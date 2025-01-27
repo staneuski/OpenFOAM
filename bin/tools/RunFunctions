@@ -28,6 +28,9 @@
 #     Miscellaneous functions for running tutorial cases
 #------------------------------------------------------------------------------
 
+[ -z "$DYLD_LIBRARY_PATH" -a -n "$FOAM_DYLD_LIBRARY_PATH" ] \
+    && export DYLD_LIBRARY_PATH="$FOAM_DYLD_LIBRARY_PATH"
+
 isTest()
 {
     for i in "$@"; do

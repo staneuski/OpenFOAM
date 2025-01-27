@@ -37,6 +37,9 @@ SourceFiles
 
 #include "int32.H"
 #include "int64.H"
+#ifdef __APPLE__
+#include "string.H"
+#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -63,6 +66,7 @@ MAXMIN(int32_t, int32_t, int32_t)
 MAXMIN(int64_t, int64_t, int32_t)
 MAXMIN(int64_t, int32_t, int64_t)
 MAXMIN(int64_t, int64_t, int64_t)
+MAXMIN(string::size_type,string::size_type,string::size_type)
 
 
 // * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //

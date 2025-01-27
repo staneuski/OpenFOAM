@@ -128,6 +128,7 @@ then
     for d in $includeDirs
     do [ ! -d "$d" ]
        path=$(eval echo "$d")
+       [ -d "$path" ] || continue
        if [ ! -d "$path/lnInclude" ]
        then
            [ $printed ] || echo "$Script: running wmakeLnInclude on dependent libraries:"

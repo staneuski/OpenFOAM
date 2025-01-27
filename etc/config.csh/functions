@@ -31,6 +31,7 @@
 #------------------------------------------------------------------------------
 
 if ( ! $?WM_CSH_FUNCTIONS ) then
+    @ _foamDarwin = (`uname -s` == "Darwin")
 
     # Temporary environment variable for automatically (un)loading functions
     set WM_CSH_FUNCTIONS loaded
@@ -66,7 +67,11 @@ if ( ! $?WM_CSH_FUNCTIONS ) then
     alias _foamAddPath 'setenv PATH \!*\:${PATH}'
 
     # Prefix to LD_LIBRARY_PATH
-    alias _foamAddLib 'setenv LD_LIBRARY_PATH \!*\:${LD_LIBRARY_PATH}'
+    if ($_foamDarwin) then
+        alias _foamAddLib 'setenv FOAM_DYLD_LIBRARY_PATH \!*\:${FOAM_DYLD_LIBRARY_PATH}; setenv DYLD_LIBRARY_PATH \!*\:${DYLD_LIBRARY_PATH}'
+    else
+        alias _foamAddLib 'setenv LD_LIBRARY_PATH \!*\:${LD_LIBRARY_PATH}'
+    endif
 
     # Prefix to MANPATH
     alias _foamAddMan 'setenv MANPATH \!*\:${MANPATH}'
@@ -88,6 +93,8 @@ if ( ! $?WM_CSH_FUNCTIONS ) then
         echo $_mostRecentDir\
     endif\
     unset _mostRecentDir'
+
+    unset _foamDarwin
 
 else
 

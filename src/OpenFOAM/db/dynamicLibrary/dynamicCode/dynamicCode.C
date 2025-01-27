@@ -346,7 +346,11 @@ Foam::fileName Foam::dynamicCode::codeRelPath() const
 
 Foam::fileName Foam::dynamicCode::libRelPath() const
 {
+#if defined(darwin64)
+    return codeRelPath()/libSubDir_/"lib" + codeName_ + ".dylib";
+#else
     return codeRelPath()/libSubDir_/"lib" + codeName_ + ".so";
+#endif
 }
 
 

@@ -17,5 +17,8 @@ LIB_LIBS = \
     -L$(FOAM_EXT_LIBBIN)/$(FOAM_MPI) \
     -lptscotch \
     -lptscotcherrexit \
-    -lscotch \
-    -lrt
+    -lscotch
+
+ifneq ("$(SO)","dylib")
+    LIB_LIBS += -lrt
+endif

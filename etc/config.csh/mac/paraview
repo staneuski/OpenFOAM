@@ -1,0 +1,13 @@
+set _paraview = /Applications/[Pp][Aa][Rr][Aa][Vv][Ii][Ee][Ww]*.app
+if ( -d $_paraview ) then
+    if ( $?prompt ) echo Using $_paraview
+    alias paraview "$_paraview/Contents/MacOS/paraview"
+else
+    echo
+    echo "Please download binary Paraview release from"
+    echo "http://paraview.org and install it in /Applications"
+    echo "folder."
+    echo
+endif
+
+#----------------------------- vi: set ft=csh et: ----------------------------

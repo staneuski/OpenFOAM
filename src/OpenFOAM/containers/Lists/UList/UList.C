@@ -28,6 +28,7 @@ License
 #include "contiguous.H"
 
 #include <algorithm>
+#include <random>
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 

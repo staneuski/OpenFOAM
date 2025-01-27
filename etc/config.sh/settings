@@ -135,6 +135,13 @@ SunOS)
     export WM_LDFLAGS='-mabi=64 -G0'
     ;;
 
+Darwin)
+    WM_ARCH=darwin64
+    export WM_COMPILER_ARCH=64
+    export WM_CC=clang
+    export WM_CXX=clang++
+    ;;
+
 *)       # An unsupported operating system
     /bin/cat <<USAGE 1>&2
 
@@ -162,7 +169,7 @@ export FOAM_APPBIN=$WM_PROJECT_DIR/platforms/$WM_OPTIONS/bin
 export FOAM_LIBBIN=$WM_PROJECT_DIR/platforms/$WM_OPTIONS/lib
 
 # External (ThirdParty) libraries
-export FOAM_EXT_LIBBIN=$WM_THIRD_PARTY_DIR/platforms/$WM_ARCH$WM_COMPILER$WM_PRECISION_OPTION$WM_LABEL_OPTION/lib
+_foam_on_macos || export FOAM_EXT_LIBBIN=$WM_THIRD_PARTY_DIR/platforms/$WM_ARCH$WM_COMPILER$WM_PRECISION_OPTION$WM_LABEL_OPTION/lib
 
 # Site-specific directory
 siteDir="${WM_PROJECT_SITE:-$WM_PROJECT_INST_DIR/site}"
@@ -211,7 +218,12 @@ fi
 unset siteDir
 
 # Make sure to pick up dummy versions of external libraries last
-_foamAddLib  $FOAM_USER_LIBBIN:$FOAM_SITE_LIBBIN:$FOAM_LIBBIN:$FOAM_EXT_LIBBIN:$FOAM_LIBBIN/dummy
+if [ -n "$FOAM_EXT_LIBBIN" ]
+then
+    _foamAddLib  $FOAM_USER_LIBBIN:$FOAM_SITE_LIBBIN:$FOAM_LIBBIN:$FOAM_EXT_LIBBIN:$FOAM_LIBBIN/dummy
+else
+    _foamAddLib  $FOAM_USER_LIBBIN:$FOAM_SITE_LIBBIN:$FOAM_LIBBIN:$FOAM_LIBBIN/dummy
+fi
 
 # Compiler settings
 # ~~~~~~~~~~~~~~~~~
@@ -312,6 +324,8 @@ Warn: WM_COMPILER_TYPE='$WM_COMPILER_TYPE' is unsupported
 USAGE
     ;;
 esac
+
+_foam_on_macos && _foam_increase_max_open_files 4096
 
 # Cleanup environment:
 # ~~~~~~~~~~~~~~~~~~~~

@@ -173,10 +173,23 @@ filter()
     shift
 }
 
+if [ "$(uname -s)" = "Darwin" ]; then
+# Implementation is taken from: http://mywiki.wooledge.org/BashFAQ/001
+while IFS= read -r; do pruneNames+=("$REPLY"); done < <(filter name lnInclude Make config noLink)
+[[ $REPLY ]] && pruneNames+=("$REPLY")
+# We use two different arrays instead of original single array implementation
+while IFS= read -r; do prunePathsPrime+=("$REPLY"); done < <(find .. -mindepth 2 -type d -name Make -exec dirname "{}" \+)
+[[ $REPLY ]] && prunePathsPrime+=("$REPLY")
+while IFS= read -r; do prunePaths+=("$REPLY"); done < <(filter path "${prunePathsPrime[@]}")
+[[ $REPLY ]] && prunePaths+=("$REPLY")
+while IFS= read -r; do matchNames+=("$REPLY"); done < <(filter name '*.[CHh]' '*.[ch]xx' '*.[ch]pp' '*.type')
+[[ $REPLY ]] && matchNames+=("$REPLY")
+else
 mapfile -t pruneNames < <(filter name lnInclude Make config noLink)
 mapfile -t prunePaths < <(find .. -mindepth 2 -type d -name Make -printf '%h\n')
 mapfile -t prunePaths < <(filter path "${prunePaths[@]}")
 mapfile -t matchNames < <(filter name '*.[CHh]' '*.[ch]xx' '*.[ch]pp' '*.type')
+fi
 
 find .. \
     \( "${pruneNames[@]}" -o "${prunePaths[@]}" \) -prune \

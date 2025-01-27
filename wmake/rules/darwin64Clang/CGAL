@@ -1,0 +1,9 @@
+CGAL_INC = \
+    -DCGAL_NO_DEPRECATED_CODE \
+    -DCGAL_HEADER_ONLY \
+    -I$(CGAL_ARCH_PATH)/include \
+    -I$(MPFR_ARCH_PATH)/include \
+    -I$(GMP_ARCH_PATH)/include \
+    -I$(BOOST_ARCH_PATH)/include
+
+CGAL_LIBS = -L$(GMP_ARCH_PATH)/lib -L$(MPFR_ARCH_PATH)/lib -lgmp -lmpfr

@@ -47,7 +47,7 @@ SYSTEMOPENMPI)
 
     # Bit of a hack: strip off 'lib' and hope this is the path to openmpi
     # include files and libraries.
-    export MPI_ARCH_PATH="${libDir%/*}"
+    _foam_on_macos || export MPI_ARCH_PATH="${libDir%/*}"
 
     _foamAddLib     $libDir
     unset libDir
@@ -263,7 +263,8 @@ esac
 # Dummy MPI already added to LD_LIBRARY_PATH and has no external libraries
 if [ "$FOAM_MPI" != dummy ]
 then
-    _foamAddLib $FOAM_LIBBIN/$FOAM_MPI:$FOAM_EXT_LIBBIN/$FOAM_MPI
+    _foamAddLib $FOAM_LIBBIN/$FOAM_MPI
+    [ -n "$FOAM_EXT_LIBBIN" ] && _foamAddLib $FOAM_EXT_LIBBIN/$FOAM_MPI
 fi
 
 

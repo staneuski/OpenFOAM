@@ -14,5 +14,8 @@ LIB_LIBS = \
     $(if $(SCOTCH_LIB_DIR),-L$(SCOTCH_LIB_DIR)) \
     -L$(FOAM_EXT_LIBBIN) \
     -lscotch \
-    -lscotcherrexit \
-    -lrt
+    -lscotcherrexit
+
+ifneq ("$(SO)","dylib")
+    LIB_LIBS += -lrt
+endif

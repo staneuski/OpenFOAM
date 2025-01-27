@@ -93,7 +93,9 @@ plotFileHeader() {
     [ "$logscale" = yes ] && _ticFormat="%1.e"
     _otherAxis="$([ "$AXIS" = x ] && echo y || echo x)"
 
-    printf "set term %s" "$_term"
+    printf "selected_terminal = 'x11'\n"
+    printf "for [t in 'wxt qt'] if (strstrt(GPVAL_TERMINALS, t)) selected_terminal = t\n"
+    printf "set term selected_terminal $_term"
     [ "$_size" = default ] || printf " size %s" "$_size"
     printf "\n"
 
@@ -315,9 +317,11 @@ trap 'rm -f $gp_file' EXIT
 touch "$file"
 
 # Re-read data file to update graph
+_stat="stat --format=%Y"
+[ "$(uname -s)" = "Darwin" ] && _stat="stat -f %m"
 while true
 do
-    mod_time=$(stat --format=%Y "$file")
+    mod_time=$($_stat "$file")
     idle_ago=$(( $(date +%s) - idle ))
     test "$mod_time" -gt "$idle_ago" || break
     sleep "$refresh"

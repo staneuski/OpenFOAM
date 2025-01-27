@@ -113,6 +113,14 @@ extension=OpenFOAM
 requirePVExe=1
 requirePVReader=1
 
+if [ "$(uname -s)" = "Darwin" ]
+then
+	extension=foam
+
+	requirePVExe=0
+	requirePVReader=0
+fi
+
 # Parse options
 while [ "$#" -gt 0 ]
 do

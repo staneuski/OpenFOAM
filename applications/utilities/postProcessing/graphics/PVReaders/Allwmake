@@ -4,6 +4,12 @@ cd ${0%/*} || exit 1    # Run from this directory
 # Parse arguments for library compilation
 . $WM_PROJECT_DIR/wmake/scripts/AllwmakeParseArguments
 
+if [ "$(uname -s)" = "Darwin" ]
+then
+    echo "Skipping PVReaders on macOS."
+    exit 0
+fi
+
 if [ ! -d "$ParaView_DIR" ]
 then
     echo "    Warning: ParaView not found in $ParaView_DIR. Skipping."

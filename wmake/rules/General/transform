@@ -31,7 +31,6 @@ $(OBJECTS_DIR)/%.dep : %
 	@$(WMAKE_BIN)/wmkdep \
 		-R '$(OBJECTS_DIR)/' '$$(OBJECTS_DIR)/' \
 		-R '$(WM_PROJECT_DIR)/' '$$(WM_PROJECT_DIR)/' \
-		-R '$(WM_THIRD_PARTY_DIR)/' '$$(WM_THIRD_PARTY_DIR)/' \
 		$(LIB_HEADER_DIRS) $< $@
 
 #------------------------------------------------------------------------------
