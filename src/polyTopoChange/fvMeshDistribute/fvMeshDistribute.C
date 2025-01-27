@@ -26,7 +26,9 @@ License
 #include "fvMeshDistribute.H"
 #include "fvMeshAdder.H"
 #include "processorCyclicFvPatchField.H"
+#include "processorCyclicFvsPatchField.H"
 #include "nonConformalProcessorCyclicFvPatchField.H"
+#include "nonConformalProcessorCyclicFvsPatchField.H"
 #include "polyTopoChange.H"
 #include "removeCells.H"
 #include "polyDistributionMap.H"
@@ -558,15 +560,15 @@ Foam::autoPtr<Foam::polyTopoChangeMap> Foam::fvMeshDistribute::repatch
     // is currently not supported by topoChange.
 
     // Store boundary fields (we only do this for surfaceFields)
-    PtrList<FieldField<fvsPatchField, scalar>> sFields;
+    PtrList<FieldField<surfaceMesh::PatchField, scalar>> sFields;
     saveBoundaryFields<scalar, surfaceMesh>(sFields);
-    PtrList<FieldField<fvsPatchField, vector>> vFields;
+    PtrList<FieldField<surfaceMesh::PatchField, vector>> vFields;
     saveBoundaryFields<vector, surfaceMesh>(vFields);
-    PtrList<FieldField<fvsPatchField, sphericalTensor>> sptFields;
+    PtrList<FieldField<surfaceMesh::PatchField, sphericalTensor>> sptFields;
     saveBoundaryFields<sphericalTensor, surfaceMesh>(sptFields);
-    PtrList<FieldField<fvsPatchField, symmTensor>> sytFields;
+    PtrList<FieldField<surfaceMesh::PatchField, symmTensor>> sytFields;
     saveBoundaryFields<symmTensor, surfaceMesh>(sytFields);
-    PtrList<FieldField<fvsPatchField, tensor>> tFields;
+    PtrList<FieldField<surfaceMesh::PatchField, tensor>> tFields;
     saveBoundaryFields<tensor, surfaceMesh>(tFields);
 
     // Change the mesh (without keeping old points).
@@ -1337,14 +1339,7 @@ void Foam::fvMeshDistribute::addProcPatches
                     procPatchID[proci].insert
                     (
                         referPatchID[bFacei],
-                        fvMeshTools::addPatch
-                        (
-                            mesh_,
-                            pp,
-                            dictionary(),   // optional per field patchField
-                            processorFvPatchField<scalar>::typeName,
-                            false           // not parallel sync
-                        )
+                        fvMeshTools::addPatch(mesh_, pp)
                     );
                 }
                 else
@@ -1354,6 +1349,7 @@ void Foam::fvMeshDistribute::addProcPatches
                           (
                               mesh_.boundaryMesh()[referPatchID[bFacei]]
                           );
+
                     processorCyclicPolyPatch pp
                     (
                         0,              // size
@@ -1368,14 +1364,7 @@ void Foam::fvMeshDistribute::addProcPatches
                     procPatchID[proci].insert
                     (
                         referPatchID[bFacei],
-                        fvMeshTools::addPatch
-                        (
-                            mesh_,
-                            pp,
-                            dictionary(),   // optional per field patchField
-                            processorCyclicFvPatchField<scalar>::typeName,
-                            false           // not parallel sync
-                        )
+                        fvMeshTools::addPatch(mesh_, pp)
                     );
                 }
             }
@@ -1444,11 +1433,7 @@ void Foam::fvMeshDistribute::addNccProcPatches()
                                 proci,
                                 owner ? nccPp.name() : nbrNccPp.name(),
                                 owner ? origPp.name() : nbrOrigPp.name()
-                            ),
-                            dictionary(),   // optional per field patchField
-                            nonConformalProcessorCyclicFvPatchField<scalar>::
-                                typeName,
-                            false           // not parallel sync
+                            )
                         );
                     }
                 }

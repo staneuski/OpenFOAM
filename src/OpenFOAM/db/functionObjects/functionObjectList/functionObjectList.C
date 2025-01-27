@@ -307,11 +307,10 @@ Foam::autoPtr<Foam::functionObjectList> Foam::functionObjectList::New
             readConfigFile
             (
                 "function",
-                args["func"],
+                {args["func"], 0},
                 functionsDict,
                 functionEntries::includeFuncEntry::functionObjectDictPath,
                 "system",
-                {"command", args.commandLine()},
                 region
             );
         }
@@ -325,11 +324,10 @@ Foam::autoPtr<Foam::functionObjectList> Foam::functionObjectList::New
                 readConfigFile
                 (
                     "function",
-                    funcs[i],
+                    {funcs[i], 0},
                     functionsDict,
                     functionEntries::includeFuncEntry::functionObjectDictPath,
                     "system",
-                    {"command", args.commandLine()},
                     region
                 );
             }

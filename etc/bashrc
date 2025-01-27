@@ -114,13 +114,13 @@ export WM_OSTYPE=POSIX
 
 #- Decomposition libraries:
 #    <library>_TYPE = none | system | ThirdParty (OpenFOAM)
-export SCOTCH_TYPE=ThirdParty
-export METIS_TYPE=none
+export SCOTCH_TYPE=system
+export METIS_TYPE=system
 export PARMETIS_TYPE=none
-export ZOLTAN_TYPE=ThirdParty
+export ZOLTAN_TYPE=none
 
 #    ParaView_TYPE = none | system | paraviewopenfoam | ThirdParty (OpenFOAM)
-export ParaView_TYPE=system
+export ParaView_TYPE=none
 
 #- Floating-point signal handling:
 #    set or unset
@@ -152,6 +152,20 @@ then
     fi
     unset WM_PROJECT_DIR_REAL
 fi
+
+# Location of site-specific templates etc
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# unset is equivalent to $WM_PROJECT_INST_DIR/site
+if [ -d "$WM_PROJECT_SITE" ]
+then
+    export WM_PROJECT_SITE
+else
+    unset WM_PROJECT_SITE
+fi
+
+# Location of user files
+# ~~~~~~~~~~~~~~~~~~~~~~
+export WM_PROJECT_USER_DIR=$HOME/$WM_PROJECT/$USER-$WM_PROJECT_VERSION
 
 # Source initialisation functions
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -187,20 +201,6 @@ then
     fi
     unset WM_THIRD_PARTY_DIR_REAL
 fi
-
-# Location of site-specific templates etc
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# unset is equivalent to $WM_PROJECT_INST_DIR/site
-if [ -d "$WM_PROJECT_SITE" ]
-then
-    export WM_PROJECT_SITE
-else
-    unset WM_PROJECT_SITE
-fi
-
-# Location of user files
-# ~~~~~~~~~~~~~~~~~~~~~~
-export WM_PROJECT_USER_DIR=$HOME/$WM_PROJECT/$USER-$WM_PROJECT_VERSION
 
 # Clean standard environment variables (PATH, LD_LIBRARY_PATH, MANPATH)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

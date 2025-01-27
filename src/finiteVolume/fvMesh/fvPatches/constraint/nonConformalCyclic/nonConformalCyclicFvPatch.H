@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -126,9 +126,6 @@ public:
 
         //- Make patch weighting factors
         void makeWeights(scalarField&) const;
-
-        //- Return delta (P to N) vectors across coupled patch
-        virtual tmp<vectorField> delta() const;
 };
 
 

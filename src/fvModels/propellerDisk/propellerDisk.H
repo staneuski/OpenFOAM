@@ -42,10 +42,12 @@ Usage
     {
         type            propellerDisk;
 
+        libs            ("libpropellerDisk.so");
+
         selectionMode   cellZone;
         cellZone        propeller;
 
-        diskNormal      (1 0 0);    // Normal direction of the disk
+        normal          (1 0 0);    // Normal direction of the propeller
 
         n               26.03;      // Rotation speed [1/s]
 
@@ -124,8 +126,11 @@ protected:
         //- Name of the velocity field
         word UName_;
 
-        //- Disk normal direction
-        vector diskNormal_;
+        //- Propeller disk centre
+        vector centre_;
+
+        //- Propeller disk normal direction
+        vector normal_;
 
         //- Rotation speed [1/s]
         scalar n_;
@@ -142,6 +147,12 @@ protected:
         //- Propeller function
         autoPtr<Function1<vector2D>> propellerFunction_;
 
+        //- Current force of the propeller on the fluid
+        mutable vector force_;
+
+        //- Current moment of the propeller on the fluid
+        mutable vector moment_;
+
         //- Optional switch to enable logging of integral properties
         Switch log_;
 
@@ -150,6 +161,15 @@ protected:
 
 
     // Protected Member Functions
+
+        //- Read the model coefficients
+        virtual void readCoeffs(const dictionary& dict);
+
+        //- Return the propeller normal
+        virtual vector normal() const
+        {
+            return normal_;
+        }
 
         //- Return the rotation speed
         virtual scalar n() const
@@ -161,9 +181,6 @@ protected:
         virtual void correctn(const scalar T) const
         {}
 
-        //- Computes the disk centre
-        vector diskCentre() const;
-
         //- Computes the thickness of the disk in streamwise direction
         scalar diskThickness(const vector& centre) const;
 
@@ -174,9 +191,6 @@ protected:
 private:
 
     // Private Member Functions
-
-        //- Read the model coefficients
-        void readCoeffs(const dictionary& dict);
 
         //- Add resistance to the UEqn
         template<class AlphaFieldType, class RhoFieldType>
@@ -216,6 +230,25 @@ public:
 
 
     // Member Functions
+
+        //- Return the propeller centre
+        virtual vector centre() const
+        {
+            return centre_;
+        }
+
+        //- Return the current force of the propeller on the fluid
+        vector force() const
+        {
+            return force_;
+        }
+
+        //- Return the current moment of the propeller on the fluid
+        vector moment() const
+        {
+            return moment_;
+        }
+
 
         // Checks
 

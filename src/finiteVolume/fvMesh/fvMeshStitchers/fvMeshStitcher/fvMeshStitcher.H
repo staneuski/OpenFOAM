@@ -62,8 +62,7 @@ protected:
         //- Alias for surface boundary fields to reduce verbosity of method
         //  definitions below
         template<class Type>
-        using SurfaceFieldBoundary =
-            GeometricBoundaryField<Type, fvsPatchField, surfaceMesh>;
+        using SurfaceFieldBoundary = GeometricBoundaryField<Type, surfaceMesh>;
 
         //- Alias the patchToPatch intersection part struct
         using part = patchToPatches::intersection::part;
@@ -73,6 +72,12 @@ protected:
 
 
 private:
+
+    // Private Static Data
+
+        //- Minimum projected volume fraction that results in a warning
+        static const scalar minWarnProjectedVolumeFraction_;
+
 
     // Private Data
 

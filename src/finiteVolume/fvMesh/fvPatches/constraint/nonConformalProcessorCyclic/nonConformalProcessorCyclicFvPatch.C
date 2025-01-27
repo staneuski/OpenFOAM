@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -115,25 +115,6 @@ void Foam::nonConformalProcessorCyclicFvPatch::makeWeights(scalarField& w) const
     else
     {
         w = 1;
-    }
-}
-
-
-Foam::tmp<Foam::vectorField>
-Foam::nonConformalProcessorCyclicFvPatch::delta() const
-{
-    if (Pstream::parRun())
-    {
-        return
-            coupledFvPatch::delta
-            (
-                boundaryMesh().mesh().Cf().boundaryField()[index()]
-              - boundaryMesh().mesh().C().boundaryField()[index()]
-            );
-    }
-    else
-    {
-        return coupledFvPatch::delta();
     }
 }
 

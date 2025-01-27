@@ -58,7 +58,8 @@ void Foam::fv::propellerDisk::addActuationDiskAxialInertialResistance
         dimensionedVector(rho.dimensions()*U.dimensions()/dimTime, Zero)
     );
 
-    const vector centre = diskCentre();
+    const vector centre(this->centre());
+    const vector normal(this->normal());
     const scalar delta = diskThickness(centre);
 
     // hub radius
@@ -66,9 +67,6 @@ void Foam::fv::propellerDisk::addActuationDiskAxialInertialResistance
 
     // propeller radius
     const scalar rProp = 0.5*dProp_;
-
-    // Unit normal
-    const vector nHat = normalised(diskNormal_);
 
     // Disk area
     const scalar A = (rProp - rHub)*(rProp - rHub)*pi;
@@ -78,7 +76,7 @@ void Foam::fv::propellerDisk::addActuationDiskAxialInertialResistance
 
     // Evaluate advance number J,
     // the volumetric mean advance speed of the disk
-    const scalar J = this->J(U, nHat);
+    const scalar J = this->J(U, normal);
 
     // Calculate the mean velocity through the disk
     const scalar Udisk = n*dProp_*J;
@@ -120,6 +118,10 @@ void Foam::fv::propellerDisk::addActuationDiskAxialInertialResistance
         const scalar At =
             (105/8.0)*Q/(delta*pi*rProp*(rProp - rHub)*(3*rHub + 4*rProp));
 
+        scalar V_ = 0;
+        force_ = Zero;
+        moment_ = Zero;
+
         forAll(cells, i)
         {
             const label celli = cells[i];
@@ -142,16 +144,33 @@ void Foam::fv::propellerDisk::addActuationDiskAxialInertialResistance
                    /(rStar*(1 - rHubPrime) + rHubPrime);
 
                 // A unit normal vector to the direction of the tangent
-                const vector radiusOrtho = normalised(r ^ nHat);
+                const vector radiusOrtho = normalised(r ^ normal);
                 const vector rotationVector = radiusOrtho*rotationDir_;
 
                 force[celli] =
                     alpha[celli]*rho[celli]
-                   *(Faxial*nHat + Ftangential*rotationVector);
+                   *(Faxial*normal + Ftangential*rotationVector);
 
-                Usource[celli] += V[celli]*force[celli];
+                const vector Vfi(V[celli]*force[celli]);
+
+                // Integrate the net force and moment of the propeller
+                // on the fluid
+                V_ += V[celli];
+                force_ += Vfi;
+                moment_ += r ^ Vfi;
+
+                Usource[celli] += Vfi;
             }
         }
+
+        reduce(V_, sumOp<scalar>());
+        reduce(force_, sumOp<vector>());
+        reduce(moment_, sumOp<vector>());
+
+        // Normalise to cache the net force and moment of the propeller
+        // on the fluid
+        force_ /= V_;
+        moment_ /= V_;
 
         if
         (

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -446,7 +446,7 @@ void Foam::regIOobject::rename(const word& newName)
 
 Foam::fileName Foam::regIOobject::filePath() const
 {
-    return IOobject::filePath(type(), globalFile());
+    return IOobject::filePath(globalFile());
 }
 
 
@@ -468,34 +468,6 @@ bool Foam::regIOobject::headerOk()
     }
 
     return ok;
-}
-
-
-void Foam::regIOobject::operator=(const IOobject& io)
-{
-    // Close any file
-    isPtr_.clear();
-
-    const bool ownedByRegistry0 = ownedByRegistry();
-    release();
-
-    // Check out of objectRegistry
-    checkOut();
-
-    IOobject::operator=(io);
-
-    if (registerObject())
-    {
-        // Re-register object with objectRegistry
-        if (ownedByRegistry0)
-        {
-            store();
-        }
-        else
-        {
-            checkIn();
-        }
-    }
 }
 
 

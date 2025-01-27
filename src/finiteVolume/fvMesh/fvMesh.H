@@ -76,9 +76,6 @@ class fvMeshMover;
 class volMesh;
 class polyDistributionMap;
 
-template<class Type, template<class> class PatchField, class GeoMesh>
-class GeometricBoundaryField;
-
 template<class Type>
 class UCompactListList;
 
@@ -157,8 +154,7 @@ private:
         mutable IOobject* polyFacesBfIOPtr_;
 
         //- Face-poly-face addressing
-        mutable GeometricBoundaryField<label, fvsPatchField, surfaceMesh>*
-            polyFacesBfPtr_;
+        mutable GeometricBoundaryField<label, surfaceMesh>* polyFacesBfPtr_;
 
         //- Offsets for poly-bFace-patch and patch-face addressing
         mutable labelList* polyBFaceOffsetsPtr_;
@@ -176,8 +172,7 @@ private:
         mutable UCompactListList<label>* polyBFacePatchFacesPtr_;
 
         //- Face-owner addressing
-        mutable GeometricBoundaryField<label, fvsPatchField, surfaceMesh>*
-            ownerBfPtr_;
+        mutable GeometricBoundaryField<label, surfaceMesh>* ownerBfPtr_;
 
         //- Current time index for cell volumes
         //  Note.  The whole mechanism will be replaced once the
@@ -277,8 +272,7 @@ private:
             wordList polyFacesPatchTypes() const;
 
             //- Modify face-poly-face addressing
-            GeometricBoundaryField<label, fvsPatchField, surfaceMesh>&
-                polyFacesBfRef();
+            GeometricBoundaryField<label, surfaceMesh>& polyFacesBfRef();
 
 
        // Make geometric data
@@ -482,7 +476,7 @@ public:
             bool conformal() const;
 
             //- Return face-poly-face addressing
-            const GeometricBoundaryField<label, fvsPatchField, surfaceMesh>&
+            const GeometricBoundaryField<label, surfaceMesh>&
                 polyFacesBf() const;
 
             //- Return poly-bFace-patch addressing
@@ -492,8 +486,7 @@ public:
             const UCompactListList<label>& polyBFacePatchFaces() const;
 
             //- Return face-owner addressing
-            const GeometricBoundaryField<label, fvsPatchField, surfaceMesh>&
-                ownerBf() const;
+            const GeometricBoundaryField<label, surfaceMesh>& ownerBf() const;
 
             //- Return the stitcher function class
             const fvMeshStitcher& stitcher() const;
@@ -622,8 +615,7 @@ public:
             //- Unconform the fvMesh from the polyMesh
             void unconform
             (
-                const GeometricBoundaryField<label, fvsPatchField, surfaceMesh>&
-                    polyFacesBf,
+                const GeometricBoundaryField<label, surfaceMesh>& polyFacesBf,
                 const surfaceVectorField& Sf,
                 const surfaceVectorField& Cf,
                 const surfaceScalarField& phi =
@@ -634,15 +626,11 @@ public:
             //- Map all fields in time using given map.
             void mapFields(const polyTopoChangeMap& map);
 
-            //- Add/insert single patch. If validBoundary the new situation
-            //  is consistent across processors.
+            //- Add/insert single patch
             virtual void addPatch
             (
                 const label insertPatchi,
-                const polyPatch& patch,
-                const dictionary& patchFieldDict,
-                const word& defaultPatchFieldType,
-                const bool validBoundary
+                const polyPatch& patch
             );
 
             //- Reorder and trim existing patches. If validBoundary the new

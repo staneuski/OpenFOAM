@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2024-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -77,8 +77,8 @@ Foam::fv::homogeneousCondensation::homogeneousCondensation
     ),
     interface_
     (
-        fluid_.phases()[phaseNames().first()],
-        fluid_.phases()[phaseNames().second()]
+        fluid_.phases()[phaseNames().second()],
+        fluid_.phases()[phaseNames().first()]
     ),
     d_
     (
@@ -152,6 +152,31 @@ Foam::fv::homogeneousCondensation::mDot() const
         mesh().lookupObject<volScalarField::Internal>(alphaNames().first());
 
     return alphaGas*mDotByAlphaGas_;
+}
+
+
+Foam::tmp<Foam::volScalarField::Internal>
+Foam::fv::homogeneousCondensation::tau() const
+{
+    static const dimensionedScalar mDotRootVSmall
+    (
+        dimDensity/dimTime,
+        rootVSmall
+    );
+
+    const multicomponentThermo& thermoGas = specieThermos().first();
+
+    // Phase molecular masses and densities
+    const volScalarField::Internal WGas(vfToVif(thermoGas.W()));
+    const volScalarField::Internal rhoGas(vfToVif(thermoGas.rho()));
+
+    // Mole fraction of nucleating specie
+    const volScalarField::Internal Xi
+    (
+        thermoGas.Y()[specieis().first()]*WGas/thermoGas.Wi(specieis().first())
+    );
+
+    return Xi*rhoGas/max(mDotByAlphaGas_, mDotRootVSmall);
 }
 
 
@@ -288,27 +313,6 @@ void Foam::fv::homogeneousCondensation::addSup
     else
     {
         phaseChange::addSup(alpha, rho, eqn);
-    }
-}
-
-
-void Foam::fv::homogeneousCondensation::addSup
-(
-    const volScalarField& alpha,
-    const volScalarField& rho,
-    const volScalarField& Yi,
-    fvMatrix<scalar>& eqn
-) const
-{
-    const label i = index(phaseNames(), eqn.psi().group());
-
-    if (i == 0 && specieis().first() != -1 && Yi.member() == specie())
-    {
-        eqn -= fvm::Sp(alpha*mDotByAlphaGas_, Yi);
-    }
-    else
-    {
-        singleComponentPhaseChange::addSup(alpha, rho, Yi, eqn);
     }
 }
 

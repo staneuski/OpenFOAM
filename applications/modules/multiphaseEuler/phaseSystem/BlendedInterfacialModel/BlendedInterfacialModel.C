@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2014-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2014-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -222,22 +222,21 @@ void Foam::BlendedInterfacialModel<ModelType>::check() const
 
 
 template<class ModelType>
-template<template<class> class PatchField, class GeoMesh>
+template<class GeoMesh>
 void Foam::BlendedInterfacialModel<ModelType>::calculateBlendingCoeffs
 (
     const UPtrList<const volScalarField>& alphas,
-    tmp<GeometricField<scalar, PatchField, GeoMesh>>& fG,
-    tmp<GeometricField<scalar, PatchField, GeoMesh>>& f1D2,
-    tmp<GeometricField<scalar, PatchField, GeoMesh>>& f2D1,
-    tmp<GeometricField<scalar, PatchField, GeoMesh>>& fS,
-    PtrList<GeometricField<scalar, PatchField, GeoMesh>>& fGD,
-    PtrList<GeometricField<scalar, PatchField, GeoMesh>>& f1D2D,
-    PtrList<GeometricField<scalar, PatchField, GeoMesh>>& f2D1D,
-    PtrList<GeometricField<scalar, PatchField, GeoMesh>>& fSD,
-    const bool subtract
+    tmp<GeometricField<scalar, GeoMesh>>& fG,
+    tmp<GeometricField<scalar, GeoMesh>>& f1D2,
+    tmp<GeometricField<scalar, GeoMesh>>& f2D1,
+    tmp<GeometricField<scalar, GeoMesh>>& fS,
+    PtrList<GeometricField<scalar, GeoMesh>>& fGD,
+    PtrList<GeometricField<scalar, GeoMesh>>& f1D2D,
+    PtrList<GeometricField<scalar, GeoMesh>>& f2D1D,
+    PtrList<GeometricField<scalar, GeoMesh>>& fSD
 ) const
 {
-    typedef GeometricField<scalar, PatchField, GeoMesh> scalarGeoField;
+    typedef GeometricField<scalar, GeoMesh> scalarGeoField;
 
     // Create a constant field
     auto constant = [&](const scalar k)
@@ -412,105 +411,6 @@ void Foam::BlendedInterfacialModel<ModelType>::calculateBlendingCoeffs
         if (f2D1.valid()) f2D1.ref() *= 1 - fDSum();
         if (fS.valid()) fS.ref() *= 1 - fDSum();
         if (fG.valid()) fG.ref() *= 1 - fDSum();
-    }
-
-    // Flip the sign of the 2 dispersed in 1 models if necessary
-    if (subtract)
-    {
-        auto signedError = [this](const phaseInterface& interface)
-        {
-            FatalErrorInFunction
-                << "A signed quantity was evaluated from the blended "
-                << ModelType::typeName << " for " << interface_.name()
-                << " but a model was provided for " << interface.name()
-                << ". Signed quantities are only possible to evaluate for"
-                << " dispersed configurations" << exit(FatalError);
-        };
-
-        const phaseModel& phase1 = interface_.phase1();
-        const phaseModel& phase2 = interface_.phase2();
-
-        if (fG.valid())
-        {
-            signedError(phaseInterface(phase1, phase2));
-        }
-        if (f1D2.valid())
-        {
-            // Do nothing
-        }
-        if (f2D1.valid())
-        {
-            f2D1.ref() *= -1;
-        }
-        if (fS.valid())
-        {
-            signedError(segregatedPhaseInterface(phase1, phase2));
-        }
-
-        forAll(alphas, phasei)
-        {
-            const phaseModel& phaseD = interface_.fluid().phases()[phasei];
-
-            if (fGD.set(phasei))
-            {
-                signedError
-                (
-                    displacedPhaseInterface(phase1, phase2, phaseD)
-                );
-            }
-            if (f1D2D.set(phasei))
-            {
-                // Do nothing
-            }
-            if (f2D1D.set(phasei))
-            {
-                f2D1.ref() *= -1;
-            }
-            if (fSD.set(phasei))
-            {
-                signedError
-                (
-                    segregatedDisplacedPhaseInterface(phase1, phase2, phaseD)
-                );
-            }
-        }
-    }
-}
-
-
-template<class ModelType>
-template<class Type, template<class> class PatchField, class GeoMesh>
-void Foam::BlendedInterfacialModel<ModelType>::correctFixedFluxBCs
-(
-    GeometricField<Type, PatchField, GeoMesh>& field
-) const
-{
-    typedef GeometricField<Type, PatchField, GeoMesh> typeGeoField;
-
-    typename typeGeoField::Boundary& fieldBf = field.boundaryFieldRef();
-
-    forAll(fieldBf, patchi)
-    {
-        if
-        (
-            (
-                !interface_.phase1().stationary()
-             && isA<fixedValueFvsPatchScalarField>
-                (
-                    interface_.phase1().phi()().boundaryField()[patchi]
-                )
-            )
-         || (
-                !interface_.phase2().stationary()
-             && isA<fixedValueFvsPatchScalarField>
-                (
-                    interface_.phase2().phi()().boundaryField()[patchi]
-                )
-            )
-        )
-        {
-            fieldBf[patchi] = Zero;
-        }
     }
 }
 
@@ -705,8 +605,7 @@ void Foam::BlendedInterfacialModel<ModelType>::postProcessBlendingCoefficients
             (
                 alphas.convert<const volScalarField>(),
                 fG, f1D2, f2D1, fS,
-                fGD, f1D2D, f2D1D, fSD,
-                false
+                fGD, f1D2D, f2D1D, fSD
             );
 
             const phaseModel& phase1 = interface_.phase1();
@@ -799,8 +698,7 @@ void Foam::BlendedInterfacialModel<ModelType>::postProcessBlendingCoefficients
             (
                 alphas.convert<const volScalarField>(),
                 fG, f1D2, f2D1, fS,
-                fGD, f1D2D, f2D1D, fSD,
-                false
+                fGD, f1D2D, f2D1D, fSD
             );
 
             label fieldi = nPhases;
@@ -902,28 +800,20 @@ void Foam::BlendedInterfacialModel<ModelType>::postProcessBlendingCoefficients
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
 template<class ModelType>
-template
-<
-    class Type,
-    template<class> class PatchField,
-    class GeoMesh,
-    class ... Args
->
-Foam::tmp<Foam::GeometricField<Type, PatchField, GeoMesh>>
+template<class Type, class GeoMesh, class ... Args>
+Foam::tmp<Foam::GeometricField<Type, GeoMesh>>
 Foam::BlendedInterfacialModel<ModelType>::evaluate
 (
-    tmp<GeometricField<Type, PatchField, GeoMesh>>
-    (ModelType::*method)(Args ...) const,
+    tmp<GeometricField<Type, GeoMesh>>(ModelType::*method)(Args ...) const,
     const word& name,
     const dimensionSet& dims,
-    const bool subtract,
     Args ... args
 ) const
 {
     check();
 
-    typedef GeometricField<scalar, PatchField, GeoMesh> scalarGeoField;
-    typedef GeometricField<Type, PatchField, GeoMesh> typeGeoField;
+    typedef GeometricField<scalar, GeoMesh> scalarGeoField;
+    typedef GeometricField<Type, GeoMesh> typeGeoField;
 
     // Get the blending coefficients
     const label nPhases = interface_.fluid().phases().size();
@@ -937,8 +827,7 @@ Foam::BlendedInterfacialModel<ModelType>::evaluate
         interface_.fluid().phases()
        .PtrList<phaseModel>::convert<const volScalarField>(),
         fG, f1D2, f2D1, fS,
-        fGD, f1D2D, f2D1D, fSD,
-        subtract
+        fGD, f1D2D, f2D1D, fSD
     );
 
     // Construct the result
@@ -996,39 +885,26 @@ Foam::BlendedInterfacialModel<ModelType>::evaluate
         }
     }
 
-    // Correct boundary conditions if necessary
-    if (ModelType::correctFixedFluxBCs)
-    {
-        correctFixedFluxBCs(x.ref());
-    }
-
     return x;
 }
 
 
 template<class ModelType>
-template
-<
-    class Type,
-    template<class> class PatchField,
-    class GeoMesh,
-    class ... Args
->
-Foam::HashPtrTable<Foam::GeometricField<Type, PatchField, GeoMesh>>
+template<class Type, class GeoMesh, class ... Args>
+Foam::HashPtrTable<Foam::GeometricField<Type, GeoMesh>>
 Foam::BlendedInterfacialModel<ModelType>::evaluate
 (
-    HashPtrTable<GeometricField<Type, PatchField, GeoMesh>>
+    HashPtrTable<GeometricField<Type, GeoMesh>>
     (ModelType::*method)(Args ...) const,
     const word& name,
     const dimensionSet& dims,
-    const bool subtract,
     Args ... args
 ) const
 {
     check();
 
-    typedef GeometricField<scalar, PatchField, GeoMesh> scalarGeoField;
-    typedef GeometricField<Type, PatchField, GeoMesh> typeGeoField;
+    typedef GeometricField<scalar, GeoMesh> scalarGeoField;
+    typedef GeometricField<Type, GeoMesh> typeGeoField;
 
     // Get the blending coefficients
     const label nPhases = interface_.fluid().phases().size();
@@ -1042,8 +918,7 @@ Foam::BlendedInterfacialModel<ModelType>::evaluate
         interface_.fluid().phases()
        .PtrList<phaseModel>::convert<const volScalarField>(),
         fG, f1D2, f2D1, fS,
-        fGD, f1D2D, f2D1D, fSD,
-        subtract
+        fGD, f1D2D, f2D1D, fSD
     );
 
     // Construct the result
@@ -1130,15 +1005,6 @@ Foam::BlendedInterfacialModel<ModelType>::evaluate
                 fSD[phasei],
                 (models1SegregatedWith2Displaced_[phasei].*method)(args ...)
             );
-        }
-    }
-
-    // Correct boundary conditions if necessary
-    if (ModelType::correctFixedFluxBCs)
-    {
-        forAllIter(typename HashPtrTable<typeGeoField>, xs, xIter)
-        {
-            correctFixedFluxBCs(*xIter());
         }
     }
 

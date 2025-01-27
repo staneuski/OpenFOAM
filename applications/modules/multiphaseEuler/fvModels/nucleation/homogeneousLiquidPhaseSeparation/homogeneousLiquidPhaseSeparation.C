@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2024-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -108,8 +108,8 @@ Foam::fv::homogeneousLiquidPhaseSeparation::homogeneousLiquidPhaseSeparation
     ),
     interface_
     (
-        fluid_.phases()[phaseNames().first()],
-        fluid_.phases()[phaseNames().second()]
+        fluid_.phases()[phaseNames().second()],
+        fluid_.phases()[phaseNames().first()]
     ),
     d_
     (
@@ -183,6 +183,28 @@ Foam::fv::homogeneousLiquidPhaseSeparation::mDot() const
         mesh().lookupObject<volScalarField::Internal>(alphaNames().first());
 
     return alphaSolution*mDotByAlphaSolution_;
+}
+
+
+Foam::tmp<Foam::volScalarField::Internal>
+Foam::fv::homogeneousLiquidPhaseSeparation::tau() const
+{
+    static const dimensionedScalar mDotRootVSmall
+    (
+        dimDensity/dimTime,
+        rootVSmall
+    );
+
+    const fluidMulticomponentThermo& thermoSolution =
+        refCast<const fluidMulticomponentThermo>(specieThermos().first());
+
+    // Solution density
+    const volScalarField::Internal rhoSolution(vfToVif(thermoSolution.rho()));
+
+    // Mass fraction of nucleating specie
+    const volScalarField::Internal Yi = thermoSolution.Y()[specieis().first()];
+
+    return Yi*rhoSolution/max(mDotByAlphaSolution_, mDotRootVSmall);
 }
 
 
@@ -321,27 +343,6 @@ void Foam::fv::homogeneousLiquidPhaseSeparation::addSup
     else
     {
         phaseChange::addSup(alpha, rho, eqn);
-    }
-}
-
-
-void Foam::fv::homogeneousLiquidPhaseSeparation::addSup
-(
-    const volScalarField& alpha,
-    const volScalarField& rho,
-    const volScalarField& Yi,
-    fvMatrix<scalar>& eqn
-) const
-{
-    const label i = index(phaseNames(), eqn.psi().group());
-
-    if (i == 0 && specieis().first() != -1 && Yi.member() == specie())
-    {
-        eqn -= fvm::Sp(alpha*mDotByAlphaSolution_, Yi);
-    }
-    else
-    {
-        singleComponentPhaseChange::addSup(alpha, rho, Yi, eqn);
     }
 }
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,6 +35,7 @@ License
 #include "polyBoundaryMeshEntries.H"
 #include "entry.H"
 #include "Cloud.H"
+#include "LagrangianMesh.H"
 #include "surfaceFields.H"
 
 // Local includes
@@ -165,7 +166,7 @@ void Foam::vtkPVFoam::updateInfoInternalMesh
 }
 
 
-void Foam::vtkPVFoam::updateInfoLagrangian
+void Foam::vtkPVFoam::updateInfolagrangian
 (
     vtkDataArraySelection* arraySelection
 )
@@ -176,7 +177,6 @@ void Foam::vtkPVFoam::updateInfoLagrangian
             << "    " << dbPtr_->timePath()/lagrangian::cloud::prefix << endl;
     }
 
-
     // Use the db directly since this might be called without a mesh,
     // but the region must get added back in
     fileName lagrangianPrefix(lagrangian::cloud::prefix);
@@ -185,7 +185,7 @@ void Foam::vtkPVFoam::updateInfoLagrangian
         lagrangianPrefix = meshRegion_/lagrangian::cloud::prefix;
     }
 
-    arrayRangeLagrangian_.reset(arraySelection->GetNumberOfArrays());
+    arrayRangelagrangian_.reset(arraySelection->GetNumberOfArrays());
 
     // Generate a list of lagrangian clouds across all times
     HashSet<fileName> cloudDirs;
@@ -211,7 +211,61 @@ void Foam::vtkPVFoam::updateInfoLagrangian
         );
     }
 
-    arrayRangeLagrangian_ += cloudDirs.size();
+    arrayRangelagrangian_ += cloudDirs.size();
+
+    if (debug)
+    {
+        // Just for debug info
+        getSelectedArrayEntries(arraySelection);
+    }
+}
+
+
+void Foam::vtkPVFoam::updateInfoLagrangian
+(
+    vtkDataArraySelection* arraySelection
+)
+{
+    if (debug)
+    {
+        InfoInFunction << nl
+            << "    " << dbPtr_->timePath()/LagrangianMesh::prefix << endl;
+    }
+
+    // Use the db directly since this might be called without a mesh,
+    // but the region must get added back in
+    const fileName LagrangianPrefix =
+        meshRegion_ == polyMesh::defaultRegion
+      ? fileName(LagrangianMesh::prefix)
+      : meshRegion_/LagrangianMesh::prefix;
+
+    arrayRangeLagrangian_.reset(arraySelection->GetNumberOfArrays());
+
+    // Generate a list of Lagrangian meshes across all times
+    HashSet<fileName> LagrangianDirs;
+
+    // Get times list. Flush first to force refresh.
+    fileHandler().flush();
+    instantList times = dbPtr_().times();
+    forAll(times, timei)
+    {
+        LagrangianDirs +=
+            fileHandler().readDir
+            (
+                dbPtr_->path()/times[timei].name()/LagrangianPrefix,
+                fileType::directory
+            );
+    }
+
+    forAllConstIter(HashSet<fileName>, LagrangianDirs, LagrangianIter)
+    {
+        arraySelection->AddArray
+        (
+            (LagrangianIter.key() + " - Lagrangian").c_str()
+        );
+    }
+
+    arrayRangeLagrangian_ += LagrangianDirs.size();
 
     if (debug)
     {
@@ -731,29 +785,65 @@ void Foam::vtkPVFoam::updateInfoFields()
         // Search for list of objects for this time and mesh region
         IOobjectList objects(runTime, times[timei].name(), regionPrefix);
 
-        addFieldsToSelection<fvPatchField, volMesh>
-        (
-            fieldSelection,
-            objects
-        );
+        addFieldsToSelection<volMesh>(fieldSelection, objects);
+        addInternalFieldsToSelection<volMesh>(fieldSelection, objects);
+        addFieldsToSelection<surfaceMesh>(fieldSelection, objects);
+        addFieldsToSelection<pointMesh>(fieldSelection, objects);
+    }
 
-        addInternalFieldsToSelection<fvPatchField, volMesh>
-        (
-            fieldSelection,
-            objects
-        );
+    // Restore the enabled selections
+    setSelectedArrayEntries(fieldSelection, enabledEntries);
+}
 
-        addFieldsToSelection<fvsPatchField, surfaceMesh>
-        (
-            fieldSelection,
-            objects
-        );
 
-        addFieldsToSelection<pointPatchField, pointMesh>
-        (
-            fieldSelection,
-            objects
-        );
+void Foam::vtkPVFoam::updateInfolagrangianFields()
+{
+    if (debug)
+    {
+        InfoInFunction << endl;
+    }
+
+    vtkDataArraySelection* fieldSelection =
+        reader_->GetlagrangianFieldSelection();
+
+    // Preserve the enabled selections
+    stringList enabledEntries = getSelectedArrayEntries(fieldSelection);
+    fieldSelection->RemoveAllArrays();
+
+    // Use the db directly since this might be called without a mesh,
+    // but the region must get added back in
+    fileName lagrangianPrefix(lagrangian::cloud::prefix);
+    if (meshRegion_ != polyMesh::defaultRegion)
+    {
+        lagrangianPrefix = meshRegion_/lagrangian::cloud::prefix;
+    }
+
+    // Add the available fields from all clouds and all time directories.
+    // Differing sets of fields from multiple clouds get combined into a single
+    // set. ParaView will display "(partial)" after field names that only apply
+    // to some of the clouds.
+    const arrayRange& range = arrayRangelagrangian_;
+
+    fileHandler().flush();
+    for (label partId = range.start(); partId < range.end(); ++ partId)
+    {
+        const instantList times = dbPtr_().times();
+        forAll(times, timei)
+        {
+            IOobjectList objects
+            (
+                dbPtr_(),
+                times[timei].name(),
+                lagrangianPrefix/getPartName(partId)
+            );
+
+            addToSelection<IOField<label>>(fieldSelection, objects);
+            addToSelection<IOField<scalar>>(fieldSelection, objects);
+            addToSelection<IOField<vector>>(fieldSelection, objects);
+            addToSelection<IOField<sphericalTensor>>(fieldSelection, objects);
+            addToSelection<IOField<symmTensor>>(fieldSelection, objects);
+            addToSelection<IOField<tensor>>(fieldSelection, objects);
+        }
     }
 
     // Restore the enabled selections
@@ -777,11 +867,10 @@ void Foam::vtkPVFoam::updateInfoLagrangianFields()
 
     // Use the db directly since this might be called without a mesh,
     // but the region must get added back in
-    fileName lagrangianPrefix(lagrangian::cloud::prefix);
-    if (meshRegion_ != polyMesh::defaultRegion)
-    {
-        lagrangianPrefix = meshRegion_/lagrangian::cloud::prefix;
-    }
+    const fileName LagrangianPrefix =
+        meshRegion_ == polyMesh::defaultRegion
+      ? fileName(LagrangianMesh::prefix)
+      : meshRegion_/LagrangianMesh::prefix;
 
     // Add the available fields from all clouds and all time directories.
     // Differing sets of fields from multiple clouds get combined into a single
@@ -790,24 +879,27 @@ void Foam::vtkPVFoam::updateInfoLagrangianFields()
     const arrayRange& range = arrayRangeLagrangian_;
 
     fileHandler().flush();
+
+    const instantList times = dbPtr_().times();
+
     for (label partId = range.start(); partId < range.end(); ++ partId)
     {
-        const instantList times = dbPtr_().times();
         forAll(times, timei)
         {
             IOobjectList objects
             (
                 dbPtr_(),
                 times[timei].name(),
-                lagrangianPrefix/getPartName(partId)
+                LagrangianPrefix/getPartName(partId)
             );
 
-            addToSelection<IOField<label>>(fieldSelection, objects);
-            addToSelection<IOField<scalar>>(fieldSelection, objects);
-            addToSelection<IOField<vector>>(fieldSelection, objects);
-            addToSelection<IOField<sphericalTensor>>(fieldSelection, objects);
-            addToSelection<IOField<symmTensor>>(fieldSelection, objects);
-            addToSelection<IOField<tensor>>(fieldSelection, objects);
+            #define ADD_TO_SELECTION(Type, GeoField) \
+                addToSelection<GeoField<Type>>(fieldSelection, objects);
+            ADD_TO_SELECTION(label, LagrangianField);
+            FOR_ALL_FIELD_TYPES(ADD_TO_SELECTION, LagrangianField);
+            ADD_TO_SELECTION(label, LagrangianInternalField);
+            FOR_ALL_FIELD_TYPES(ADD_TO_SELECTION, LagrangianInternalField);
+            #undef ADD_TO_SELECTION
         }
     }
 

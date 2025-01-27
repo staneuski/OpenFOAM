@@ -47,7 +47,8 @@ Foam::dictionary::dictionary
       ? parentDict.name()/name
       : name
     ),
-    parent_(parentDict)
+    parent_(parentDict),
+    filePtr_(nullptr)
 {
     read(is);
 }
@@ -56,7 +57,8 @@ Foam::dictionary::dictionary
 Foam::dictionary::dictionary(Istream& is, const bool keepHeader)
 :
     dictionaryName(is.name()),
-    parent_(dictionary::null)
+    parent_(dictionary::null),
+    filePtr_(nullptr)
 {
     // Reset input mode as this is a "top-level" dictionary
     functionEntries::inputModeEntry::clear();
@@ -122,6 +124,14 @@ bool Foam::dictionary::read(Istream& is, const bool keepHeader)
         return false;
     }
 
+    // Cache the current name and file/stream pointer
+    const fileName name0(name());
+    const Istream* filePtr0 = filePtr_;
+
+    // Set the name and file/stream pointer to the given stream
+    name() = is.name();
+    filePtr_ = &is;
+
     token currToken(is);
     if (currToken != token::BEGIN_BLOCK)
     {
@@ -145,6 +155,10 @@ bool Foam::dictionary::read(Istream& is, const bool keepHeader)
 
         return false;
     }
+
+    // Reset the name and file/stream pointer to the original
+    name() = name0;
+    filePtr_ = filePtr0;
 
     return true;
 }
@@ -429,22 +443,55 @@ Foam::wordList Foam::listAllConfigFiles
 }
 
 
+Foam::string Foam::expandArg
+(
+    const string& arg,
+    dictionary& dict,
+    const label lineNumber
+)
+{
+    // Add a temporary dummy_ entry to set the arg lineNumber in dict
+    dict.set(primitiveEntry("dummy_", token(word("<dummy>"), lineNumber)));
+
+    string expandedArg(arg);
+    stringOps::inplaceExpandEntry(expandedArg, dict, true, false);
+
+    // Remove temporary dummy_ entry
+    dict.remove("dummy_");
+
+    return expandedArg;
+}
+
+
+void Foam::addArgEntry
+(
+    dictionary& dict,
+    const word& keyword,
+    const string& value,
+    const label lineNumber
+)
+{
+    IStringStream entryStream(keyword + ' ' + value + ';');
+    entryStream.lineNumber() = lineNumber;
+    dict.set(entry::New(entryStream).ptr());
+}
+
+
 bool Foam::readConfigFile
 (
     const word& configType,
-    const string& argString,
+    const Tuple2<string, label>& argStringLine,
     dictionary& parentDict,
     const fileName& configFilesPath,
     const word& configFilesDir,
-    const Pair<string>& contextTypeAndValue,
     const word& region
 )
 {
     word funcType;
-    wordReList args;
-    List<Tuple2<word, string>> namedArgs;
+    List<Tuple2<wordRe, label>> args;
+    List<Tuple3<word, string, label>> namedArgs;
 
-    dictArgList(argString, funcType, args, namedArgs);
+    dictArgList(argStringLine, funcType, args, namedArgs);
 
     // Search for the configuration file
     fileName path = findConfigFile
@@ -506,7 +553,14 @@ bool Foam::readConfigFile
     DynamicList<wordAndDictionary> fieldArgs;
     forAll(args, i)
     {
-        fieldArgs.append(wordAndDictionary(args[i], dictionary::null));
+        fieldArgs.append
+        (
+            wordAndDictionary
+            (
+                expandArg(args[i].first(), funcDict, args[i].second()),
+                dictionary::null
+            )
+        );
     }
     forAll(namedArgs, i)
     {
@@ -550,11 +604,18 @@ bool Foam::readConfigFile
         {
             const Pair<word> dAk(dictAndKeyword(namedArgs[i].first()));
             dictionary& subDict(funcDict.scopedDict(dAk.first()));
-            IStringStream entryStream
+            addArgEntry
             (
-                dAk.second() + ' ' + namedArgs[i].second() + ';'
+                subDict,
+                dAk.second(),
+                expandArg
+                (
+                    namedArgs[i].second(),
+                    funcDict,
+                    namedArgs[i].third()
+                ),
+                namedArgs[i].third()
             );
-            subDict.set(entry::New(entryStream).ptr());
         }
     }
 
@@ -567,17 +628,57 @@ bool Foam::readConfigFile
     // Set the name of the entry to that specified by the optional
     // name argument otherwise automatically generate a unique name
     // from the type and arguments
-    word entryName(string::validate<word>(argString));
-    forAll(namedArgs, i)
+    word entryName(funcType);
+    if (args.size() || namedArgs.size())
     {
-        if
-        (
-            namedArgs[i].first() == "funcName"
-         || namedArgs[i].first() == "name"
-        )
+        bool named = false;
+        forAll(namedArgs, i)
         {
-            entryName = namedArgs[i].second();
-            entryName.strip(" \n");
+            if
+            (
+                namedArgs[i].first() == "funcName"
+             || namedArgs[i].first() == "name"
+            )
+            {
+                entryName = expandArg
+                (
+                    namedArgs[i].second(),
+                    funcDict,
+                    namedArgs[i].third()
+                );
+                entryName.strip(" \n");
+                named = true;
+            }
+        }
+
+        if (!named)
+        {
+            entryName += '(';
+            forAll(args, i)
+            {
+                if (i > 0)
+                {
+                    entryName += ',';
+                }
+                entryName += args[i].first();
+            }
+            forAll(namedArgs, i)
+            {
+                if (args.size() || i > 0)
+                {
+                    entryName += ',';
+                }
+                entryName += namedArgs[i].first();
+                entryName += '=';
+                entryName += expandArg
+                (
+                    namedArgs[i].second(),
+                    funcDict,
+                    namedArgs[i].third()
+                );
+            }
+            entryName += ')';
+            string::stripInvalid<word>(entryName);
         }
     }
 
@@ -615,21 +716,21 @@ bool Foam::readConfigFile
         }
 
         FatalIOErrorInFunction(funcDict0)
-            << nl << "In " << configType << " entry:" << nl
-            << "    " << argString.c_str() << nl
-            << nl << "In " << contextTypeAndValue.first().c_str() << ":" << nl
-            << "    " << contextTypeAndValue.second().c_str() << nl;
+            << nl << "in " << configType << " entry:" << nl
+            << argStringLine.first().c_str() << nl
+            << nl << "in dictionary " << parentDict.name().c_str()
+            << " starting at line " << argStringLine.second() << nl;
 
         word funcType;
-        wordReList args;
-        List<Tuple2<word, string>> namedArgs;
-        dictArgList(argString, funcType, args, namedArgs);
+        List<Tuple2<wordRe, label>> args;
+        List<Tuple3<word, string, label>> namedArgs;
+        dictArgList(argStringLine, funcType, args, namedArgs);
 
         string argList;
         forAll(args, i)
         {
-            args[i].strip(" \n");
-            argList += (argList.size() ? ", " : "") + args[i];
+            args[i].first().strip(" \n");
+            argList += (argList.size() ? ", " : "") + args[i].first();
         }
         forAll(namedArgs, i)
         {
@@ -656,13 +757,14 @@ bool Foam::readConfigFile
     // now that the argument entries have been added
     dictionary funcArgsDict;
     funcArgsDict.add(entryName, funcDict);
+
     {
         OStringStream os;
         funcArgsDict.write(os);
         funcArgsDict = dictionary
         (
             funcType,
-            parentDict,
+            funcsDict,
             IStringStream(os.str())()
         );
     }

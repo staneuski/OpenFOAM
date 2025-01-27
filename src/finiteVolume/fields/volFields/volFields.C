@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -53,30 +53,6 @@ defineTemplateTypeNameAndDebug(volVectorField, 0);
 defineTemplateTypeNameAndDebug(volSphericalTensorField, 0);
 defineTemplateTypeNameAndDebug(volSymmTensorField, 0);
 defineTemplateTypeNameAndDebug(volTensorField, 0);
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-template<>
-tmp<VolField<scalar>>
-VolField<scalar>::component
-(
-    const direction
-) const
-{
-    return *this;
-}
-
-
-template<>
-void VolField<scalar>::replace
-(
-    const direction,
-    const VolField<scalar>& gsf
-)
-{
-    *this == gsf;
-}
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

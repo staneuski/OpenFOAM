@@ -55,10 +55,10 @@ SourceFiles
 #include "DLList.H"
 #include "HashSet.H"
 #include "ITstream.H"
-#include "wordReList.H"
 #include "Pair.H"
 #include "className.H"
 #include "fieldTypes.H"
+#include "Tuple3.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -168,6 +168,9 @@ class dictionary
 
         //- Parent dictionary
         const dictionary& parent_;
+
+        //- Current stream/file pointer
+        mutable const Istream* filePtr_;
 
         //- Entries of matching patterns
         DLList<entry*> patternEntries_;
@@ -686,10 +689,6 @@ public:
             //  corresponding sub-dictionary entries
             bool substituteKeyword(const word& keyword);
 
-            //- Substitute the given scoped keyword prepended by '$' with the
-            //  corresponding sub-dictionary entries
-            bool substituteScopedKeyword(const word& keyword);
-
             //- Add a new entry
             //  With the merge option, dictionaries are interwoven and
             //  primitive entries are overwritten
@@ -915,18 +914,18 @@ dictionary operator|(const dictionary& dict1, const dictionary& dict2);
 //- Parse dictionary substitution argument list
 void dictArgList
 (
-    const string& argString,
+    const Tuple2<string, label>& argString,
     word& configName,
-    wordReList& args,
-    List<Tuple2<word, string>>& namedArgs
+    List<Tuple2<wordRe, label>>& args,
+    List<Tuple3<word, string, label>>& namedArgs
 );
 
 //- Parse dictionary substitution argument list
 void dictArgList
 (
-    const string& argString,
-    wordReList& args,
-    List<Tuple2<word, string>>& namedArgs
+    const Tuple2<string, label>& argString,
+    List<Tuple2<wordRe, label>>& args,
+    List<Tuple3<word, string, label>>& namedArgs
 );
 
 //- Extracts dict name and keyword
@@ -981,6 +980,24 @@ fileName findConfigFile
     const word& region = word::null
 );
 
+//- Expand arg within the dict context and return
+string expandArg
+(
+    const string& arg,
+    dictionary& dict,
+    const label lineNumber
+);
+
+//- Add the keyword value pair to dict
+//  setting the given lineNumber for the entry
+void addArgEntry
+(
+    dictionary& dict,
+    const word& keyword,
+    const string& value,
+    const label lineNumber
+);
+
 //- Read the specified configuration file
 //  parsing the optional arguments included in the string
 //  'argString', inserting 'field' or 'fields' entries as required
@@ -1002,11 +1019,10 @@ fileName findConfigFile
 bool readConfigFile
 (
     const word& configType,
-    const string& argString,
+    const Tuple2<string, label>& argString,
     dictionary& parentDict,
     const fileName& configFilesPath,
     const word& configFilesDir,
-    const Pair<string>& contextTypeAndValue,
     const word& region = word::null
 );
 

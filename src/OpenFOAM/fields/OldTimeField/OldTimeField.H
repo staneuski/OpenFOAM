@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2024-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -49,14 +49,6 @@ class OldTimeField;
 
 
 /*---------------------------------------------------------------------------*\
-                        Using OldTimeVoid Declaration
-\*---------------------------------------------------------------------------*/
-
-template<typename T>
-using OldTimeVoid = void;
-
-
-/*---------------------------------------------------------------------------*\
                     Struct OldTimeBaseFieldType Declaration
 \*---------------------------------------------------------------------------*/
 
@@ -73,7 +65,7 @@ template<class FieldType>
 struct OldTimeBaseFieldType
 <
     FieldType,
-    OldTimeVoid<typename FieldType::Base::OldTime>
+    pTraits<typename FieldType::Base::OldTime>
 >
 {
     typedef typename FieldType::Base::OldTime type;
@@ -86,29 +78,115 @@ struct OldTimeBaseFieldType
 
 
 /*---------------------------------------------------------------------------*\
-                          Class OldTimeField Declaration
+                      Class OldTimeField0Type Declaration
+\*---------------------------------------------------------------------------*/
+
+template<class FieldType>
+struct OldTimeField0Type;
+
+template
+<
+    template<class, class, template<class> class> class GeoField,
+    class Type,
+    class GeoMesh,
+    template<class> class PrimitiveField
+>
+struct OldTimeField0Type<GeoField<Type, GeoMesh, PrimitiveField>>
+{
+    typedef GeoField<Type, GeoMesh, PrimitiveField> type;
+};
+
+template<class Type>
+class SubField;
+
+template
+<
+    template<class, class, template<class> class> class GeoField,
+    class Type,
+    class GeoMesh
+>
+struct OldTimeField0Type<GeoField<Type, GeoMesh, SubField>>
+{
+    typedef GeoField<Type, GeoMesh, Field> type;
+};
+
+template<class Type>
+class UniformDimensionedField;
+
+template<class Type>
+struct OldTimeField0Type<UniformDimensionedField<Type>>
+{
+    typedef UniformDimensionedField<Type> type;
+};
+
+
+/*---------------------------------------------------------------------------*\
+                    Class OldTimeOtherFieldType Declaration
+\*---------------------------------------------------------------------------*/
+
+template<class FieldType>
+struct OldTimeOtherFieldType;
+
+template
+<
+    template<class, class, template<class> class> class GeoField,
+    class Type,
+    class GeoMesh,
+    template<class> class PrimitiveField
+>
+struct OldTimeOtherFieldType<GeoField<Type, GeoMesh, PrimitiveField>>
+{
+    template<template<class> class OtherPrimitiveField>
+    using type = GeoField<Type, GeoMesh, OtherPrimitiveField>;
+};
+
+template<class Type>
+class UniformDimensionedField;
+
+template<class Type>
+struct OldTimeOtherFieldType<UniformDimensionedField<Type>>
+{
+    template<template<class> class OtherPrimitiveField>
+    using type = UniformDimensionedField<Type>;
+};
+
+
+/*---------------------------------------------------------------------------*\
+                        Class OldTimeField Declaration
 \*---------------------------------------------------------------------------*/
 
 template<class FieldType>
 class OldTimeField
 {
-public:
+private:
 
-    // Public Typedefs
+    // Private Typedefs
 
         //- The old-time field type
+        typedef typename OldTimeField0Type<FieldType>::type Field0Type;
+
+        //- The field type based on a different primitive field type
+        template<template<class> class OtherPrimitiveField>
+        using OtherFieldType =
+            typename OldTimeOtherFieldType<FieldType>::
+            template type<OtherPrimitiveField>;
+
+        //- The old-time field class
         typedef OldTimeField<FieldType> OldTime;
 
+        //- The old-time field class based on a different primitive field type
+        template<template<class> class OtherPrimitiveField>
+        using OtherOldTime =
+            OldTimeField<OtherFieldType<OtherPrimitiveField>>;
 
-private:
 
     // Private Data
 
         //- Current time index
         mutable label timeIndex_;
 
-        //- The old time field pointer or reference
-        mutable tmp<FieldType> tfield0_;
+        //- The old-time field pointer or reference
+        mutable tmp<Field0Type> tfield0_;
 
 
     // Private Member Functions
@@ -145,18 +223,20 @@ protected:
         //- Read old-time field from file if it is present
         bool readOldTimeIfPresent();
 
-        //- Copy the old times from the given field
+        //- Copy the old-times from the given field
+        template<template<class> class OtherPrimitiveField>
         void copyOldTimes
         (
             const IOobject& io,
-            const OldTimeField<FieldType>& otf
+            const OtherOldTime<OtherPrimitiveField>&
         );
 
-        //- Copy the old times from the given field
+        //- Copy the old-times from the given field
+        template<template<class> class OtherPrimitiveField>
         void copyOldTimes
         (
             const word& newName,
-            const OldTimeField<FieldType>& otf
+            const OtherOldTime<OtherPrimitiveField>&
         );
 
 
@@ -198,10 +278,13 @@ public:
         //- Return whether or not this is an old-time field
         bool isOldTime() const;
 
+        //- Return whether old-time fields have been stored yet
+        bool hasStoredOldTimes() const;
+
         //- Store the old-time fields
         void storeOldTimes() const;
 
-        //- Clear old time fields
+        //- Clear old-time fields
         void clearOldTimes();
 
         //- Set the oldest field pointer to nullObjectPtr. This removes the
@@ -209,20 +292,20 @@ public:
         //  field can be reinstated on the next storeOldTimes.
         void nullOldestTime();
 
-        //- Return the number of old time fields stored
+        //- Return the number of old-time fields stored
         label nOldTimes(const bool includeNull=true) const;
 
-        //- Return the old time field
-        const FieldType& oldTime() const;
+        //- Return the old-time field
+        const Field0Type& oldTime() const;
 
-        //- Return a non-const reference to the old time field
-        FieldType& oldTimeRef();
+        //- Return a non-const reference to the old-time field
+        Field0Type& oldTimeRef();
 
-        //- Return the n-th old time field
-        const FieldType& oldTime(const label n) const;
+        //- Return the n-th old-time field
+        const Field0Type& oldTime(const label n) const;
 
         //- Return a non-const reference to the n-th old time field
-        FieldType& oldTimeRef(const label n);
+        Field0Type& oldTimeRef(const label n);
 
 
     // Member Operators
@@ -243,6 +326,7 @@ public:
     using OldTimeField<FieldType>::copyOldTimes;                               \
     using OldTimeField<FieldType>::timeIndex;                                  \
     using OldTimeField<FieldType>::isOldTime;                                  \
+    using OldTimeField<FieldType>::hasStoredOldTimes;                          \
     using OldTimeField<FieldType>::storeOldTimes;                              \
     using OldTimeField<FieldType>::clearOldTimes;                              \
     using OldTimeField<FieldType>::nullOldestTime;                             \
