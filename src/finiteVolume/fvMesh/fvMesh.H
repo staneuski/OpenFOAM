@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -227,18 +227,15 @@ private:
 
         // Storage management
 
-            //- Clear geometry but not the old-time cell volumes
-            void clearGeomNotOldVol();
+            //- Clear FV geometry but not the old-time cell volumes
+            void clearFvGeomNotOldVol();
+
+            //- Clear FV geometry
+            void clearFvGeom();
 
             //- Clear geometry like clearGeomNotOldVol but recreate any
             //  geometric demand-driven data that was set
             void updateGeomNotOldVol();
-
-            //- Clear geometry
-            void clearGeom();
-
-            //- Clear addressing
-            void clearAddressing(const bool isMeshUpdate = false);
 
             //- Store old times fields for all fields of a given type and class
             template<class Type, template<class> class GeoField>
@@ -322,16 +319,26 @@ public:
     // Static data
 
         //- Set of names of registered geometric fields
-        //  V, Sf, magSf, C, Cf
+        //  Vc, Vc0, Vc00, Sf, magSf, C, Cf, meshPhi, meshPhi_0
         const static HashSet<word> geometryFields;
+
+        //- Set of names of registered current-time geometric fields
+        //  Vc, Sf, magSf, C, Cf
+        const static HashSet<word> curGeometryFields;
 
 
     // Constructors
 
-        //- Construct from IOobject. Optionally prevent post-construction, so
-        //  that postConstruct may be called manually for finer control of
-        //  construction of mesh changes and the level of stitching.
-        explicit fvMesh(const IOobject& io, const bool doPost = true);
+        //- Construct from IOobject.
+        //  Optionally prevent post-construction, so that postConstruct may be
+        //  called manually for finer control of construction of mesh changes
+        //  and the level of stitching.
+        //  Optionally prevent zone generation
+        explicit fvMesh
+        (
+            const IOobject& io,
+            const bool doPost = true
+        );
 
         //- Construct from cellShapes with boundary.
         fvMesh
@@ -389,6 +396,7 @@ public:
             void postConstruct
             (
                 const bool changers,
+                const bool zones,
                 const stitchType stitch
             );
 
@@ -542,12 +550,28 @@ public:
             //- Return the list of fields of type GeoField
             //  i.e. fields that are not geometry
             template<class GeoField>
-            UPtrList<GeoField> fields(const bool strict = false) const;
+            UPtrList<GeoField> fields
+            (
+                bool strict = false,
+                const HashSet<word>& geometryFields = fvMesh::geometryFields
+            ) const;
 
             //- Return the list of current fields of type GeoField
             //  i.e. fields that are not old-times or geometry
             template<class GeoField>
-            UPtrList<GeoField> curFields() const;
+            UPtrList<GeoField> curFields
+            (
+                const bool strict = false,
+                const HashSet<word>& geometryFields = fvMesh::geometryFields
+            ) const;
+
+            //- Return the list of fields and old-time-geometry of type GeoField
+            //  i.e. fields that are not current-time geometry
+            template<class GeoField>
+            UPtrList<GeoField> fieldsAndOldTimeGeometry
+            (
+                const bool strict = false
+            ) const;
 
             //- Return a labelType of valid component indicators
             //  1 : valid (solved)
@@ -580,8 +604,20 @@ public:
             //- Move the mesh
             bool move();
 
+            //- Print a list of all the currently allocated mesh data
+            void printAllocated() const;
+
+            //- Clear geometry
+            void clearGeom();
+
+            //- Clear addressing
+            void clearAddressing(const bool isMeshUpdate = false);
+
             //- Clear all geometry and addressing
             void clearOut();
+
+            //- Prepare for a mesh change
+            void preChange();
 
             //- Update mesh corresponding to the given map
             virtual void topoChange(const polyTopoChangeMap& map);

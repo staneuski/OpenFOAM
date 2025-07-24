@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -198,6 +198,13 @@ int main(int argc, char *argv[])
             false
         );
 
+        meshTarget.postConstruct
+        (
+            false,
+            false,
+            fvMesh::stitchType::nonGeometric
+        );
+
         Info<< "Target mesh size: " << meshTarget.nCells() << endl;
 
         for (int proci=0; proci<nProcs; proci++)
@@ -222,6 +229,13 @@ int main(int argc, char *argv[])
                     runTimeSource
                 ),
                 false
+            );
+
+            meshSource.postConstruct
+            (
+                false,
+                false,
+                fvMesh::stitchType::nonGeometric
             );
 
             Info<< "mesh size: " << meshSource.nCells() << endl;
@@ -273,6 +287,13 @@ int main(int argc, char *argv[])
             false
         );
 
+        meshSource.postConstruct
+        (
+            false,
+            false,
+            fvMesh::stitchType::nonGeometric
+        );
+
         Info<< "Source mesh size: " << meshSource.nCells() << endl;
 
         for (int proci=0; proci<nProcs; proci++)
@@ -295,6 +316,13 @@ int main(int argc, char *argv[])
                     runTimeTarget
                 ),
                 false
+            );
+
+            meshTarget.postConstruct
+            (
+                false,
+                false,
+                fvMesh::stitchType::nonGeometric
             );
 
             Info<< "mesh size: " << meshTarget.nCells() << endl;
@@ -366,6 +394,13 @@ int main(int argc, char *argv[])
                 false
             );
 
+            meshSource.postConstruct
+            (
+                false,
+                false,
+                fvMesh::stitchType::nonGeometric
+            );
+
             Info<< "mesh size: " << meshSource.nCells() << endl;
 
             boundBox bbSource(meshSource.bounds());
@@ -400,6 +435,13 @@ int main(int argc, char *argv[])
                             runTimeTarget
                         ),
                         false
+                    );
+
+                    meshTarget.postConstruct
+                    (
+                        false,
+                        false,
+                        fvMesh::stitchType::nonGeometric
                     );
 
                     Info<< "mesh size: " << meshTarget.nCells() << endl;
@@ -451,6 +493,13 @@ int main(int argc, char *argv[])
             false
         );
 
+        meshSource.postConstruct
+        (
+            false,
+            false,
+            fvMesh::stitchType::nonGeometric
+        );
+
         fvMesh meshTarget
         (
             IOobject
@@ -460,6 +509,13 @@ int main(int argc, char *argv[])
                 runTimeTarget
             ),
             false
+        );
+
+        meshTarget.postConstruct
+        (
+            false,
+            false,
+            fvMesh::stitchType::nonGeometric
         );
 
         Info<< "Source mesh size: " << meshSource.nCells() << tab

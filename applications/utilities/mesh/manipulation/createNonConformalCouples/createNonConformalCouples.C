@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -31,8 +31,8 @@ Usage
     \b createNonConformalCouples \<patch1\> \<patch2\>
 
     Options:
-      - \par -overwrite \n
-        Replace the old mesh with the new one, rather than writing the new one
+      - \par -noOverwrite \n
+        Do not replace the old mesh with the new one, writing the new one
         into a separate time directory
 
       - \par -fields \n
@@ -55,7 +55,6 @@ Note
 \*---------------------------------------------------------------------------*/
 
 #include "argList.H"
-#include "fvMeshStitchersStationary.H"
 #include "fvMeshTools.H"
 #include "hashedWordList.H"
 #include "IOobjectList.H"
@@ -66,6 +65,7 @@ Note
 #include "nonConformalProcessorCyclicPolyPatch.H"
 #include "polyMesh.H"
 #include "processorPolyPatch.H"
+#include "stationary_fvMeshStitcher.H"
 #include "systemDict.H"
 #include "Time.H"
 
@@ -315,7 +315,7 @@ void evaluateNonConformalProcessorCyclics(const fvMesh& mesh)
 
 int main(int argc, char *argv[])
 {
-    #include "addOverwriteOption.H"
+    #include "addNoOverwriteOption.H"
     #include "addMeshOption.H"
     #include "addRegionOption.H"
     #include "addDictOption.H"
@@ -433,7 +433,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    const bool overwrite = args.optionFound("overwrite");
+    #include "setNoOverwrite.H"
 
     const word oldInstance = regionMeshes[0].pointsInstance();
 
@@ -583,7 +583,7 @@ int main(int argc, char *argv[])
             const label regioni =
                 regionNames[couple.regionNames[!owner]];
 
-            dictionary patchDict
+            dictionary patchDict = dictionary::entries
             (
                 "type", couple.ncPatchType,
                 "nFaces", 0,

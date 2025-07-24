@@ -6,8 +6,8 @@ cd ${0%/*} || exit 1    # Run from this directory
 
 runApplication blockMesh
 
-runApplication createNonConformalCouples -overwrite
+runApplication createNonConformalCouples
 
-runApplication $(getApplication)
+runApplication foamRun
 
 #------------------------------------------------------------------------------

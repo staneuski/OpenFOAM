@@ -231,6 +231,8 @@ dictionaryListEntry = $(dictionary)/dictionaryListEntry
 $(dictionaryListEntry)/dictionaryListEntry.C
 $(dictionaryListEntry)/dictionaryListEntryIO.C
 
+$(dictionary)/mergeDictionaries/mergeDictionaries.C
+
 functionEntries = $(dictionary)/functionEntries
 $(functionEntries)/negEntry/negEntry.C
 $(functionEntries)/calcIncludeEntry/calcIncludeEntry.C
@@ -495,6 +497,15 @@ meshes/zones/cellZones/cellZoneList.C
 meshes/zones/faceZones/faceZone.C
 meshes/zones/faceZones/faceZoneList.C
 
+meshes/zoneGeneration/zoneSet/zoneSet.C
+meshes/zoneGeneration/zoneGenerator/zoneGenerator.C
+meshes/zoneGeneration/lookup/lookup.C
+
+meshes/zoneGeneration/zoneGeneratorList/zoneGeneratorList.C
+meshes/zoneGeneration/zonesGenerator/zonesGenerator.C
+
+meshes/zoneGeneration/generatedZoneSet/generatedZoneSet.C
+
 polyMesh = meshes/polyMesh
 
 polyPatches = $(polyMesh)/polyPatches
@@ -555,7 +566,6 @@ $(primitiveMesh)/primitiveMeshEdgeCells.C
 $(primitiveMesh)/primitiveMeshEdgeFaces.C
 $(primitiveMesh)/primitiveMeshEdges.C
 $(primitiveMesh)/primitiveMeshFaceCentresAndAreas.C
-$(primitiveMesh)/primitiveMeshFindCell.C
 $(primitiveMesh)/primitiveMeshPointCells.C
 $(primitiveMesh)/primitiveMeshPointFaces.C
 $(primitiveMesh)/primitiveMeshPointPoints.C
@@ -719,6 +729,7 @@ $(interpolationWeights)/linearInterpolationWeights/linearInterpolationWeights.C
 $(interpolationWeights)/stepInterpolationWeights/stepInterpolationWeights.C
 $(interpolationWeights)/splineInterpolationWeights/splineInterpolationWeights.C
 
+algorithms/pointInCell/pointInCell.C
 algorithms/indexedOctree/indexedOctreeName.C
 algorithms/indexedOctree/treeDataCell.C
 algorithms/indexedOctree/volumeType.C
@@ -741,5 +752,8 @@ distributions/standardNormal/standardNormal.C
 distributions/tabulatedCumulative/tabulatedCumulative.C
 distributions/tabulatedDensity/tabulatedDensity.C
 distributions/uniform/uniform.C
+
+geometry/splines/BSpline/BSpline.C
+geometry/splines/CatmullRomSpline/CatmullRomSpline.C
 
 LIB = $(FOAM_LIBBIN)/libOpenFOAM

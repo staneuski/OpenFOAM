@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -66,61 +66,29 @@ Foam::saturationModels::function1Temperature::~function1Temperature()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::scalarField>
 Foam::saturationModels::function1Temperature::Tsat
 (
-    const volScalarField::Internal& p
+    const scalarField& p
 ) const
 {
-    tmp<volScalarField::Internal> tTsat
-    (
-        volScalarField::Internal::New
-        (
-            "Tsat",
-            p.mesh(),
-            dimensionedScalar(dimTemperature, 0)
-        )
-    );
-
-    volScalarField::Internal& Tsat = tTsat.ref();
-
-    Tsat.primitiveFieldRef() = function_->value(p.primitiveField());
-
-    return tTsat;
+    return function_->value(p);
 }
 
 
-Foam::tmp<Foam::volScalarField>
-Foam::saturationModels::function1Temperature::Tsat
+Foam::tmp<Foam::scalarField>
+Foam::saturationModels::function1Temperature::TsatPrime
 (
-    const volScalarField& p
+    const scalarField& p
 ) const
 {
-    tmp<volScalarField> tTsat
-    (
-        volScalarField::New
+    const scalar dp(rootSmall*gAverage(p));
+
+    return
         (
-            "Tsat",
-            p.mesh(),
-            dimensionedScalar(dimTemperature, 0)
-        )
-    );
-
-    volScalarField& Tsat = tTsat.ref();
-
-    Tsat.primitiveFieldRef() = function_->value(p.primitiveField());
-
-    volScalarField::Boundary& TsatBf = Tsat.boundaryFieldRef();
-
-    forAll(Tsat.boundaryField(), patchi)
-    {
-        scalarField& Tsatp = TsatBf[patchi];
-        const scalarField& pp = p.boundaryField()[patchi];
-
-        Tsatp = function_->value(pp);
-    }
-
-    return tTsat;
+            function_->value(p + dp/2)
+          - function_->value(p - dp/2)
+        )/dp;
 }
 
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -23,6 +23,7 @@ License
 
 \*---------------------------------------------------------------------------*/
 
+#include "saturationModels.H"
 #include "constantTemperature.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -39,6 +40,8 @@ namespace saturationModels
         constantTemperature,
         dictionary
     );
+
+    static const dimensionedScalar zeroTbyP(dimTemperature/dimPressure, 0);
 }
 }
 
@@ -49,7 +52,15 @@ template<class FieldType>
 Foam::tmp<FieldType>
 Foam::saturationModels::constantTemperature::Tsat(const FieldType& p) const
 {
-    return FieldType::New("Tsat", p.mesh(), Tsat_);
+    return evaluate(p, "Tsat", Tsat_);
+}
+
+
+template<class FieldType>
+Foam::tmp<FieldType>
+Foam::saturationModels::constantTemperature::TsatPrime(const FieldType& p) const
+{
+    return evaluate(p, "TsatPrime", zeroTbyP);
 }
 
 
@@ -77,17 +88,19 @@ Foam::saturationModels::constantTemperature::constantTemperature
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::saturationModels::constantTemperature::
-~constantTemperature()
+Foam::saturationModels::constantTemperature::~constantTemperature()
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-IMPLEMENT_TSAT(constantTemperature, volScalarField::Internal);
+IMPLEMENT_TSAT(saturationModels::constantTemperature, scalarField);
 
 
-IMPLEMENT_TSAT(constantTemperature, volScalarField);
+IMPLEMENT_TSAT(saturationModels::constantTemperature, volScalarField::Internal);
+
+
+IMPLEMENT_TSAT(saturationModels::constantTemperature, volScalarField);
 
 
 // ************************************************************************* //

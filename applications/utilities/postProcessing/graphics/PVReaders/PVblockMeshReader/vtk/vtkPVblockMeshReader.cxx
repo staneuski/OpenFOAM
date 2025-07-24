@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2020 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -22,6 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 \*---------------------------------------------------------------------------*/
+
 #include "vtkPVblockMeshReader.h"
 
 #include "pqApplicationCore.h"
@@ -45,6 +46,35 @@ License
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 vtkStandardNewMacro(vtkPVblockMeshReader);
+
+
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+
+void vtkPVblockMeshReader::updatePointNumbersView(const bool show)
+{
+    if (!foamData_) return;
+
+    pqApplicationCore* appCore = pqApplicationCore::instance();
+    if (!appCore) return;
+
+    // Server manager model for querying items in the server manager
+    pqServerManagerModel* smModel = appCore->getServerManagerModel();
+    if (!smModel) return;
+
+    // Get all the pqRenderView instances
+    QList<pqRenderView*> renderViews = smModel->findItems<pqRenderView*>();
+
+    for (int viewI=0; viewI<renderViews.size(); ++viewI)
+    {
+        foamData_->renderPointNumbers
+        (
+            renderViews[viewI]->getRenderViewProxy()->GetRenderer(),
+            show
+        );
+    }
+
+    // Use refresh here?
+}
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -125,11 +155,6 @@ int vtkPVblockMeshReader::RequestInformation
 {
     vtkDebugMacro(<<"RequestInformation");
 
-    if (Foam::vtkPVblockMesh::debug)
-    {
-        cout<<"REQUEST_INFORMATION\n";
-    }
-
     if (!FileName)
     {
         vtkErrorMacro("FileName has to be specified!");
@@ -140,7 +165,7 @@ int vtkPVblockMeshReader::RequestInformation
 
     if (Foam::vtkPVblockMesh::debug)
     {
-        cout<<"RequestInformation with " << nInfo << " item(s)\n";
+        cout<< "\nRequestInformation with " << nInfo << " item(s)\n";
         for (int infoI = 0; infoI < nInfo; ++infoI)
         {
             outputVector->GetInformationObject(infoI)->Print(cout);
@@ -175,7 +200,6 @@ int vtkPVblockMeshReader::RequestData
         return 0;
     }
 
-    // Catch previous error
     if (!foamData_)
     {
         vtkErrorMacro("Reader failed - perhaps no mesh?");
@@ -186,7 +210,7 @@ int vtkPVblockMeshReader::RequestData
 
     if (Foam::vtkPVblockMesh::debug)
     {
-        cout<<"RequestData with " << nInfo << " item(s)\n";
+        cout<< "\nRequestData with " << nInfo << " item(s)\n";
         for (int infoI = 0; infoI < nInfo; ++infoI)
         {
             outputVector->GetInformationObject(infoI)->Print(cout);
@@ -203,12 +227,12 @@ int vtkPVblockMeshReader::RequestData
 
     if (Foam::vtkPVblockMesh::debug)
     {
-        cout<< "update output with "
+        cout<< "Update output with "
             << output->GetNumberOfBlocks() << " blocks\n";
     }
 
-
     foamData_->Update(output);
+
     updatePointNumbersView(ShowPointNumbers);
 
     // Do any cleanup on the OpenFOAM side
@@ -220,15 +244,12 @@ int vtkPVblockMeshReader::RequestData
 
 void vtkPVblockMeshReader::SetRefresh()
 {
-    // Delete the current blockMesh to force re-read and update
-    if (foamData_)
-    {
-        updatePointNumbersView(false);
-        delete foamData_;
-        foamData_ = 0;
-    }
-
     Modified();
+
+    pqApplicationCore* appCore = pqApplicationCore::instance();
+    if (!appCore) return;
+
+    appCore->render();
 }
 
 
@@ -237,41 +258,12 @@ void vtkPVblockMeshReader::SetShowPointNumbers(const int val)
     if (ShowPointNumbers != val)
     {
         ShowPointNumbers = val;
+        if (foamData_)
+        {
+            foamData_->updateInfo();
+        }
         updatePointNumbersView(ShowPointNumbers);
     }
-}
-
-
-void vtkPVblockMeshReader::updatePointNumbersView(const bool show)
-{
-    pqApplicationCore* appCore = pqApplicationCore::instance();
-
-    // Need to check this, since our destructor calls this
-    if (!appCore)
-    {
-        return;
-    }
-
-    // Server manager model for querying items in the server manager
-    pqServerManagerModel* smModel = appCore->getServerManagerModel();
-    if (!smModel || !foamData_)
-    {
-        return;
-    }
-
-
-    // Get all the pqRenderView instances
-    QList<pqRenderView*> renderViews = smModel->findItems<pqRenderView*>();
-    for (int viewI=0; viewI<renderViews.size(); ++viewI)
-    {
-        foamData_->renderPointNumbers
-        (
-            renderViews[viewI]->getRenderViewProxy()->GetRenderer(),
-            show
-        );
-    }
-
-    // Use refresh here?
 }
 
 
@@ -279,7 +271,8 @@ void vtkPVblockMeshReader::PrintSelf(ostream& os, vtkIndent indent)
 {
     vtkDebugMacro(<<"PrintSelf");
 
-    this->Superclass::PrintSelf(os,indent);
+    this->Superclass::PrintSelf(os, indent);
+
     os  << indent << "File name: "
         << (this->FileName ? this->FileName : "(none)") << "\n";
 

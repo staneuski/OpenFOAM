@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -52,8 +52,8 @@ License
 #include "OFstream.H"
 #include "geometric.H"
 #include "randomGenerator.H"
-#include "searchableSurfaces.H"
-#include "treeBoundBox.H"
+#include "searchableSurfaceList.H"
+#include "meshSearch.H"
 #include "fvMeshTools.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -61,56 +61,33 @@ License
 namespace Foam
 {
     defineTypeNameAndDebug(meshRefinement, 0);
-
-    template<>
-    const char* Foam::NamedEnum
-    <
-        Foam::meshRefinement::IOdebugType,
-        5
-    >::names[] =
-    {
-        "mesh",
-        "intersections",
-        "featureSeeds",
-        "attraction",
-        "layerInfo"
-    };
-
-    template<>
-    const char* Foam::NamedEnum
-    <
-        Foam::meshRefinement::IOoutputType,
-        1
-    >::names[] =
-    {
-        "layerInfo"
-    };
-
-    template<>
-    const char* Foam::NamedEnum
-    <
-        Foam::meshRefinement::IOwriteType,
-        5
-    >::names[] =
-    {
-        "mesh",
-        "noRefinement",
-        "scalarLevels",
-        "layerSets",
-        "layerFields"
-    };
-
 }
 
 const Foam::NamedEnum<Foam::meshRefinement::IOdebugType, 5>
-Foam::meshRefinement::IOdebugTypeNames;
+Foam::meshRefinement::IOdebugTypeNames
+{
+    "mesh",
+    "intersections",
+    "featureSeeds",
+    "attraction",
+    "layerInfo"
+};
 
 const Foam::NamedEnum<Foam::meshRefinement::IOoutputType, 1>
-Foam::meshRefinement::IOoutputTypeNames;
+Foam::meshRefinement::IOoutputTypeNames
+{
+    "layerInfo"
+};
 
 const Foam::NamedEnum<Foam::meshRefinement::IOwriteType, 5>
-Foam::meshRefinement::IOwriteTypeNames;
-
+Foam::meshRefinement::IOwriteTypeNames
+{
+    "mesh",
+    "noRefinement",
+    "scalarLevels",
+    "layerSets",
+    "layerFields"
+};
 
 Foam::meshRefinement::writeType Foam::meshRefinement::writeLevel_;
 
@@ -2054,8 +2031,10 @@ Foam::label Foam::meshRefinement::findRegion
     const point& location
 )
 {
+    const meshSearch& searchEngine = meshSearch::New(mesh);
+
     label regioni = -1;
-    label celli = mesh.findCell(location);
+    label celli = searchEngine.findCell(location);
     if (celli != -1)
     {
         regioni = cellRegion[celli];
@@ -2065,7 +2044,7 @@ Foam::label Foam::meshRefinement::findRegion
     if (regioni == -1)
     {
         // See if we can perturb a bit
-        celli = mesh.findCell(location + perturbVec);
+        celli = searchEngine.findCell(location + perturbVec);
         if (celli != -1)
         {
             regioni = cellRegion[celli];
@@ -2278,8 +2257,8 @@ void Foam::meshRefinement::distribute(const polyDistributionMap& map)
         bb = treeBoundBox(mesh_.points()).extend(1e-4);
 
         // Distribute all geometry (so refinementSurfaces and refinementRegions)
-        searchableSurfaces& geometry =
-            const_cast<searchableSurfaces&>(surfaces_.geometry());
+        searchableSurfaceList& geometry =
+            const_cast<searchableSurfaceList&>(surfaces_.geometry());
 
         forAll(geometry, i)
         {
@@ -2442,8 +2421,8 @@ bool Foam::meshRefinement::write() const
     // been changed) get written as well.
     // Note: should ideally have some 'modified' flag to say whether it
     // has been changed or not.
-    searchableSurfaces& geometry =
-        const_cast<searchableSurfaces&>(surfaces_.geometry());
+    searchableSurfaceList& geometry =
+        const_cast<searchableSurfaceList&>(surfaces_.geometry());
 
     forAll(geometry, i)
     {

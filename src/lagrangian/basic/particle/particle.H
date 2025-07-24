@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -55,6 +55,8 @@ class particle;
 
 class polyPatch;
 
+class meshSearch;
+
 class cyclicPolyPatch;
 class processorPolyPatch;
 class symmetryPlanePolyPatch;
@@ -82,7 +84,7 @@ class particle
 :
     public IDLList<particle>::link
 {
-    // Private member data
+    // Private Static Member Data
 
         //- Size in bytes of the position data
         static const std::size_t sizeofPosition_;
@@ -188,6 +190,18 @@ private:
         label origId_;
 
 
+    // Private Member Functions
+
+        //- Locate the particle at the given position. Returns whether or not a
+        //  boundary was hit. The cell index must be valid.
+        bool locate
+        (
+            const polyMesh& mesh,
+            const vector& position,
+            label celli
+        );
+
+
 public:
 
     // Static Data Members
@@ -204,7 +218,10 @@ public:
         );
 
         //- Cumulative particle counter - used to provide unique ID
-        static label particleCount_;
+        static label particleCount;
+
+        //- Particles are not instantaneous by default
+        static const bool instantaneous = false;
 
 
     // Constructors
@@ -224,7 +241,7 @@ public:
         //  required topology
         particle
         (
-            const polyMesh& mesh,
+            const meshSearch& searchEngine,
             const vector& position,
             const label celli,
             label& nLocateBoundaryHits
@@ -330,10 +347,13 @@ public:
             //  for a new track
             inline void reset(const scalar stepFraction);
 
-            //- Locate the particle at the given position
+            //- Locate the particle at the given position. Returns whether or
+            //  not a boundary was hit. The cell index may be invalid, in which
+            //  case a tree search is performed to find the cell containing the
+            //  position.
             bool locate
             (
-                const polyMesh& mesh,
+                const meshSearch& searchEngine,
                 const vector& position,
                 label celli
             );

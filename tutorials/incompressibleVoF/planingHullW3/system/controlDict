@@ -14,8 +14,6 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     foamRun;
-
 solver          incompressibleVoF;
 
 startFrom       latestTime;
@@ -51,5 +49,10 @@ adjustTimeStep  yes;
 maxCo           5;
 maxAlphaCo      5;
 maxDeltaT       0.002;
+
+DebugSwitches
+{
+    MULES           1;
+}
 
 // ************************************************************************* //

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,11 +35,10 @@ License
 
 void Foam::solvers::multiphaseEuler::compositionPredictor()
 {
-    autoPtr<phaseSystem::specieTransferTable>
-    specieTransferPtr(fluid.specieTransfer());
-
-    phaseSystem::specieTransferTable&
-    specieTransfer(specieTransferPtr());
+    autoPtr<HashPtrTable<fvScalarMatrix>> popBalSpecieTransferPtr =
+        populationBalanceSystem_.specieTransfer();
+    HashPtrTable<fvScalarMatrix>& popBalSpecieTransfer =
+        popBalSpecieTransferPtr();
 
     fluid_.correctReactions();
 
@@ -59,7 +58,7 @@ void Foam::solvers::multiphaseEuler::compositionPredictor()
                 (
                     phase.YiEqn(Y[i])
                  ==
-                   *specieTransfer[Y[i].name()]
+                    *popBalSpecieTransfer[Y[i].name()]
                   + fvModels().source(alpha, rho, Y[i])
                 );
 
@@ -84,14 +83,19 @@ void Foam::solvers::multiphaseEuler::compositionPredictor()
 
 void Foam::solvers::multiphaseEuler::energyPredictor()
 {
-    autoPtr<phaseSystem::heatTransferTable>
-        heatTransferPtr(fluid.heatTransfer());
+    autoPtr<HashPtrTable<fvScalarMatrix>> heatTransferPtr =
+        heatTransferSystem_.heatTransfer();
+    HashPtrTable<fvScalarMatrix>& heatTransfer =
+        heatTransferPtr();
 
-    phaseSystem::heatTransferTable& heatTransfer = heatTransferPtr();
+    autoPtr<HashPtrTable<fvScalarMatrix>> popBalHeatTransferPtr =
+        populationBalanceSystem_.heatTransfer();
+    HashPtrTable<fvScalarMatrix>& popBalHeatTransfer =
+        popBalHeatTransferPtr();
 
-    forAll(fluid.anisothermalPhases(), anisothermalPhasei)
+    forAll(fluid.thermalPhases(), thermalPhasei)
     {
-        phaseModel& phase = fluid_.anisothermalPhases()[anisothermalPhasei];
+        phaseModel& phase = fluid_.thermalPhases()[thermalPhasei];
 
         const volScalarField& alpha = phase;
         const volScalarField& rho = phase.rho();
@@ -100,7 +104,8 @@ void Foam::solvers::multiphaseEuler::energyPredictor()
         (
             phase.heEqn()
          ==
-           *heatTransfer[phase.name()]
+            *heatTransfer[phase.name()]
+          + *popBalHeatTransfer[phase.name()]
           + fvModels().source(alpha, rho, phase.thermo().he())
         );
 
@@ -111,7 +116,7 @@ void Foam::solvers::multiphaseEuler::energyPredictor()
     }
 
     fluid_.correctThermo();
-    fluid_.correctContinuityError();
+    fluid_.correctContinuityError(populationBalanceSystem_.dmdts());
 }
 
 
@@ -119,25 +124,21 @@ void Foam::solvers::multiphaseEuler::energyPredictor()
 
 void Foam::solvers::multiphaseEuler::thermophysicalPredictor()
 {
-    if (pimple.thermophysics())
+    for (int Ecorr=0; Ecorr<nEnergyCorrectors; Ecorr++)
     {
-        for (int Ecorr=0; Ecorr<nEnergyCorrectors; Ecorr++)
+        fluid_.predictThermophysicalTransport();
+        compositionPredictor();
+        energyPredictor();
+
+        forAll(fluid.thermalPhases(), thermalPhasei)
         {
-            fluid_.predictThermophysicalTransport();
-            compositionPredictor();
-            energyPredictor();
+            const phaseModel& phase = fluid.thermalPhases()[thermalPhasei];
 
-            forAll(fluid.anisothermalPhases(), anisothermalPhasei)
-            {
-                const phaseModel& phase =
-                    fluid.anisothermalPhases()[anisothermalPhasei];
-
-                Info<< phase.name() << " min/max T "
-                    << min(phase.thermo().T()).value()
-                    << " - "
-                    << max(phase.thermo().T()).value()
-                    << endl;
-            }
+            Info<< phase.name() << " min/max T "
+                << min(phase.thermo().T()).value()
+                << " - "
+                << max(phase.thermo().T()).value()
+                << endl;
         }
     }
 }

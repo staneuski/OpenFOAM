@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -152,8 +152,7 @@ protected:
         virtual tmp<surfaceScalarField> alphaPhi
         (
             const surfaceScalarField& phi,
-            const volScalarField& alpha,
-            const dictionary& alphaControls
+            const volScalarField& alpha
         );
 
         //- Adjust the rDeltaT in the vicinity of the interface
@@ -163,8 +162,7 @@ protected:
         virtual void alphaSuSp
         (
             tmp<volScalarField::Internal>& Su,
-            tmp<volScalarField::Internal>& Sp,
-            const dictionary& alphaControls
+            tmp<volScalarField::Internal>& Sp
         );
 
         //- Correct the interface properties following mesh-change
@@ -210,6 +208,12 @@ public:
         //- Called at the start of the PIMPLE loop
         virtual void prePredictor();
 
+        //- Predict the momentum transport
+        virtual void momentumTransportPredictor();
+
+        //- Predict thermophysical transport
+        virtual void thermophysicalTransportPredictor();
+
         //- Construct and solve the energy equation,
         //  convert to temperature
         //  and update thermophysical and transport properties
@@ -218,8 +222,11 @@ public:
         //- Construct and solve the pressure equation in the PISO loop
         virtual void pressureCorrector();
 
-        //- Correct the momentum and thermophysical transport modelling
-        virtual void postCorrector();
+        //- Correct the momentum transport
+        virtual void momentumTransportCorrector();
+
+        //- Correct the thermophysical transport
+        virtual void thermophysicalTransportCorrector();
 
 
     // Member Operators

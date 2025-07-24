@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -31,6 +31,7 @@ License
 #include "slicedSurfaceFields.H"
 #include "SubField.H"
 #include "demandDrivenData.H"
+#include "zonesGenerator.H"
 #include "fvMeshLduAddressing.H"
 #include "fvMeshTopoChanger.H"
 #include "fvMeshDistributor.H"
@@ -68,17 +69,27 @@ const Foam::HashSet<Foam::word> Foam::fvMesh::geometryFields
     "magSf",
     "Cc",
     "Cf",
-    "meshPhi"
+    "meshPhi",
+    "meshPhi_0"
+};
+
+const Foam::HashSet<Foam::word> Foam::fvMesh::curGeometryFields
+{
+    "Vc",
+    "Sf",
+    "magSf",
+    "Cc",
+    "Cf"
 };
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-void Foam::fvMesh::clearGeomNotOldVol()
+void Foam::fvMesh::clearFvGeomNotOldVol()
 {
     if (debug)
     {
-        Pout<< FUNCTION_NAME << "clearGeomNotOldVol" << endl;
+        Pout<< FUNCTION_NAME << "clearFvGeomNotOldVol" << endl;
     }
 
     meshObjects::clearUpto
@@ -107,6 +118,21 @@ void Foam::fvMesh::clearGeomNotOldVol()
 }
 
 
+void Foam::fvMesh::clearFvGeom()
+{
+    if (debug)
+    {
+        Pout<< FUNCTION_NAME << "clearFvGeom" << endl;
+    }
+
+    clearFvGeomNotOldVol();
+
+    deleteDemandDrivenData(phiPtr_);
+    deleteDemandDrivenData(V0Ptr_);
+    deleteDemandDrivenData(V00Ptr_);
+}
+
+
 void Foam::fvMesh::updateGeomNotOldVol()
 {
     bool haveV = (VPtr_ != nullptr);
@@ -115,7 +141,7 @@ void Foam::fvMesh::updateGeomNotOldVol()
     bool haveCP = (CSlicePtr_ != nullptr || CPtr_ != nullptr);
     bool haveCf = (CfSlicePtr_ != nullptr || CfPtr_ != nullptr);
 
-    clearGeomNotOldVol();
+    clearFvGeomNotOldVol();
 
     // Now recreate the fields
     if (haveV)
@@ -141,6 +167,88 @@ void Foam::fvMesh::updateGeomNotOldVol()
 }
 
 
+void Foam::fvMesh::storeOldTimeFields()
+{
+    storeOldTimeFields<PointField>();
+    storeOldTimeFields<VolField>();
+    storeOldTimeFields<SurfaceField>();
+}
+
+
+void Foam::fvMesh::nullOldestTimeFields()
+{
+    nullOldestTimeFields<PointField>();
+    nullOldestTimeFields<VolField>();
+    nullOldestTimeFields<SurfaceField>();
+}
+
+
+void Foam::fvMesh::printAllocated() const
+{
+    polyMesh::printAllocated();
+
+    Pout<< "fvMesh allocated :" << endl;
+
+    if (lduPtr_)
+    {
+        Pout<< "    Ldu Addressing" << endl;
+    }
+
+    if (polyFacesBfPtr_)
+    {
+        Pout<< "    Poly-faces boundary field" << endl;
+    }
+
+    if (polyBFacePatchesPtr_)
+    {
+        Pout<< "    Poly-boundary-face to fv-patch and fv-patch-face map"
+            << endl;
+    }
+
+    if (ownerBfPtr_)
+    {
+        Pout<< "    Owner boundary field" << endl;
+    }
+
+    if (V0Ptr_)
+    {
+        Pout<< "    Old-time cell volumes field" << endl;
+    }
+
+    if (V00Ptr_)
+    {
+        Pout<< "    Old-old-time cell volumes field" << endl;
+    }
+
+    if (SfPtr_)
+    {
+        Pout<< "    Non-sliced face areas field" << endl;
+    }
+
+    if (magSfPtr_)
+    {
+        Pout<< "    Non-sliced face area magnitudes field" << endl;
+    }
+
+    if (CPtr_)
+    {
+        Pout<< "    Non-sliced cell centres field" << endl;
+    }
+
+    if (CfPtr_)
+    {
+        Pout<< "    Non-sliced face centres field" << endl;
+    }
+
+    if (phiPtr_)
+    {
+        Pout<< "    Mesh flux field" << endl;
+    }
+
+    surfaceInterpolation::printAllocated();
+}
+
+
 void Foam::fvMesh::clearGeom()
 {
     if (debug)
@@ -148,11 +256,9 @@ void Foam::fvMesh::clearGeom()
         Pout<< FUNCTION_NAME << "Clearing geometric data" << endl;
     }
 
-    clearGeomNotOldVol();
+    clearFvGeom();
 
-    deleteDemandDrivenData(phiPtr_);
-    deleteDemandDrivenData(V0Ptr_);
-    deleteDemandDrivenData(V00Ptr_);
+    polyMesh::clearGeom();
 }
 
 
@@ -204,25 +310,9 @@ void Foam::fvMesh::clearAddressing(const bool isMeshUpdate)
 }
 
 
-void Foam::fvMesh::storeOldTimeFields()
-{
-    storeOldTimeFields<PointField>();
-    storeOldTimeFields<VolField>();
-    storeOldTimeFields<SurfaceField>();
-}
-
-
-void Foam::fvMesh::nullOldestTimeFields()
-{
-    nullOldestTimeFields<PointField>();
-    nullOldestTimeFields<VolField>();
-    nullOldestTimeFields<SurfaceField>();
-}
-
-
 void Foam::fvMesh::clearOut()
 {
-    clearGeom();
+    clearFvGeom();
 
     surfaceInterpolation::clearOut();
 
@@ -270,7 +360,12 @@ Foam::surfaceLabelField::Boundary& Foam::fvMesh::polyFacesBfRef()
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::fvMesh::fvMesh(const IOobject& io, const bool doPost)
+Foam::fvMesh::fvMesh
+(
+    const IOobject& io,
+    const bool doPost
+    // const bool doZones
+)
 :
     polyMesh(io),
     surfaceInterpolation(*this),
@@ -309,7 +404,7 @@ Foam::fvMesh::fvMesh(const IOobject& io, const bool doPost)
 
     if (doPost)
     {
-        postConstruct(true, stitchType::geometric);
+        postConstruct(true, true, stitchType::geometric);
     }
 }
 
@@ -535,7 +630,12 @@ Foam::fvMesh::~fvMesh()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::fvMesh::postConstruct(const bool changers, const stitchType stitch)
+void Foam::fvMesh::postConstruct
+(
+    const bool changers,
+    const bool zones,
+    const stitchType stitch
+)
 {
     // Construct the stitcher
     stitcher_.set(fvMeshStitcher::New(*this, changers).ptr());
@@ -592,6 +692,13 @@ void Foam::fvMesh::postConstruct(const bool changers, const stitchType stitch)
             );
         }
     }
+
+    // Generate the zones after the mesh manipulators have been constructed
+    // to support motion-specific zone generators requiring access to the mover
+    if (zones)
+    {
+        zonesGenerator::New(*this);
+    }
 }
 
 
@@ -627,8 +734,6 @@ bool Foam::fvMesh::update()
         nullOldestTimeFields();
     }
 
-    if (!conformal()) stitcher_->disconnect(true, true);
-
     // Remove the oldest cell volume field
     if (V00Ptr_)
     {
@@ -639,29 +744,38 @@ bool Foam::fvMesh::update()
         nullDemandDrivenData(V0Ptr_);
     }
 
-    // Set topoChanged_ false before any mesh change
+    // Remove the oldest mesh flux field
+    if (phiPtr_)
+    {
+        phiPtr_->nullOldestTime();
+    }
+
+    // Set topoChanged_ false before any mesh change. Topo-changing can switch
+    // on and off during a run.
     topoChanged_ = false;
-    bool updated = topoChanger_->update();
-    topoChanged_ = updated;
 
-    updated = distributor_->update() || updated;
+    topoChanged_ = topoChanger_->update();
 
-    return updated;
+    const bool distributed = distributor_->update();
+
+    return topoChanged_ || distributed;
 }
 
 
 bool Foam::fvMesh::move()
 {
-    if (!conformal()) stitcher_->disconnect(true, true);
+    preChange();
 
-    // Do not set moving false
-    // Once the mesh starts moving it is considered to be moving
-    // for the rest of the run
+    // Do not set moving_ false before any mesh motion. Once the mesh starts
+    // moving it is considered to be moving for the rest of the run.
     const bool moved = mover_->update();
 
     curTimeIndex_ = time().timeIndex();
 
-    stitcher_->connect(true, true, false);
+    if (conformal() && stitcher_->stitches())
+    {
+        stitcher_->connect(true, true, false);
+    }
 
     return moved;
 }
@@ -705,7 +819,7 @@ void Foam::fvMesh::removeFvBoundary()
 void Foam::fvMesh::swap(fvMesh& otherMesh)
 {
     // Clear the sliced fields
-    clearGeom();
+    clearFvGeom();
 
     // Clear the current volume and other geometry factors
     surfaceInterpolation::clearOut();
@@ -813,7 +927,7 @@ Foam::fvMesh::readUpdateState Foam::fvMesh::readUpdate
             Info<< "Point motion update" << endl;
         }
 
-        clearGeom();
+        clearFvGeom();
     }
     else
     {
@@ -1105,11 +1219,17 @@ void Foam::fvMesh::mapFields(const polyTopoChangeMap& map)
 }
 
 
+void Foam::fvMesh::preChange()
+{
+    stitcher_->disconnect(true, true);
+}
+
+
 void Foam::fvMesh::setPoints(const pointField& p)
 {
     polyMesh::setPoints(p);
 
-    clearGeom();
+    clearFvGeom();
 
     // Update other local data
     surfaceInterpolation::movePoints();
@@ -1123,6 +1243,8 @@ void Foam::fvMesh::setPoints(const pointField& p)
 
 Foam::tmp<Foam::scalarField> Foam::fvMesh::movePoints(const pointField& p)
 {
+    preChange();
+
     // Set the mesh to be moving. This remains true for the rest of the run.
     moving_ = true;
 
@@ -1246,11 +1368,18 @@ Foam::tmp<Foam::scalarField> Foam::fvMesh::movePoints(const pointField& p)
 
 void Foam::fvMesh::topoChange(const polyTopoChangeMap& map)
 {
+    if (!conformal())
+    {
+        FatalErrorInFunction
+            << "The mesh was not disconnected prior to topology change"
+            << exit(FatalError);
+    }
+
     // Update polyMesh. This needs to keep volume existent!
     polyMesh::topoChange(map);
 
     // Clear the sliced fields
-    clearGeomNotOldVol();
+    clearFvGeomNotOldVol();
 
     // Check that we're not trying to maintain old-time mesh geometry
     if (V0Ptr_ && Foam::notNull(V0Ptr_))
@@ -1299,11 +1428,18 @@ void Foam::fvMesh::topoChange(const polyTopoChangeMap& map)
 
 void Foam::fvMesh::mapMesh(const polyMeshMap& map)
 {
+    if (!conformal())
+    {
+        FatalErrorInFunction
+            << "The mesh was not disconnected prior to mesh-to-mesh mapping"
+            << exit(FatalError);
+    }
+
     // Distribute polyMesh data
     polyMesh::mapMesh(map);
 
     // Clear the sliced fields
-    clearGeomNotOldVol();
+    clearFvGeomNotOldVol();
 
     // Clear the current volume and other geometry factors
     surfaceInterpolation::clearOut();
@@ -1325,11 +1461,18 @@ void Foam::fvMesh::mapMesh(const polyMeshMap& map)
 
 void Foam::fvMesh::distribute(const polyDistributionMap& map)
 {
+    if (!conformal())
+    {
+        FatalErrorInFunction
+            << "The mesh was not disconnected prior to distribution"
+            << exit(FatalError);
+    }
+
     // Distribute polyMesh data
     polyMesh::distribute(map);
 
     // Clear the sliced fields
-    clearGeomNotOldVol();
+    clearFvGeomNotOldVol();
 
     // Clear the current volume and other geometry factors
     surfaceInterpolation::clearOut();
@@ -1375,7 +1518,7 @@ const Foam::fileName& Foam::fvMesh::polyFacesBfInstance() const
 void Foam::fvMesh::conform(const surfaceScalarField& phi)
 {
     // Clear the geometry fields
-    clearGeomNotOldVol();
+    clearFvGeomNotOldVol();
 
     // Clear the current volume and other geometry factors
     surfaceInterpolation::clearOut();
@@ -1404,7 +1547,7 @@ void Foam::fvMesh::unconform
 )
 {
     // Clear the geometry fields
-    clearGeomNotOldVol();
+    clearFvGeomNotOldVol();
 
     // Clear the current volume and other geometry factors
     surfaceInterpolation::clearOut();
@@ -1509,7 +1652,7 @@ void Foam::fvMesh::addPatch
     deleteDemandDrivenData(phiPtr_);
 
     // Clear the sliced fields
-    clearGeomNotOldVol();
+    clearFvGeomNotOldVol();
 
     // Clear the current volume and other geometry factors
     surfaceInterpolation::clearOut();

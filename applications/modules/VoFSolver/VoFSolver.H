@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -105,7 +105,7 @@ protected:
 
         //- Reference to the buoyant pressure for buoyant cases
         //  otherwise to the pressure
-        volScalarField& p_rgh;
+        volScalarField& p_rgh_;
 
         //- Reference to the mixture continuity density field
         const volScalarField& rho;
@@ -206,6 +206,10 @@ public:
         //- Reference to the VoF mixture
         const VoFMixture& mixture;
 
+        //- Reference to the buoyant pressure for buoyant cases
+        //  otherwise to the pressure
+        const volScalarField& p_rgh;
+
         //- Reference to the velocity field
         const volVectorField& U;
 
@@ -244,19 +248,8 @@ public:
         //- Corrections that follow mesh motion
         virtual void motionCorrector();
 
-        //- Called at the start of the PIMPLE loop
-        virtual void prePredictor() = 0;
-
         //- Construct and optionally solve the momentum equation
         virtual void momentumPredictor();
-
-        //- Construct and solve the energy equation,
-        //  convert to temperature
-        //  and update thermophysical and transport properties
-        virtual void thermophysicalPredictor() = 0;
-
-        //- Construct and solve the pressure equation in the PISO loop
-        virtual void pressureCorrector() = 0;
 
         //- Called after the PIMPLE loop at the end of the time-step
         virtual void postSolve();

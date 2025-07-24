@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -41,24 +41,46 @@ const char* const physicoChemical::group = "physicoChemical";
 
 // Note: cannot use dimless etc. as they may not have been constructed yet
 
+const Foam::dimensionedScalar physicoChemical::R
+(
+    dimensionedScalar
+    (
+        "R",
+        physicoChemical::NA*physicoChemical::k
+    )
+);
+
+
 const Foam::dimensionedScalar physicoChemical::RR
 (
     dimensionedConstant
     (
         physicoChemical::group,
+        "R",
         "RR",
-        physicoChemical::NA*physicoChemical::k
+        physicoChemical::NNA*physicoChemical::k
     )
 );
 
 
 const Foam::dimensionedScalar physicoChemical::F
 (
+    dimensionedScalar
+    (
+        "F",
+        physicoChemical::NA*electromagnetic::e
+    )
+);
+
+
+const Foam::dimensionedScalar physicoChemical::FF
+(
     dimensionedConstant
     (
         physicoChemical::group,
         "F",
-        physicoChemical::NA*electromagnetic::e
+        "FF",
+        physicoChemical::NNA*electromagnetic::e
     )
 );
 

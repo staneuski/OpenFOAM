@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -47,17 +47,13 @@ namespace Foam
     );
 }
 
-
-namespace Foam
-{
-    template<>
-    const char*
-        NamedEnum<nonConformalCyclicPolyPatch::moveUpdate, 3>::names[] =
-        {"always", "detect", "never"};
-}
-
 const Foam::NamedEnum<Foam::nonConformalCyclicPolyPatch::moveUpdate, 3>
-    Foam::nonConformalCyclicPolyPatch::moveUpdateNames_;
+Foam::nonConformalCyclicPolyPatch::moveUpdateNames_
+{
+    "always",
+    "detect",
+    "never"
+};
 
 
 // * * * * * * * * * * * *  Protected Member Functions * * * * * * * * * * * //
@@ -314,12 +310,22 @@ Foam::nonConformalCyclicPolyPatch::intersection() const
 
         const nonConformalBoundary& ncb = nonConformalBoundary::New(mesh);
 
+        const string inRegionName =
+            mesh.name() == polyMesh::defaultRegion
+          ? ""
+          : " in region " + mesh.name();
+
         intersection_.update
         (
             origPatch(),
             ncb.patchPointNormals(origPatchIndex()),
             nbrPatch().origPatch(),
-            transform()
+            transform(),
+            {
+                origPatchName() + inRegionName,
+                nbrPatch().origPatchName() + inRegionName
+            },
+            cyclicTransform::str()
         );
 
         intersectionIsValid_ = 2;
@@ -356,6 +362,11 @@ Foam::nonConformalCyclicPolyPatch::rays() const
 
         const nonConformalBoundary& ncb = nonConformalBoundary::New(mesh);
 
+        const string inRegionName =
+            mesh.name() == polyMesh::defaultRegion
+          ? ""
+          : " in region " + mesh.name();
+
         rays_.update
         (
             primitiveOldTimePatch
@@ -372,7 +383,12 @@ Foam::nonConformalCyclicPolyPatch::rays() const
                 mesh.points(),
                 mesh.oldPoints()
             ),
-            transform()
+            transform(),
+            {
+                origPatchName() + inRegionName,
+                nbrPatch().origPatchName() + inRegionName
+            },
+            cyclicTransform::str()
         );
 
         raysIsValid_ = 2;

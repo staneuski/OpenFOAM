@@ -30,13 +30,7 @@ divSchemes
 
     div(rhoPhi,U)   Gauss linearUpwind grad(U);
 
-    div(phi,k)      Gauss upwind;
-    div(phi,epsilon) Gauss upwind;
-    div(phi,omega)  Gauss upwind;
-
     div(((rho*nuEff)*dev2(T(grad(U))))) Gauss linear;
-
-    div(alphaPhi,tracer) Gauss vanLeer;
 }
 
 laplacianSchemes

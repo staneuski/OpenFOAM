@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2024-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -41,22 +41,27 @@ void Foam::fv::propellerDisk::addActuationDiskAxialInertialResistance
     const volVectorField::Internal& U
 ) const
 {
-    const labelUList& cells = set_.cells();
+    const labelList& cells = zone_.zone();
     const scalarField& V = mesh().V();
 
-    volVectorField::Internal force
-    (
-        IOobject
+    if (!forcePtr_.valid())
+    {
+        forcePtr_ = new volVectorField::Internal
         (
-            typedName("force"),
-            mesh().time().name(),
+            IOobject
+            (
+                typedName("force"),
+                mesh().time().name(),
+                mesh(),
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE
+            ),
             mesh(),
-            IOobject::NO_READ,
-            IOobject::AUTO_WRITE
-        ),
-        mesh(),
-        dimensionedVector(rho.dimensions()*U.dimensions()/dimTime, Zero)
-    );
+            dimensionedVector(rho.dimensions()*U.dimensions()/dimTime, Zero)
+        );
+    }
+
+    volVectorField::Internal& force = forcePtr_();
 
     const vector centre(this->centre());
     const vector normal(this->normal());
@@ -118,7 +123,6 @@ void Foam::fv::propellerDisk::addActuationDiskAxialInertialResistance
         const scalar At =
             (105/8.0)*Q/(delta*pi*rProp*(rProp - rHub)*(3*rHub + 4*rProp));
 
-        scalar V_ = 0;
         force_ = Zero;
         moment_ = Zero;
 
@@ -153,9 +157,8 @@ void Foam::fv::propellerDisk::addActuationDiskAxialInertialResistance
 
                 const vector Vfi(V[celli]*force[celli]);
 
-                // Integrate the net force and moment of the propeller
-                // on the fluid
-                V_ += V[celli];
+                // Integrate the net force and moment
+                // of the fluid on the propeller
                 force_ += Vfi;
                 moment_ += r ^ Vfi;
 
@@ -163,14 +166,8 @@ void Foam::fv::propellerDisk::addActuationDiskAxialInertialResistance
             }
         }
 
-        reduce(V_, sumOp<scalar>());
         reduce(force_, sumOp<vector>());
         reduce(moment_, sumOp<vector>());
-
-        // Normalise to cache the net force and moment of the propeller
-        // on the fluid
-        force_ /= V_;
-        moment_ /= V_;
 
         if
         (
@@ -180,12 +177,20 @@ void Foam::fv::propellerDisk::addActuationDiskAxialInertialResistance
         {
             if (logFile_.valid())
             {
-                logFile_->writeTime(n, J, Jcorr, Udisk, Ucorr, Kt, Kq, T, Q);
-            }
-
-            if (mesh().time().writeTime())
-            {
-                force.write();
+                logFile_->writeTime
+                (
+                    n,
+                    J,
+                    Jcorr,
+                    Udisk,
+                    Ucorr,
+                    Kt,
+                    Kq,
+                    T,
+                    Q,
+                    force_,
+                    moment_
+                );
             }
         }
     }

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2016-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2016-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -231,6 +231,8 @@ Foam::rigidBodyMeshMotion::rigidBodyMeshMotion
             pMesh,
             bodyMeshes_[bi].patchSet_,
             bodyMeshes_[bi].pointZoneSet_,
+            labelHashSet(),
+            labelHashSet(),
             points0(),
             bodyMeshes_[bi].do_
         );
@@ -340,7 +342,7 @@ void Foam::rigidBodyMeshMotion::solve()
             (
                 functionObjects::forces::typeName,
                 t,
-                dictionary
+                dictionary::entries
                 (
                     "type", functionObjects::forces::typeName,
                     "patches", bodyMeshes_[bi].patches_,
@@ -461,6 +463,8 @@ void Foam::rigidBodyMeshMotion::topoChange(const polyTopoChangeMap& map)
                 pMesh,
                 bodyMeshes_[bi].patchSet_,
                 bodyMeshes_[bi].pointZoneSet_,
+                labelHashSet(),
+                labelHashSet(),
                 newPoints0,
                 bodyMeshes_[bi].do_
             );

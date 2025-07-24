@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2024-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,6 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "propellerDisk.H"
+#include "propellerDiskAdjustment.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -61,9 +62,9 @@ void Foam::fv::propellerDisk::readCoeffs(const dictionary& dict)
     }
     else
     {
-        const Field<vector> zoneCellCentres(mesh().cellCentres(), set_.cells());
-        const Field<scalar> zoneCellVolumes(mesh().cellVolumes(), set_.cells());
-        centre_ = gSum(zoneCellVolumes*zoneCellCentres)/set_.V();
+        const Field<vector> zoneCellCentres(mesh().cellCentres(), zone_.zone());
+        const Field<scalar> zoneCellVolumes(mesh().cellVolumes(), zone_.zone());
+        centre_ = gSum(zoneCellVolumes*zoneCellCentres)/zone_.V();
     }
 
     normal_ = normalised(dict.lookup<vector>("normal"));
@@ -85,8 +86,38 @@ void Foam::fv::propellerDisk::readCoeffs(const dictionary& dict)
         logFile_ = new functionObjects::logFile(mesh(), name(), typeName);
         logFile_->writeTimeColumnHeaders
         (
-            {"n", "J", "Jcorr", "Udisk", "Ucorr", "Kt", "Kq", "T/rho", "Q/rho"}
+            {
+                "n",
+                "J",
+                "Jcorr",
+                "Udisk",
+                "Ucorr",
+                "Kt",
+                "Kq",
+                "T/rho",
+                "Q/rho",
+                "force",
+                "moment"
+            }
         );
+    }
+
+    bool adjustment(dict.lookupOrDefault<Switch>("adjustment", false));
+
+    if (adjustment)
+    {
+        if (adjustment_.valid())
+        {
+            adjustment_->readCoeffs(dict);
+        }
+        else
+        {
+            adjustment_ = new propellerDiskAdjustment(*this, dict);
+        }
+    }
+    else
+    {
+        adjustment_.clear();
     }
 }
 
@@ -95,10 +126,10 @@ void Foam::fv::propellerDisk::readCoeffs(const dictionary& dict)
 
 Foam::scalar Foam::fv::propellerDisk::diskThickness(const vector& centre) const
 {
-    const Field<vector> zoneCellCentres(mesh().cellCentres(), set_.cells());
+    const Field<vector> zoneCellCentres(mesh().cellCentres(), zone_.zone());
     const scalar r2 = gMax(magSqr(zoneCellCentres - centre));
 
-    return set_.V()/(constant::mathematical::pi*r2);
+    return zone_.V()/(constant::mathematical::pi*r2);
 }
 
 
@@ -108,7 +139,7 @@ Foam::scalar Foam::fv::propellerDisk::J
     const vector& nHat
 ) const
 {
-    const labelUList& cells = set_.cells();
+    const labelList& cells = zone_.zone();
     const scalarField& V = mesh().V();
 
     scalar VUn = 0;
@@ -118,9 +149,31 @@ Foam::scalar Foam::fv::propellerDisk::J
     }
     reduce(VUn, sumOp<scalar>());
 
-    const scalar Uref = VUn/set_.V();
+    const scalar Uref = VUn/zone_.V();
 
     return mag(Uref/(n_*dProp_));
+}
+
+
+Foam::scalar Foam::fv::propellerDisk::n() const
+{
+    if (adjustment_.valid())
+    {
+        return adjustment_->n();
+    }
+    else
+    {
+        return n_;
+    }
+}
+
+
+void Foam::fv::propellerDisk::correctn(const scalar T) const
+{
+    if (adjustment_.valid())
+    {
+        adjustment_->correctn(T);
+    }
 }
 
 
@@ -135,7 +188,7 @@ Foam::fv::propellerDisk::propellerDisk
 )
 :
     fvModel(name, modelType, mesh, dict),
-    set_(mesh, dict),
+    zone_(mesh, dict),
     phaseName_(word::null),
     UName_(word::null),
     force_(Zero),
@@ -152,7 +205,7 @@ bool Foam::fv::propellerDisk::read(const dictionary& dict)
 {
     if (fvModel::read(dict))
     {
-        set_.read(coeffs(dict));
+        zone_.read(coeffs(dict));
         readCoeffs(coeffs(dict));
         return true;
     }
@@ -222,20 +275,20 @@ void Foam::fv::propellerDisk::addSup
 
 bool Foam::fv::propellerDisk::movePoints()
 {
-    set_.movePoints();
+    zone_.movePoints();
     return true;
 }
 
 
 void Foam::fv::propellerDisk::topoChange(const polyTopoChangeMap& map)
 {
-    set_.topoChange(map);
+    zone_.topoChange(map);
 }
 
 
 void Foam::fv::propellerDisk::mapMesh(const polyMeshMap& map)
 {
-    set_.mapMesh(map);
+    zone_.mapMesh(map);
 }
 
 
@@ -244,7 +297,7 @@ void Foam::fv::propellerDisk::distribute
     const polyDistributionMap& map
 )
 {
-    set_.distribute(map);
+    zone_.distribute(map);
 }
 
 

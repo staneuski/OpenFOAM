@@ -29,6 +29,7 @@ Description
 
 Usage
     Example specification:
+    \verbatim
     <LagrangianPatchName>
     {
         type            internal;
@@ -131,6 +132,12 @@ public:
                 )
             );
         }
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using LagrangianPatchField<Type>::operator=;
 };
 
 

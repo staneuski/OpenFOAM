@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -84,14 +84,11 @@ public:
 
     // Member Functions
 
-        //- Saturation temperature for volScalarField::Internal
-        virtual tmp<volScalarField::Internal> Tsat
-        (
-            const volScalarField::Internal& p
-        ) const;
+        //- Saturation temperature for scalarField
+        virtual tmp<scalarField> Tsat(const scalarField& p) const;
 
-        //- Saturation temperature for volScalarField
-        virtual tmp<volScalarField> Tsat(const volScalarField& p) const;
+        //- Saturation temperature derivative w.r.t. pressure for scalarField
+        virtual tmp<scalarField> TsatPrime(const scalarField& p) const;
 };
 
 

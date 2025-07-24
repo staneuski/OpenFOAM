@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -56,6 +56,7 @@ See also
 
 #include "VoFSolver.H"
 #include "twoPhaseVoFMixture.H"
+#include "MULES.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -89,6 +90,26 @@ protected:
         //- Switch indicating if this is a restart
         bool alphaRestart;
 
+        //- Function to calculate the number of explicit MULES sub-cycles
+        //  from the alpha Courant number
+        autoPtr<Function1<scalar>> nAlphaSubCyclesPtr;
+
+        //- Number of alpha correctors
+        //  Usually used to improve the accuracy at high Courant numbers
+        //  with semi-implicit MULES, MULESCorr = true
+        label nAlphaCorr;
+
+        //- Semi-implicit MULES switch
+        bool MULESCorr;
+
+        //- Apply the compression correction from the previous iteration
+        //  Improves efficiency for steady-simulations but can only be applied
+        //  once the alpha field is reasonably steady, i.e. fully developed
+        bool alphaApplyPrevCorr;
+
+        //- MULES controls
+        MULES::control MULEScontrols;
+
 
     // Kinematic properties
 
@@ -110,18 +131,20 @@ private:
     // Private Member Functions
 
         //- Solve for the phase-fractions
-        void alphaSolve(const dictionary& alphaControls);
+        void alphaSolve(const label nAlphaSubCycles);
 
 
 protected:
 
     // Protected Member Functions
 
+        //- Read controls
+        virtual bool read();
+
         virtual tmp<surfaceScalarField> alphaPhi
         (
             const surfaceScalarField& phi,
-            const volScalarField& alpha,
-            const dictionary& alphaControls
+            const volScalarField& alpha
         );
 
         //- Solve for the phase-fractions
@@ -131,8 +154,7 @@ protected:
         virtual void alphaSuSp
         (
             tmp<volScalarField::Internal>& Su,
-            tmp<volScalarField::Internal>& Sp,
-            const dictionary& alphaControls
+            tmp<volScalarField::Internal>& Sp
         ) = 0;
 
         //- Correct the interface properties following mesh-change

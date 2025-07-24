@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -23,15 +23,10 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "Pstream.H"
-#include "functionObjectList.H"
 #include "streamlines.H"
 #include "streamlinesCloud.H"
-#include "ReadFields.H"
-#include "meshSearch.H"
 #include "sampledSet.H"
 #include "globalIndex.H"
-#include "distributionMap.H"
 #include "interpolationCellPoint.H"
 #include "PatchTools.H"
 #include "writeFile.H"
@@ -68,20 +63,20 @@ void gatherAndFlatten(DynamicField<Type>& field)
 
 namespace Foam
 {
-    template<>
-    const char*
-        NamedEnum<functionObjects::streamlines::trackDirection, 3>::names[] =
-        {"forward", "backward", "both"};
-
     namespace functionObjects
     {
         defineTypeNameAndDebug(streamlines, 0);
         addToRunTimeSelectionTable(functionObject, streamlines, dictionary);
-
-        const NamedEnum<streamlines::trackDirection, 3>
-            streamlines::trackDirectionNames_;
     }
 }
+
+const Foam::NamedEnum<Foam::functionObjects::streamlines::trackDirection, 3>
+Foam::functionObjects::streamlines::trackDirectionNames_
+{
+    "forward",
+    "backward",
+    "both"
+};
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -94,10 +89,9 @@ Foam::functionObjects::streamlines::streamlines
 )
 :
     fvMeshFunctionObject(name, runTime, dict),
-    dict_(dict),
     nSubCycle_(0)
 {
-    read(dict_);
+    read(dict);
 }
 
 
@@ -111,11 +105,6 @@ Foam::functionObjects::streamlines::~streamlines()
 
 bool Foam::functionObjects::streamlines::read(const dictionary& dict)
 {
-    if (dict != dict_)
-    {
-        dict_ = dict;
-    }
-
     Info<< type() << " " << name() << ":" << nl;
 
     dict.lookup("fields") >> fields_;
@@ -171,13 +160,10 @@ bool Foam::functionObjects::streamlines::read(const dictionary& dict)
 
     cloudName_ = dict.lookupOrDefault<word>("cloudName", "streamlines");
 
-    meshSearchPtr_.reset(new meshSearch(mesh_));
-
     sampledSetPtr_ = sampledSet::New
     (
         "seedSampleSet",
         mesh_,
-        meshSearchPtr_(),
         dict.subDict("seedSampleSet")
     );
 
@@ -267,6 +253,9 @@ bool Foam::functionObjects::streamlines::write()
             );
     }
 
+    // Get the mesh searching engine
+    const meshSearch& searchEngine = meshSearch::New(mesh_);
+
     // Do tracking to create sampled data
     DynamicField<point> allPositions;
     DynamicField<label> allTracks;
@@ -292,7 +281,7 @@ bool Foam::functionObjects::streamlines::write()
             (
                 new streamlinesParticle
                 (
-                    mesh_,
+                    searchEngine,
                     sampledSetPtr_().positions()[i],
                     sampledSetPtr_().cells()[i],
                     nLocateBoundaryHits,
@@ -583,6 +572,8 @@ bool Foam::functionObjects::streamlines::write()
         );
     }
 
+    Info<< endl;
+
     return true;
 }
 
@@ -591,8 +582,7 @@ void Foam::functionObjects::streamlines::movePoints(const polyMesh& mesh)
 {
     if (&mesh == &mesh_)
     {
-        // Moving mesh affects the search tree
-        read(dict_);
+        sampledSetPtr_->movePoints();
     }
 }
 
@@ -604,7 +594,7 @@ void Foam::functionObjects::streamlines::topoChange
 {
     if (&map.mesh() == &mesh_)
     {
-        read(dict_);
+        sampledSetPtr_->topoChange(map);
     }
 }
 
@@ -616,7 +606,7 @@ void Foam::functionObjects::streamlines::mapMesh
 {
     if (&map.mesh() == &mesh_)
     {
-        read(dict_);
+        sampledSetPtr_->mapMesh(map);
     }
 }
 
@@ -628,7 +618,7 @@ void Foam::functionObjects::streamlines::distribute
 {
     if (&map.mesh() == &mesh_)
     {
-        read(dict_);
+        sampledSetPtr_->distribute(map);
     }
 }
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2012-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2012-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -63,14 +63,13 @@ timeVaryingMappedFixedValuePointPatchField
 {
     if (dict.found("offset"))
     {
-        offset_ =
-            Function1<Type>::New
-            (
-                "offset",
-                this->db().time().userUnits(),
-                iF.dimensions(),
-                dict
-            );
+        offset_ = Function1<Type>::New
+        (
+            "offset",
+            this->db().time().userUnits(),
+            iF.dimensions(),
+            dict
+        );
     }
 
     if
@@ -167,18 +166,7 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::map
     const fieldMapper& mapper
 )
 {
-    fixedValuePointPatchField<Type>::map(ptf, mapper);
-
-    const timeVaryingMappedFixedValuePointPatchField<Type>& tiptf =
-        refCast<const timeVaryingMappedFixedValuePointPatchField<Type>>(ptf);
-
-    mapper(startSampledValues_, tiptf.startSampledValues_);
-    mapper(endSampledValues_, tiptf.endSampledValues_);
-
-    // Clear interpolator
-    mapperPtr_.clear();
-    startSampleTime_ = -1;
-    endSampleTime_ = -1;
+    reset(ptf);
 }
 
 
@@ -276,7 +264,7 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::checkTable()
         // Read the times for which data is available
 
         const fileName samplePointsDir = samplePointsFile.path();
-        sampleTimes_ = Time::findTimes(samplePointsDir);
+        sampleTimes_ = this->db().time().findTimes(samplePointsDir);
 
         if (debug)
         {
@@ -295,7 +283,7 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::checkTable()
     (
         sampleTimes_,
         startSampleTime_,
-        this->db().time().value(),
+        this->db().time().userTimeValue(),
         lo,
         hi
     );
@@ -304,7 +292,7 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::checkTable()
     {
         FatalErrorInFunction
             << "Cannot find starting sampling values for current time "
-            << this->db().time().value() << nl
+            << this->db().time().userTimeValue() << nl
             << "Have sampling values for times "
             << pointToPointPlanarInterpolation::timeNames(sampleTimes_) << nl
             << "In directory "
@@ -476,7 +464,7 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::updateCoeffs()
         scalar start = sampleTimes_[startSampleTime_].value();
         scalar end = sampleTimes_[endSampleTime_].value();
 
-        scalar s = (this->db().time().value()-start)/(end-start);
+        scalar s = (this->db().time().userTimeValue()-start)/(end-start);
 
         if (debug)
         {
@@ -487,8 +475,8 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::updateCoeffs()
                 << " with weight:" << s << endl;
         }
 
-        this->operator==((1-s)*startSampledValues_ + s*endSampledValues_);
-        wantedAverage = (1-s)*startAverage_ + s*endAverage_;
+        this->operator==((1 - s)*startSampledValues_ + s*endSampledValues_);
+        wantedAverage = (1 - s)*startAverage_ + s*endAverage_;
     }
 
     // Enforce average. Either by scaling (if scaling factor > 0.5) or by
@@ -516,7 +504,7 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::updateCoeffs()
                 Pout<< "updateCoeffs :"
                     << " offsetting with:" << offset << endl;
             }
-            this->operator==(fld+offset);
+            this->operator==(fld + offset);
         }
         else
         {
@@ -534,7 +522,10 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::updateCoeffs()
     // Apply offset to mapped values
     if (offset_.valid())
     {
-        this->operator==(*this + offset_->value(this->db().time().value()));
+        this->operator==
+        (
+            *this + offset_->value(this->db().time().value())
+        );
     }
 
     if (debug)

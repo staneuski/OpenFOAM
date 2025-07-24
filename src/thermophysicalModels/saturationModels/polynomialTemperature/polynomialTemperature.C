@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -63,23 +63,14 @@ Foam::saturationModels::polynomialTemperature::~polynomialTemperature()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-Foam::tmp<Foam::volScalarField::Internal>
+Foam::tmp<Foam::scalarField>
 Foam::saturationModels::polynomialTemperature::Tsat
 (
-    const volScalarField::Internal& p
+    const scalarField& p
 ) const
 {
-    tmp<volScalarField::Internal> tTsat
-    (
-        volScalarField::Internal::New
-        (
-            "Tsat",
-            p.mesh(),
-            dimensionedScalar(dimTemperature, 0)
-        )
-    );
-
-    volScalarField::Internal& Tsat = tTsat.ref();
+    tmp<scalarField> tTsat(new scalarField(p.size(), scalar(0)));
+    scalarField& Tsat = tTsat.ref();
 
     forAll(Tsat, celli)
     {
@@ -90,43 +81,21 @@ Foam::saturationModels::polynomialTemperature::Tsat
 }
 
 
-Foam::tmp<Foam::volScalarField>
-Foam::saturationModels::polynomialTemperature::Tsat
+Foam::tmp<Foam::scalarField>
+Foam::saturationModels::polynomialTemperature::TsatPrime
 (
-    const volScalarField& p
+    const scalarField& p
 ) const
 {
-    tmp<volScalarField> tTsat
-    (
-        volScalarField::New
-        (
-            "Tsat",
-            p.mesh(),
-            dimensionedScalar(dimTemperature, 0)
-        )
-    );
+    tmp<scalarField> tTsatPrime(new scalarField(p.size(), scalar(0)));
+    scalarField& TsatPrime = tTsatPrime.ref();
 
-    volScalarField& Tsat = tTsat.ref();
-
-    forAll(Tsat, celli)
+    forAll(TsatPrime, celli)
     {
-        Tsat[celli] = C_.value(p[celli]);
+        TsatPrime[celli] = C_.derivative(p[celli]);
     }
 
-    volScalarField::Boundary& TsatBf = Tsat.boundaryFieldRef();
-
-    forAll(Tsat.boundaryField(), patchi)
-    {
-        scalarField& Tsatp = TsatBf[patchi];
-        const scalarField& pp = p.boundaryField()[patchi];
-
-        forAll(Tsatp, facei)
-        {
-            Tsatp[facei] = C_.value(pp[facei]);
-        }
-    }
-
-    return tTsat;
+    return tTsatPrime;
 }
 
 

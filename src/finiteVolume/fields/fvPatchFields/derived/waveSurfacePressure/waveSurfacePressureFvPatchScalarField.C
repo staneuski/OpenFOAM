@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,27 +35,17 @@ License
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-namespace Foam
-{
-    template<>
-    const char* NamedEnum
-    <
-        waveSurfacePressureFvPatchScalarField::ddtSchemeType,
-        3
-    >::names[] =
-    {
-        fv::EulerDdtScheme<scalar>::typeName_(),
-        fv::CrankNicolsonDdtScheme<scalar>::typeName_(),
-        fv::backwardDdtScheme<scalar>::typeName_()
-    };
-}
-
-
 const Foam::NamedEnum
 <
     Foam::waveSurfacePressureFvPatchScalarField::ddtSchemeType,
     3
->   Foam::waveSurfacePressureFvPatchScalarField::ddtSchemeTypeNames_;
+>
+Foam::waveSurfacePressureFvPatchScalarField::ddtSchemeTypeNames_
+{
+    fv::EulerDdtScheme<scalar>::typeName_(),
+    fv::CrankNicolsonDdtScheme<scalar>::typeName_(),
+    fv::backwardDdtScheme<scalar>::typeName_()
+};
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -212,10 +202,7 @@ void Foam::waveSurfacePressureFvPatchScalarField::updateCoeffs()
     const uniformDimensionedVectorField& g =
         db().lookupObject<uniformDimensionedVectorField>("g");
 
-    const uniformDimensionedScalarField& pRef =
-        this->db().template lookupObject<uniformDimensionedScalarField>("pRef");
-
-    operator==(pRef.value() - rhop*(g.value() & zetap));
+    operator==(-rhop*(g.value() & zetap));
 
     fixedValueFvPatchScalarField::updateCoeffs();
 }

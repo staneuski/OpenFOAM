@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -106,7 +106,7 @@ protected:
 
         //- Reference to the buoyant pressure for buoyant cases
         //  otherwise to the pressure
-        volScalarField& p_rgh;
+        volScalarField& p_rgh_;
 
 
     // Pressure reference
@@ -217,6 +217,10 @@ public:
         //- Reference to the pressure field
         const volScalarField& p;
 
+        //- Reference to the buoyant pressure for buoyant cases
+        //  otherwise to the pressure
+        const volScalarField& p_rgh;
+
         //- Reference to the continuity density field
         const volScalarField& rho;
 
@@ -261,6 +265,12 @@ public:
         //- Called at the start of the PIMPLE loop
         virtual void prePredictor();
 
+        //- Predict the momentum transport
+        virtual void momentumTransportPredictor();
+
+        //- Predict thermophysical transport
+        virtual void thermophysicalTransportPredictor();
+
         //- Construct and optionally solve the momentum equation
         virtual void momentumPredictor();
 
@@ -272,8 +282,11 @@ public:
         //- Construct and solve the pressure equation in the PISO loop
         virtual void pressureCorrector();
 
-        //- Correct the momentum and thermophysical transport modelling
-        virtual void postCorrector();
+        //- Correct the momentum transport
+        virtual void momentumTransportCorrector();
+
+        //- Correct the thermophysical transport
+        virtual void thermophysicalTransportCorrector();
 
         //- Called after the PIMPLE loop at the end of the time-step
         virtual void postSolve();

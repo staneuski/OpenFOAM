@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2021 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -71,18 +71,27 @@ class tmp
         mutable T* ptr_;
 
 
-    // Private member operators
+    // Private Member Functions
 
         //- Return true if the object is a reusable or non-reusable temporary
         inline bool isAnyTmp() const;
 
+
+    // Private Member Operators
+
+        //- Increment the reference count
         inline void operator++();
 
 
 public:
 
-    typedef T Type;
-    typedef Foam::refCount refCount;
+    // Public Type Definitions
+
+        //- The type
+        typedef T Type;
+
+        //- The reference counting class
+        typedef Foam::refCount refCount;
 
 
     // Constructors
@@ -97,13 +106,16 @@ public:
         inline tmp(const tmp<T>&);
 
         //- Construct copy moving content, does not increment reference count
+        inline tmp(tmp<T>&&);
+
+        //- Construct copy moving content, does not increment reference count
         inline tmp(const tmp<T>&&);
 
         //- Construct copy transferring content of temporary if required
         inline tmp(const tmp<T>&, bool allowTransfer);
 
 
-    //- Destructor: deletes temporary object when the reference count is 0
+    //- Destructor. Deletes temporary object when the reference count is 0.
     inline ~tmp();
 
 
@@ -167,6 +179,9 @@ public:
 
         //- Assignment transferring the temporary T to this tmp
         inline void operator=(const tmp<T>&);
+
+        //- Move assignment transferring the temporary T to this tmp
+        inline void operator=(tmp<T>&&);
 
         //- Move assignment transferring the temporary T to this tmp
         inline void operator=(const tmp<T>&&);

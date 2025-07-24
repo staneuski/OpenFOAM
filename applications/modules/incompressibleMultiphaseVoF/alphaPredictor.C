@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,18 +25,13 @@ License
 
 #include "incompressibleMultiphaseVoF.H"
 #include "subCycle.H"
-#include "CMULES.H"
+#include "MULES.H"
 #include "fvcFlux.H"
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-void Foam::solvers::incompressibleMultiphaseVoF::alphaSolve
-(
-    const dictionary& alphaControls
-)
+void Foam::solvers::incompressibleMultiphaseVoF::alphaSolve()
 {
-    const scalar cAlpha(alphaControls.lookup<scalar>("cAlpha"));
-
     const word alphaScheme("div(phi,alpha)");
     const word alpharScheme("div(phirb,alpha)");
 
@@ -88,6 +83,7 @@ void Foam::solvers::incompressibleMultiphaseVoF::alphaSolve
         // Limit alphaPhi for each phase
         MULES::limit
         (
+            MULEScontrols,
             1.0/mesh.time().deltaT().value(),
             geometricOneField(),
             alpha,
@@ -158,9 +154,7 @@ void Foam::solvers::incompressibleMultiphaseVoF::alphaSolve
 
 void Foam::solvers::incompressibleMultiphaseVoF::alphaPredictor()
 {
-    const dictionary& alphaControls = mesh.solution().solverDict("alpha");
-
-    const label nAlphaSubCycles(alphaControls.lookup<label>("nAlphaSubCycles"));
+    const label nAlphaSubCycles = ceil(nAlphaSubCyclesPtr->value(alphaCoNum));
 
     if (nAlphaSubCycles > 1)
     {
@@ -178,23 +172,23 @@ void Foam::solvers::incompressibleMultiphaseVoF::alphaPredictor()
 
         const dimensionedScalar totalDeltaT = runTime.deltaT();
 
-        List<volScalarField*> alphaPtrs(phases.size());
+        UPtrList<volScalarField> alphas(phases.size());
         forAll(phases, phasei)
         {
-            alphaPtrs[phasei] = &phases[phasei];
+            alphas.set(phasei, &phases[phasei]);
         }
 
         for
         (
             subCycle<volScalarField, subCycleFields> alphaSubCycle
             (
-                alphaPtrs,
+                alphas,
                 nAlphaSubCycles
             );
             !(++alphaSubCycle).end();
         )
         {
-            alphaSolve(alphaControls);
+            alphaSolve();
             rhoPhiSum += (runTime.deltaT()/totalDeltaT)*rhoPhi;
         }
 
@@ -202,7 +196,7 @@ void Foam::solvers::incompressibleMultiphaseVoF::alphaPredictor()
     }
     else
     {
-        alphaSolve(alphaControls);
+        alphaSolve();
     }
 
     mixture.correct();

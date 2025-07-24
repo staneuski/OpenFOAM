@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -37,6 +37,7 @@ SourceFiles
 
 #include "fvModel.H"
 #include "scalarField.H"
+#include "DimensionedFieldFwd.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -55,6 +56,33 @@ public:
 
     //- Runtime type information
     TypeName("fvSource");
+
+
+    // Static Member Functions
+
+        //- Print min/average/max information for a given field
+        static void infoField
+        (
+            const word& name,
+            const dimensionSet& dims,
+            const scalarField& field,
+            const bool print = true
+        );
+
+        //- Print min/average/max information for a given field
+        static void infoField
+        (
+            const word& name,
+            const DimensionedField<scalar, volMesh>& field,
+            const bool print = true
+        );
+
+        //- Print min/average/max information for a given field
+        static void infoField
+        (
+            const DimensionedField<scalar, volMesh>& field,
+            const bool print = true
+        );
 
 
     // Constructors
@@ -92,22 +120,7 @@ public:
             //- Return the list of fields for which the fvModel adds source term
             //  to the transport equation. Sources return null, as all this
             //  logic is handled in addsSupToField.
-            virtual wordList addSupFields() const;
-
-
-        // Access
-
-            //- Return the cells that the source applies to
-            virtual labelUList cells() const = 0;
-
-            //- Return the number of cells that the source applies to
-            virtual label nCells() const;
-
-
-        // Sources
-
-            //- Return the source value
-            virtual tmp<scalarField> source(const word& fieldName) const = 0;
+            virtual wordList addSupFields() const final;
 
 
     // Member Operators

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2018-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2018-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -55,6 +55,10 @@ Description
       + aluminium: radiationProperties, thermophysicalProperties
       + ...
 
+    foamSetupCHT can optionally write a template createNonConformalCouplesDict
+    file, with entries for pairs of patches connecting fluid-solid and
+    solid-solid region meshes.  The user can edit the file accordingly.
+
 \*---------------------------------------------------------------------------*/
 
 #include "argList.H"
@@ -69,6 +73,12 @@ using namespace Foam;
 
 int main(int argc, char *argv[])
 {
+    argList::addBoolOption
+    (
+        "nonConformalCouples",
+        "creates a template \'createNonConformalCouplesDict\' file"
+    );
+
     #include "setRootCase.H"
     #include "createTime.H"
 
@@ -111,8 +121,10 @@ int main(int argc, char *argv[])
     }
 
     // Set of valid solver names, listed by:
-    // grep -rwl thermo $FOAM_MODULES | \
-    //     sed "s@$FOAM_MODULES/\([^/]*\).*@\1@g" | sort -u
+    /*
+        grep -rwl thermo $FOAM_MODULES | \
+            sed "s@$FOAM_MODULES/\([^/]*\).*@\1@g" | sort -u
+    */
     const wordHashSet solvers
     {
         "compressibleMultiphaseVoF",
@@ -207,8 +219,114 @@ int main(int argc, char *argv[])
 
     Info<< "\nWriting regionSolvers\n" << endl;
     {
-        OFstream regionSolversFile(currentDir/runTime.system()/"regionSolvers");
+        OFstream regionSolversFile
+        (
+            currentDir/runTime.system()/"regionSolvers"
+        );
         regionSolvers.write(regionSolversFile);
+    }
+
+    if (args.optionFound("nonConformalCouples"))
+    {
+        IOdictionary NCCdict
+        (
+            IOobject
+            (
+                "createNonConformalCouplesDict",
+                runTime.system(),
+                runTime
+            )
+        );
+
+        NCCdict.add("fields", "no");
+
+        label NCCi(1);
+        dictionary couplesDict("nonConformalCouples");
+
+        forAll(regionList, i)
+        {
+            forAll(regionList, j)
+            {
+                if
+                (
+                    i <= j
+                 || (
+                        solverList[i] != "solid"
+                     && solverList[j] != "solid"
+                    )
+                )
+                {
+                    break;
+                }
+
+                if (solverList[i] == "solid" && solverList[j] == "solid")
+                {
+                    dictionary couple;
+
+                    wordList keywords{"regions", "patches"};
+                    forAll(keywords, key)
+                    {
+                        couple.add
+                        (
+                            keywords[key],
+                            Pair<word>{regionList[i], regionList[j]},
+                            true
+                        );
+                    }
+
+                    couplesDict.add
+                    (
+                        word("NCC" + std::to_string((NCCi++))),
+                        couple,
+                        true
+                    );
+                }
+                else
+                {
+                    word solidRegion;
+                    word fluidRegion;
+
+                    if (solverList[i] == "solid")
+                    {
+                        solidRegion = regionList[i];
+                        fluidRegion = regionList[j];
+                    }
+                    else
+                    {
+                        solidRegion = regionList[j];
+                        fluidRegion = regionList[i];
+                    }
+
+                    dictionary couple;
+                    couple.add
+                    (
+                        "regions",
+                        Pair<word>{solidRegion, fluidRegion},
+                        true
+                    );
+
+                    couple.add
+                    (
+                        "patches",
+                        Pair<word>{solidRegion, solidRegion},
+                        true
+                    );
+
+                    couplesDict.add
+                    (
+                        word("NCC" + std::to_string((NCCi++))),
+                        couple,
+                        true
+                    );
+                }
+            }
+        }
+
+        NCCdict.add("nonConformalCouples", couplesDict);
+
+        Info<< "Writing " << NCCdict.name() << "\n" << endl;
+
+        NCCdict.regIOobject::write();
     }
 
     Info<< "End\n" << endl;

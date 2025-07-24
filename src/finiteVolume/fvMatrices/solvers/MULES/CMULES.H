@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2013-2021 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -60,15 +60,14 @@ namespace MULES
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-template<class RdeltaTType, class RhoType, class SpType, class SuType>
+template<class RdeltaTType, class RhoType, class SpType>
 void correct
 (
     const RdeltaTType& rDeltaT,
     const RhoType& rho,
     volScalarField& psi,
     const surfaceScalarField& phiCorr,
-    const SpType& Sp,
-    const SuType& Su
+    const SpType& Sp
 );
 
 template<class RhoType>
@@ -79,22 +78,22 @@ void correct
     const surfaceScalarField& phiCorr
 );
 
-template<class RhoType, class SpType, class SuType>
+template<class RhoType, class SpType>
 void correct
 (
     const RhoType& rho,
     volScalarField& psi,
     const surfaceScalarField& phiCorr,
-    const SpType& Sp,
-    const SuType& Su
+    const SpType& Sp
 );
 
 template<class RhoType, class PsiMaxType, class PsiMinType>
 void correct
 (
+    const control& controls,
     const RhoType& rho,
     volScalarField& psi,
-    const surfaceScalarField& phi,
+    const surfaceScalarField& phiBD,
     surfaceScalarField& phiCorr,
     const PsiMaxType& psiMax,
     const PsiMinType& psiMin
@@ -104,18 +103,17 @@ template
 <
     class RhoType,
     class SpType,
-    class SuType,
     class PsiMaxType,
     class PsiMinType
 >
 void correct
 (
+    const control& controls,
     const RhoType& rho,
     volScalarField& psi,
-    const surfaceScalarField& phi,
+    const surfaceScalarField& phiBD,
     surfaceScalarField& phiCorr,
     const SpType& Sp,
-    const SuType& Su,
     const PsiMaxType& psiMax,
     const PsiMinType& psiMin
 );
@@ -125,42 +123,37 @@ template
     class RdeltaTType,
     class RhoType,
     class SpType,
-    class SuType,
-    class PsiMaxType,
-    class PsiMinType
->
-void limiterCorr
-(
-    surfaceScalarField& allLambda,
-    const RdeltaTType& rDeltaT,
-    const RhoType& rho,
-    const volScalarField& psi,
-    const surfaceScalarField& phi,
-    const surfaceScalarField& phiCorr,
-    const SpType& Sp,
-    const SuType& Su,
-    const PsiMaxType& psiMax,
-    const PsiMinType& psiMin
-);
-
-template
-<
-    class RdeltaTType,
-    class RhoType,
-    class SpType,
-    class SuType,
     class PsiMaxType,
     class PsiMinType
 >
 void limitCorr
 (
+    const control& controls,
     const RdeltaTType& rDeltaT,
     const RhoType& rho,
     const volScalarField& psi,
-    const surfaceScalarField& phi,
+    const surfaceScalarField& phiBD,
     surfaceScalarField& phiCorr,
     const SpType& Sp,
-    const SuType& Su,
+    const PsiMaxType& psiMax,
+    const PsiMinType& psiMin
+);
+
+template
+<
+    class RhoType,
+    class SpType,
+    class PsiMaxType,
+    class PsiMinType
+>
+void limitCorr
+(
+    const control& controls,
+    const RhoType& rho,
+    const volScalarField& psi,
+    const surfaceScalarField& phiBD,
+    surfaceScalarField& phiCorr,
+    const SpType& Sp,
     const PsiMaxType& psiMax,
     const PsiMinType& psiMin
 );

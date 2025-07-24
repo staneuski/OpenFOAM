@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2012-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2012-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -90,8 +90,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef functionObjects_scalarTransport_H
-#define functionObjects_scalarTransport_H
+#ifndef scalarTransport_functionObject_H
+#define scalarTransport_functionObject_H
 
 #include "fvMeshFunctionObject.H"
 #include "volFields.H"
@@ -121,6 +121,9 @@ public:
             viscosity
         };
 
+        //- Diffusivity type names
+        static const NamedEnum<diffusivityType, 3> diffusivityTypeNames_;
+
 
 private:
 
@@ -134,9 +137,6 @@ private:
 
         //- Name of density field (optional)
         word rhoName_;
-
-        //- diffusivity type names
-        static const NamedEnum<diffusivityType, 3> diffusivityTypeNames_;
 
         //- The type of diffusivity
         diffusivityType diffusivity_;
@@ -166,14 +166,8 @@ private:
         //  needed if a compressive convection scheme is used
         const dimensionedScalar deltaN_;
 
-        //- Scalar volumetric flux
-        tmp<surfaceScalarField> tsPhi_;
-
         //- MULES Correction
         tmp<surfaceScalarField> tsPhiCorr0_;
-
-        //- Switch to indicate that s has been restarted for Crank-Nicolson
-        bool sRestart_;
 
 
     // Private Member Functions
@@ -217,11 +211,16 @@ public:
         //- Return the list of fields required
         virtual wordList fields() const;
 
+        //- Do not execute at the start of the run
+        virtual bool executeAtStart() const
+        {
+            return false;
+        }
+
         //- Calculate the scalarTransport
         virtual bool execute();
 
-        //- Do nothing.
-        //  The volScalarField is registered and written automatically
+        //- Write the updated scalar field
         virtual bool write();
 
 

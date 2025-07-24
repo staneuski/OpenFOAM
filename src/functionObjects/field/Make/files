@@ -14,13 +14,14 @@ nearWallFields/nearWallFields.C
 nearWallFields/findCellParticle.C
 
 processorField/processorField.C
-readFields/readFields.C
 
 streamlines/streamlines.C
 streamlines/streamlinesParticle.C
 streamlines/streamlinesCloud.C
 
 surfaceInterpolate/surfaceInterpolate.C
+
+volField/volField.C
 
 regionSizeDistribution/regionSizeDistribution.C
 histogram/histogram.C
@@ -49,6 +50,7 @@ shearStress/shearStress.C
 totalEnthalpy/totalEnthalpy.C
 reconstruct/reconstruct.C
 power/power.C
+tr/tr.C
 
 turbulenceFields/turbulenceFields.C
 yPlus/yPlus.C
@@ -86,6 +88,7 @@ cylindrical/cylindricalFunctionObject.C
 uniform/uniform.C
 
 layerAverage/layerAverage.C
+cutLayerAverage/cutLayerAverage.C
 patchCutLayerAverage/patchCutLayerAverage.C
 
 LIB = $(FOAM_LIBBIN)/libfieldFunctionObjects

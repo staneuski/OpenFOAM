@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -39,8 +39,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef functionObjects_forcesBase_H
-#define functionObjects_forcesBase_H
+#ifndef forcesBase_functionObject_H
+#define forcesBase_functionObject_H
 
 #include "fvMeshFunctionObject.H"
 #include "logFiles.H"
@@ -158,15 +158,6 @@ protected:
         //- Initialise the fields
         void initialise();
 
-        //- Return the effective surface stress
-        tmp<surfaceVectorField> devTau() const;
-
-        //- Dynamic viscosity field
-        tmp<volScalarField> mu() const;
-
-        //- Return rho if specified otherwise rhoRef
-        tmp<volScalarField> rho() const;
-
         //- Return rhoRef if the pressure field is dynamic, i.e. p/rho
         //  otherwise return 1
         scalar rho(const volScalarField& p) const;
@@ -252,6 +243,15 @@ public:
         {
             return wordList::null();
         }
+
+        //- Return the effective surface stress
+        tmp<surfaceVectorField> devTau() const;
+
+        //- Dynamic viscosity field
+        tmp<volScalarField> mu() const;
+
+        //- Return rho if specified otherwise rhoRef
+        tmp<volScalarField> rho() const;
 
         //- Calculate the forces and moments
         virtual void calcForcesMoments();

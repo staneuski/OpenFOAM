@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -37,41 +37,37 @@ namespace Foam
 
     defineTypeNameAndDebug(fileOperation, 0);
     defineRunTimeSelectionTable(fileOperation, word);
-
-    template<>
-    const char* Foam::NamedEnum
-    <
-        fileOperation::pathType,
-        12
-    >::names[] =
-    {
-        "notFound",
-        "absolute",
-        "objectPath",
-        "writeObject",
-        "uncollatedProc",
-        "globalProc",
-        "localProc",
-        "parentObjectPath",
-        "findInstance",
-        "uncollatedProcInstance",
-        "globalProcInstance",
-        "localProcInstance"
-    };
-    const NamedEnum<fileOperation::pathType, 12> fileOperation::pathTypeNames_;
-
-    word fileOperation::defaultFileHandler
-    (
-        debug::optimisationSwitches().lookupOrAddDefault
-        (
-            "fileHandler",
-            // Foam::fileOperations::uncollatedFileOperation::typeName,
-            word("uncollated")
-        )
-    );
-
-    word fileOperation::processorsBaseDir = "processors";
 }
+
+
+const Foam::NamedEnum<Foam::fileOperation::pathType, 12>
+Foam::fileOperation::pathTypeNames_
+{
+    "notFound",
+    "absolute",
+    "objectPath",
+    "writeObject",
+    "uncollatedProc",
+    "globalProc",
+    "localProc",
+    "parentObjectPath",
+    "findInstance",
+    "uncollatedProcInstance",
+    "globalProcInstance",
+    "localProcInstance"
+};
+
+Foam::word Foam::fileOperation::defaultFileHandler
+(
+    debug::optimisationSwitches().lookupOrAddDefault
+    (
+        "fileHandler",
+        // Foam::fileOperations::uncollatedFileOperation::typeName,
+        word("uncollated")
+    )
+);
+
+Foam::word Foam::fileOperation::processorsBaseDir = "processors";
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -659,6 +655,7 @@ void Foam::fileOperation::setUnmodified(const label watchFd) const
 
 Foam::instantList Foam::fileOperation::findTimes
 (
+    const Time&,
     const fileName& directory,
     const word& constantName
 ) const

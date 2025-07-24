@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -27,6 +27,7 @@ License
 #include "fvMesh.H"
 #include "fvMatrix.H"
 #include "geometricOneField.H"
+#include "meshSearch.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -88,7 +89,7 @@ void Foam::fv::actuationDisk::readCoeffs(const dictionary& dict)
     }
 
     upstreamPoint_ = dict.lookup<point>("upstreamPoint");
-    upstreamCellId_ = mesh().findCell(upstreamPoint_);
+    upstreamCellId_ = meshSearch::New(mesh()).findCell(upstreamPoint_);
     if (returnReduce(upstreamCellId_, maxOp<label>()) == -1)
     {
         FatalIOErrorInFunction(coeffs(dict))
@@ -124,7 +125,7 @@ void Foam::fv::actuationDisk::addActuationDiskAxialInertialResistance
     forAll(cells, i)
     {
         Usource[cells[i]] +=
-            (alpha[cells[i]]*rho[cells[i]]*(Vcells[cells[i]]/set_.V()))*T;
+            (alpha[cells[i]]*rho[cells[i]]*(Vcells[cells[i]]/zone_.V()))*T;
     }
 }
 
@@ -140,7 +141,7 @@ Foam::fv::actuationDisk::actuationDisk
 )
 :
     fvModel(name, modelType, mesh, dict),
-    set_(mesh, coeffs(dict)),
+    zone_(mesh, coeffs(dict)),
     phaseName_(word::null),
     UName_(word::null),
     diskDir_(vector::uniform(NaN)),
@@ -171,7 +172,7 @@ void Foam::fv::actuationDisk::addSup
     addActuationDiskAxialInertialResistance
     (
         eqn.source(),
-        set_.cells(),
+        zone_.zone(),
         mesh().V(),
         geometricOneField(),
         geometricOneField(),
@@ -190,7 +191,7 @@ void Foam::fv::actuationDisk::addSup
     addActuationDiskAxialInertialResistance
     (
         eqn.source(),
-        set_.cells(),
+        zone_.zone(),
         mesh().V(),
         geometricOneField(),
         rho,
@@ -210,7 +211,7 @@ void Foam::fv::actuationDisk::addSup
     addActuationDiskAxialInertialResistance
     (
         eqn.source(),
-        set_.cells(),
+        zone_.zone(),
         mesh().V(),
         alpha,
         rho,
@@ -221,26 +222,26 @@ void Foam::fv::actuationDisk::addSup
 
 bool Foam::fv::actuationDisk::movePoints()
 {
-    set_.movePoints();
+    zone_.movePoints();
     return true;
 }
 
 
 void Foam::fv::actuationDisk::topoChange(const polyTopoChangeMap& map)
 {
-    set_.topoChange(map);
+    zone_.topoChange(map);
 }
 
 
 void Foam::fv::actuationDisk::mapMesh(const polyMeshMap& map)
 {
-    set_.mapMesh(map);
+    zone_.mapMesh(map);
 }
 
 
 void Foam::fv::actuationDisk::distribute(const polyDistributionMap& map)
 {
-    set_.distribute(map);
+    zone_.distribute(map);
 }
 
 
@@ -248,7 +249,7 @@ bool Foam::fv::actuationDisk::read(const dictionary& dict)
 {
     if (fvModel::read(dict))
     {
-        set_.read(coeffs(dict));
+        zone_.read(coeffs(dict));
         readCoeffs(coeffs(dict));
         return true;
     }

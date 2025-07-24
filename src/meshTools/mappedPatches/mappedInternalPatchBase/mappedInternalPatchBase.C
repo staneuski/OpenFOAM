@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -27,8 +27,7 @@ License
 #include "SubField.H"
 #include "Time.H"
 #include "triPointRef.H"
-#include "treeDataCell.H"
-#include "indexedOctree.H"
+#include "meshSearch.H"
 #include "globalIndex.H"
 #include "RemoteData.H"
 #include "OBJstream.H"
@@ -39,22 +38,14 @@ License
 namespace Foam
 {
     defineTypeNameAndDebug(mappedInternalPatchBase, 0);
-
-    template<>
-    const char* Foam::NamedEnum
-    <
-        Foam::mappedInternalPatchBase::offsetMode,
-        2
-    >::names[] =
-    {
-        "normal",
-        "direction"
-    };
 }
 
-
 const Foam::NamedEnum<Foam::mappedInternalPatchBase::offsetMode, 2>
-    Foam::mappedInternalPatchBase::offsetModeNames_;
+Foam::mappedInternalPatchBase::offsetModeNames_
+{
+    "normal",
+    "direction"
+};
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -101,6 +92,8 @@ void Foam::mappedInternalPatchBase::calcMapping() const
 
     const polyMesh& nbrMesh = this->nbrMesh();
 
+    const meshSearch& nbrSearchEngine = meshSearch::New(nbrMesh);
+
     const globalIndex patchGlobalIndex(patch_.size());
 
     // Find processor and cell/face indices of samples
@@ -130,12 +123,11 @@ void Foam::mappedInternalPatchBase::calcMapping() const
         List<RemoteData<scalar>> allNearest(patchGlobalIndex.size());
 
         // Find containing cell for every sampling point
-        const indexedOctree<Foam::treeDataCell>& tree = nbrMesh.cellTree();
         forAll(allPoints, alli)
         {
             const point& p = allPoints[alli];
 
-            const label celli = tree.findInside(p);
+            const label celli = nbrSearchEngine.findCell(p);
 
             if (celli != -1)
             {
@@ -180,14 +172,14 @@ void Foam::mappedInternalPatchBase::calcMapping() const
                 << nbrRegionName() << " with offset mode "
                 << offsetModeNames_[offsetMode_] << "." << endl;
 
-            const indexedOctree<Foam::treeDataCell>& tree = nbrMesh.cellTree();
             forAll(allPoints, alli)
             {
                 const point& p = allPoints[alli];
 
                 if (allNearest[alli].proci == -1)
                 {
-                    const pointIndexHit pih = tree.findNearest(p, sqr(great));
+                    const pointIndexHit pih =
+                        nbrSearchEngine.cellTree().findNearest(p, sqr(great));
 
                     allNearest[alli].proci = Pstream::myProcNo();
                     allNearest[alli].elementi = pih.index();
@@ -251,6 +243,8 @@ void Foam::mappedInternalPatchBase::calcMapping() const
     // Dump connecting lines for debugging
     if (debug)
     {
+        const pointField::subField patchFaceCentres = patch_.faceCentres();
+
         OBJstream obj
         (
             patch_.name()
@@ -264,13 +258,13 @@ void Foam::mappedInternalPatchBase::calcMapping() const
         mapPtr_->distribute(ccs);
         forAll(patch_, patchFacei)
         {
-            const point& fc = patch_.faceCentres()[patchFacei];
+            const point& fc = patchFaceCentres[patchFacei];
             const point mid = 0.51*fc + 0.49*ccs[patchFacei];
             obj.write(linePointRef(fc, mid));
         }
 
         // Patch -> Cells
-        pointField fcs(patch_.faceCentres());
+        pointField fcs(patchFaceCentres);
         mapPtr_->reverseDistribute(cellIndices_.size(), fcs);
         forAll(cellIndices_, i)
         {
@@ -399,12 +393,13 @@ Foam::tmp<Foam::pointField> Foam::mappedInternalPatchBase::samplePoints() const
     // with a triangulation of the face. This triangulation matches the
     // tetrahedralisation used for cell searches. This maximises the chances
     // that the point will be successfully found in a cell.
+    const pointField::subField patchFaceCentres = patch_.faceCentres();
     forAll(patch_, patchFacei)
     {
         const pointField& ps = mesh.points();
 
         const face& f = patch_[patchFacei];
-        const point& fc = patch_.faceCentres()[patchFacei];
+        const point& fc = patchFaceCentres[patchFacei];
 
         result[patchFacei] = fc;
 

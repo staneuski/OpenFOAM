@@ -18,15 +18,19 @@ solvers
 {
     alpha.water
     {
-        nAlphaCorr      1;
-        nAlphaSubCycles 3;
+        nSubCycles      polynomial (0 2);
+
+        MULES
+        {
+            extremaCoeff    0.01;
+        }
     }
 
     "pcorr.*"
     {
         solver          GAMG;
         smoother        DICGaussSeidel;
-        tolerance       0.02;
+        tolerance       0.001;
         relTol          0;
     }
 

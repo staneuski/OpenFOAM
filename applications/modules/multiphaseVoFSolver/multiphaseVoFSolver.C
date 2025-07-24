@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -65,6 +65,31 @@ void Foam::solvers::multiphaseVoFSolver::correctCoNum()
 
 // * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
 
+bool Foam::solvers::multiphaseVoFSolver::read()
+{
+    VoFSolver::read();
+
+    const dictionary& alphaControls = mesh.solution().solverDict("alpha");
+
+    cAlpha = alphaControls.lookup<scalar>("cAlpha");
+
+    nAlphaSubCyclesPtr =
+        Function1<scalar>::New
+        (
+            alphaControls.found("nAlphaSubCycles")
+          ? "nAlphaSubCycles"
+          : "nSubCycles",
+            dimless,
+            dimless,
+            alphaControls
+        );
+
+    MULEScontrols.read(alphaControls);
+
+    return true;
+}
+
+
 void Foam::solvers::multiphaseVoFSolver::correctInterface()
 {}
 
@@ -90,6 +115,8 @@ Foam::solvers::multiphaseVoFSolver::multiphaseVoFSolver
 
     phases(mixture.phases())
 {
+    read();
+
     if (transient())
     {
         correctCoNum();
@@ -113,8 +140,6 @@ void Foam::solvers::multiphaseVoFSolver::preSolve()
 
 void Foam::solvers::multiphaseVoFSolver::prePredictor()
 {
-    VoFSolver::prePredictor();
-
     alphaPredictor();
 }
 

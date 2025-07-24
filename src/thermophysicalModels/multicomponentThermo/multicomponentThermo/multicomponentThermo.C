@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,6 +24,14 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "multicomponentThermo.H"
+
+// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
+
+namespace Foam
+{
+    defineTypeNameAndDebug(multicomponentThermo, 0);
+}
+
 
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
@@ -101,7 +109,6 @@ Foam::multicomponentThermo::implementation::implementation
     }
 
     // Read the species' mass fractions
-    tmp<volScalarField> tYdefault;
     forAll(species_, i)
     {
         typeIOobject<volScalarField> header
@@ -135,52 +142,20 @@ Foam::multicomponentThermo::implementation::implementation
         else
         {
             // Read Ydefault if not already read
-            if (!tYdefault.valid())
+            if (!Ydefault_.valid())
             {
-                const word YdefaultName
+                Ydefault_ = new volScalarField
                 (
-                    IOobject::groupName("Ydefault", phaseName)
+                    IOobject
+                    (
+                        IOobject::groupName("Ydefault", phaseName),
+                        mesh.time().name(),
+                        mesh,
+                        IOobject::MUST_READ,
+                        IOobject::NO_WRITE
+                    ),
+                    mesh
                 );
-
-                typeIOobject<volScalarField> timeIO
-                (
-                    YdefaultName,
-                    mesh.time().name(),
-                    mesh,
-                    IOobject::MUST_READ,
-                    IOobject::NO_WRITE
-                );
-
-                typeIOobject<volScalarField> constantIO
-                (
-                    YdefaultName,
-                    mesh.time().constant(),
-                    mesh,
-                    IOobject::MUST_READ,
-                    IOobject::NO_WRITE
-                );
-
-                typeIOobject<volScalarField> time0IO
-                (
-                    YdefaultName,
-                    mesh.time().beginTime().name(),
-                    mesh,
-                    IOobject::MUST_READ,
-                    IOobject::NO_WRITE
-                );
-
-                if (timeIO.headerOk())
-                {
-                    tYdefault = new volScalarField(timeIO, mesh);
-                }
-                else if (constantIO.headerOk())
-                {
-                    tYdefault = new volScalarField(constantIO, mesh);
-                }
-                else
-                {
-                    tYdefault = new volScalarField(time0IO, mesh);
-                }
             }
 
             Y_.set
@@ -196,7 +171,7 @@ Foam::multicomponentThermo::implementation::implementation
                         IOobject::NO_READ,
                         IOobject::AUTO_WRITE
                     ),
-                    tYdefault()
+                    Ydefault_()
                 )
             );
         }
@@ -238,7 +213,7 @@ Foam::multicomponentThermo::implementation::speciesActive() const
 }
 
 
-void Foam::multicomponentThermo::syncSpeciesActive() const
+void Foam::multicomponentThermo::implementation::syncSpeciesActive() const
 {
     if (Pstream::parRun())
     {
@@ -259,6 +234,11 @@ void Foam::multicomponentThermo::syncSpeciesActive() const
             }
         }
     }
+
+    if (Ydefault_.valid())
+    {
+        Ydefault_->writeOpt() = IOobject::AUTO_WRITE;
+    }
 }
 
 
@@ -276,7 +256,7 @@ Foam::multicomponentThermo::implementation::Y() const
 }
 
 
-void Foam::multicomponentThermo::normaliseY()
+void Foam::multicomponentThermo::implementation::normaliseY()
 {
     if (species().size())
     {
@@ -302,6 +282,11 @@ void Foam::multicomponentThermo::normaliseY()
 
         Y()[defaultSpecie()] = scalar(1) - Yt;
         Y()[defaultSpecie()].max(scalar(0));
+    }
+
+    if (Ydefault_.valid() && Ydefault_->writeOpt() == IOobject::NO_WRITE)
+    {
+        Ydefault_.clear();
     }
 }
 

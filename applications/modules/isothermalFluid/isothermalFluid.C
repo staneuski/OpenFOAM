@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -127,12 +127,12 @@ Foam::solvers::isothermalFluid::isothermalFluid
 
     buoyancy(buoyancy::New(mesh)),
 
-    p_rgh(buoyancy.valid() ? buoyancy->p_rgh : p_),
+    p_rgh_(buoyancy.valid() ? buoyancy->p_rgh : p_),
 
     pressureReference
     (
         p_,
-        p_rgh,
+        p_rgh_,
         pimple.dict(),
         thermo_.incompressible()
     ),
@@ -182,6 +182,7 @@ Foam::solvers::isothermalFluid::isothermalFluid
 
     thermo(thermo_),
     p(p_),
+    p_rgh(p_rgh_),
     rho(rho_),
     U(U_),
     phi(phi_)
@@ -193,7 +194,7 @@ Foam::solvers::isothermalFluid::isothermalFluid
     {
         hydrostaticInitialisation
         (
-            p_rgh,
+            p_rgh_,
             p_,
             rho_,
             U,
@@ -325,6 +326,30 @@ void Foam::solvers::isothermalFluid::preSolve()
 }
 
 
+void Foam::solvers::isothermalFluid::prePredictor()
+{
+    if
+    (
+        !mesh.schemes().steady()
+     && !pimple.simpleRho()
+     && pimple.firstIter()
+    )
+    {
+        correctDensity();
+    }
+}
+
+
+void Foam::solvers::isothermalFluid::momentumTransportPredictor()
+{
+    momentumTransport->predict();
+}
+
+
+void Foam::solvers::isothermalFluid::thermophysicalTransportPredictor()
+{}
+
+
 void Foam::solvers::isothermalFluid::thermophysicalPredictor()
 {
     thermo_.correct();
@@ -349,13 +374,14 @@ void Foam::solvers::isothermalFluid::pressureCorrector()
 }
 
 
-void Foam::solvers::isothermalFluid::postCorrector()
+void Foam::solvers::isothermalFluid::momentumTransportCorrector()
 {
-    if (pimple.correctTransport())
-    {
-        momentumTransport->correct();
-    }
+    momentumTransport->correct();
 }
+
+
+void Foam::solvers::isothermalFluid::thermophysicalTransportCorrector()
+{}
 
 
 void Foam::solvers::isothermalFluid::postSolve()

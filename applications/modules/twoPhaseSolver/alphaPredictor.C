@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,7 +25,6 @@ License
 
 #include "twoPhaseSolver.H"
 #include "subCycle.H"
-#include "interfaceCompression.H"
 #include "CMULES.H"
 #include "CrankNicolsonDdtScheme.H"
 #include "fvcFlux.H"
@@ -36,61 +35,20 @@ License
 Foam::tmp<Foam::surfaceScalarField> Foam::solvers::twoPhaseSolver::alphaPhi
 (
     const surfaceScalarField& phi,
-    const volScalarField& alpha,
-    const dictionary& alphaControls
+    const volScalarField& alpha
 )
 {
-    const word alphaScheme(mesh.schemes().div(divAlphaName)[1].wordToken());
-
-    ITstream compressionScheme
-    (
-        compressionSchemes.found(alphaScheme)
-      ? mesh.schemes().div(divAlphaName)
-      : ITstream
-        (
-            divAlphaName,
-            tokenList
-            {
-                word("Gauss"),
-                word("interfaceCompression"),
-                alphaScheme,
-                alphaControls.lookup<scalar>("cAlpha")
-            }
-        )
-    );
-
     return fvc::flux
     (
         phi,
         alpha,
-        compressionScheme
+        mesh.schemes().div(divAlphaName)
     );
 }
 
 
-void Foam::solvers::twoPhaseSolver::alphaSolve
-(
-    const dictionary& alphaControls
-)
+void Foam::solvers::twoPhaseSolver::alphaSolve(const label nAlphaSubCycles)
 {
-    const label nAlphaSubCycles(alphaControls.lookup<label>("nAlphaSubCycles"));
-
-    const label nAlphaCorr(alphaControls.lookup<label>("nAlphaCorr"));
-
-    const bool MULESCorr
-    (
-        alphaControls.lookupOrDefault<Switch>("MULESCorr", false)
-    );
-
-    // Apply the compression correction from the previous iteration
-    // Improves efficiency for steady-simulations but can only be applied
-    // once the alpha field is reasonably steady, i.e. fully developed
-    const bool alphaApplyPrevCorr
-    (
-        alphaControls.lookupOrDefault<Switch>("alphaApplyPrevCorr", false)
-    );
-
-
     // Set the off-centering coefficient according to ddt scheme
     scalar ocCoeff = 0;
     {
@@ -171,7 +129,7 @@ void Foam::solvers::twoPhaseSolver::alphaSolve
     tmp<volScalarField::Internal> Su;
     tmp<volScalarField::Internal> Sp;
 
-    alphaSuSp(Su, Sp, alphaControls);
+    alphaSuSp(Su, Sp);
 
     if (MULESCorr)
     {
@@ -211,6 +169,7 @@ void Foam::solvers::twoPhaseSolver::alphaSolve
             Info<< "Applying the previous iteration compression flux" << endl;
             MULES::correct
             (
+                MULEScontrols,
                 geometricOneField(),
                 alpha1,
                 alphaPhi1,
@@ -244,15 +203,7 @@ void Foam::solvers::twoPhaseSolver::alphaSolve
         }
 
         // Split operator
-        tmp<surfaceScalarField> talphaPhi1Un
-        (
-            alphaPhi
-            (
-                phiCN(),
-                talpha1CN(),
-                alphaControls
-            )
-        );
+        tmp<surfaceScalarField> talphaPhi1Un(alphaPhi(phiCN(), talpha1CN()));
 
         if (MULESCorr)
         {
@@ -263,12 +214,12 @@ void Foam::solvers::twoPhaseSolver::alphaSolve
             {
                 MULES::correct
                 (
+                    MULEScontrols,
                     geometricOneField(),
                     alpha1,
                     talphaPhi1Un(),
                     talphaPhi1Corr.ref(),
                     (Sp() + divU())(),
-                    (-(Sp() + divU())*alpha1)(),
                     oneField(),
                     zeroField()
                 );
@@ -277,6 +228,7 @@ void Foam::solvers::twoPhaseSolver::alphaSolve
             {
                 MULES::correct
                 (
+                    MULEScontrols,
                     geometricOneField(),
                     alpha1,
                     talphaPhi1Un(),
@@ -305,6 +257,7 @@ void Foam::solvers::twoPhaseSolver::alphaSolve
             {
                 MULES::explicitSolve
                 (
+                    MULEScontrols,
                     geometricOneField(),
                     alpha1,
                     phiCN,
@@ -319,6 +272,7 @@ void Foam::solvers::twoPhaseSolver::alphaSolve
             {
                 MULES::explicitSolve
                 (
+                    MULEScontrols,
                     geometricOneField(),
                     alpha1,
                     phiCN,
@@ -379,10 +333,7 @@ void Foam::solvers::twoPhaseSolver::alphaSolve
 
 void Foam::solvers::twoPhaseSolver::alphaPredictor()
 {
-    const dictionary& alphaControls = mesh.solution().solverDict(alpha1.name());
-
-    const label nAlphaSubCycles(alphaControls.lookup<label>("nAlphaSubCycles"));
-
+    const label nAlphaSubCycles = ceil(nAlphaSubCyclesPtr->value(alphaCoNum));
 
     if (nAlphaSubCycles > 1)
     {
@@ -406,19 +357,19 @@ void Foam::solvers::twoPhaseSolver::alphaPredictor()
             )
         );
 
-        List<volScalarField*> alphaPtrs({&alpha1, &alpha2});
+        UPtrList<volScalarField> alphas({&alpha1, &alpha2});
 
         for
         (
             subCycle<volScalarField, subCycleFields> alphaSubCycle
             (
-                alphaPtrs,
+                alphas,
                 nAlphaSubCycles
             );
             !(++alphaSubCycle).end();
         )
         {
-            alphaSolve(alphaControls);
+            alphaSolve(nAlphaSubCycles);
             talphaPhi1.ref() += (runTime.deltaT()/totalDeltaT)*alphaPhi1;
         }
 
@@ -427,7 +378,7 @@ void Foam::solvers::twoPhaseSolver::alphaPredictor()
     }
     else
     {
-        alphaSolve(alphaControls);
+        alphaSolve(nAlphaSubCycles);
     }
 }
 

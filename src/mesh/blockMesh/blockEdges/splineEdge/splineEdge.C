@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -64,7 +64,7 @@ Foam::blockEdges::splineEdge::splineEdge
 (
     const dictionary& dict,
     const label index,
-    const searchableSurfaces& geometry,
+    const searchableSurfaceList& geometry,
     const pointField& points,
     Istream& is
 )
@@ -100,7 +100,8 @@ Foam::point Foam::blockEdges::splineEdge::position(const scalar mu) const
 
 Foam::scalar Foam::blockEdges::splineEdge::length() const
 {
-    return CatmullRomSpline::length();
+    NotImplemented;
+    return NaN;
 }
 
 

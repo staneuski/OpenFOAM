@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,14 +24,52 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "fvSource.H"
-#include "fvCellSet.H"
-#include "fvMatrices.H"
+#include "volMesh.H"
 
-// * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
     defineTypeNameAndDebug(fvSource, 0);
+}
+
+
+// * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
+
+void Foam::fvSource::infoField
+(
+    const word& name,
+    const dimensionSet& dims,
+    const scalarField& field,
+    const bool print
+)
+{
+    if (!print) return;
+
+    Info<< indent << "min/average/max " << name
+        << " = " << gMin(field) << '/' << gAverage(field) << '/' << gMax(field)
+        << ' ' << dims << endl;
+}
+
+
+void Foam::fvSource::infoField
+(
+    const word& name,
+    const DimensionedField<scalar, volMesh>& field,
+    const bool print
+)
+{
+    infoField(name, field.dimensions(), field.primitiveField(), print);
+}
+
+
+void Foam::fvSource::infoField
+(
+    const DimensionedField<scalar, volMesh>& field,
+    const bool print
+)
+{
+    infoField(field.name(), field, print);
 }
 
 
@@ -60,12 +98,6 @@ Foam::fvSource::~fvSource()
 Foam::wordList Foam::fvSource::addSupFields() const
 {
     return wordList::null();
-}
-
-
-Foam::label Foam::fvSource::nCells() const
-{
-    return cells().size();
 }
 
 

@@ -45,6 +45,7 @@ Description
 
 Usage
     Example specification:
+    \verbatim
     <LagrangianPatchName>
     {
         type            empty;
@@ -149,6 +150,12 @@ public:
             PstreamBuffers&,
             const LagrangianScalarInternalDynamicField& fraction
         );
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using LagrangianPatchField<Type>::operator=;
 };
 
 

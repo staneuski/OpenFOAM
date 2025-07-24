@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2020 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -72,8 +72,11 @@ namespace physicoChemical
     //- Atomic mass unit
     extern const dimensionedScalar mu;
 
-    //- Avagadro number
+    //- Avagadro number: default SI units: [1/mol]
     extern const dimensionedScalar NA;
+
+    //- Avagadro number: default SI units: [1/kmol]
+    extern const dimensionedScalar NNA;
 
     //- Boltzmann constant
     extern const dimensionedScalar k;

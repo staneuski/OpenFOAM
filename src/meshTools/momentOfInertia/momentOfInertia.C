@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2021 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,7 +35,7 @@ void Foam::momentOfInertia::massPropertiesSolid
     scalar density,
     scalar& mass,
     vector& cM,
-    tensor& J
+    symmTensor& J
 )
 {
     // Reimplemented from: Wm4PolyhedralMassProperties.cpp
@@ -87,14 +87,14 @@ void Foam::momentOfInertia::massPropertiesSolid
         const triFace& tri(triFaces[i]);
 
         // vertices of triangle i
-        vector v0 = pts[tri[0]];
-        vector v1 = pts[tri[1]];
-        vector v2 = pts[tri[2]];
+        const vector& v0 = pts[tri[0]];
+        const vector& v1 = pts[tri[1]];
+        const vector& v2 = pts[tri[2]];
 
         // cross product of edges
-        vector eA = v1 - v0;
-        vector eB = v2 - v0;
-        vector n = eA ^ eB;
+        const vector eA(v1 - v0);
+        const vector eB(v2 - v0);
+        const vector n(eA ^ eB);
 
         // compute integral terms
         scalar tmp0, tmp1, tmp2;
@@ -169,15 +169,12 @@ void Foam::momentOfInertia::massPropertiesSolid
     J.xx() = integrals[5] + integrals[6];
     J.xy() = -integrals[7];
     J.xz() = -integrals[9];
-    J.yx() = J.xy();
     J.yy() = integrals[4] + integrals[6];
     J.yz() = -integrals[8];
-    J.zx() = J.xz();
-    J.zy() = J.yz();
     J.zz() = integrals[4] + integrals[5];
 
     // inertia relative to center of mass
-    J -= mass*((cM & cM)*I - cM*cM);
+    J -= mass*((cM & cM)*I - sqr(cM));
 
     // Apply density
     mass *= density;
@@ -192,12 +189,12 @@ void Foam::momentOfInertia::massPropertiesShell
     scalar density,
     scalar& mass,
     vector& cM,
-    tensor& J
+    symmTensor& J
 )
 {
     // Reset properties for accumulation
 
-    mass = 0.0;
+    mass = 0;
     cM = Zero;
     J = Zero;
 
@@ -207,16 +204,16 @@ void Foam::momentOfInertia::massPropertiesShell
     {
         const triFace& tri(triFaces[i]);
 
-        triPointRef t
+        const triPointRef t
         (
             pts[tri[0]],
             pts[tri[1]],
             pts[tri[2]]
         );
 
-        scalar triMag = t.mag();
+        const scalar triMag = t.mag();
 
-        cM +=  triMag*t.centre();
+        cM += triMag*t.centre();
 
         mass += triMag;
     }
@@ -247,7 +244,7 @@ void Foam::momentOfInertia::massPropertiesSolid
     scalar density,
     scalar& mass,
     vector& cM,
-    tensor& J
+    symmTensor& J
 )
 {
     triFaceList faces(surf.size());
@@ -267,7 +264,7 @@ void Foam::momentOfInertia::massPropertiesShell
     scalar density,
     scalar& mass,
     vector& cM,
-    tensor& J
+    symmTensor& J
 )
 {
     triFaceList faces(surf.size());
@@ -285,7 +282,7 @@ Foam::tensor Foam::momentOfInertia::applyParallelAxisTheorem
 (
     scalar mass,
     const vector& cM,
-    const tensor& J,
+    const symmTensor& J,
     const vector& refPt
 )
 {
@@ -293,9 +290,9 @@ Foam::tensor Foam::momentOfInertia::applyParallelAxisTheorem
     // new reference point from the centre of mass of the body that
     // the inertia tensor applies to.
 
-    vector d = (refPt - cM);
+    const vector d(refPt - cM);
 
-    return J + mass*((d & d)*I - d*d);
+    return J + mass*(magSqr(d)*I - sqr(d));
 }
 
 
@@ -336,9 +333,9 @@ Foam::tensor Foam::momentOfInertia::meshInertia
         faces[cTI] = cellTets[cTI].faceTriIs(mesh);
     }
 
-    scalar m = 0.0;
+    scalar m = 0;
     vector cM = Zero;
-    tensor J = Zero;
+    symmTensor J = Zero;
 
     massPropertiesSolid(mesh.points(), faces, 1.0, m, cM, J);
 

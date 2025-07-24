@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -39,6 +39,7 @@ SourceFiles
 #include "volFieldsFwd.H"
 #include "dictionary.H"
 #include "dimensionSet.H"
+#include "HashSet.H"
 #include "fvModelM.H"
 #include "geometricOneField.H"
 
@@ -117,6 +118,10 @@ public:
     TypeName("fvModel");
 
 
+    //- The keywords read by this class
+    static const wordHashSet keywords;
+
+
     // Declare run-time constructor selection table
 
         declareRunTimeSelectionTable
@@ -135,6 +140,13 @@ public:
 
 
     // Static Member Functions
+
+        //- Return the coefficients sub-dictionary for a given model type
+        inline static const dictionary& coeffs
+        (
+            const word& modelType,
+            const dictionary&
+        );
 
         //- Return the dimensions of the matrix of a source term
         template<class AlphaRhoFieldType, class ... AlphaRhoFieldTypes>

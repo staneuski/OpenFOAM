@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -172,6 +172,12 @@ private:
                 const labelList& patchOffsets,
                 const labelList& patchSizes,
                 const bool owner
+            );
+
+            //- Return the number of valid indices in the given list
+            static label nValidIndices
+            (
+                const List<FixedList<label, 3>>& indices
             );
 
             //- Create couplings by transferring geometry from the original to
@@ -446,9 +452,6 @@ public:
         //- Does this stitcher do anything?
         bool stitches() const;
 
-        //- Is the set of connected region meshes dynamic?
-        bool dynamic() const;
-
         //- Disconnect the mesh by removing faces from the nonConformalCyclics
         bool disconnect
         (
@@ -489,6 +492,12 @@ public:
         //- Disallow default bitwise assignment
         void operator=(const fvMeshStitcher&) = delete;
 };
+
+
+// Template Specialisations
+
+template<>
+void fvMeshStitcher::postUnconformSurfaceFields<Foam::vector>();
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

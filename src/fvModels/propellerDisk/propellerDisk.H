@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2024-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -44,7 +44,6 @@ Usage
 
         libs            ("libpropellerDisk.so");
 
-        selectionMode   cellZone;
         cellZone        propeller;
 
         normal          (1 0 0);    // Normal direction of the propeller
@@ -92,7 +91,7 @@ SourceFiles
 
 #include "fvModel.H"
 #include "logFile.H"
-#include "fvCellSet.H"
+#include "fvCellZone.H"
 #include "Function1.H"
 #include "vector2D.H"
 #include "forces.H"
@@ -104,6 +103,8 @@ namespace Foam
 {
 namespace fv
 {
+
+class propellerDiskAdjustment;
 
 /*---------------------------------------------------------------------------*\
                      Class propellerDisk Declaration
@@ -117,8 +118,8 @@ protected:
 
     // Protected Data
 
-        //- The set of cells the fvConstraint applies to
-        fvCellSet set_;
+        //- The cellZone the fvConstraint applies to
+        fvCellZone zone_;
 
         //- The name of the phase to which this fvModel applies
         word phaseName_;
@@ -147,10 +148,12 @@ protected:
         //- Propeller function
         autoPtr<Function1<vector2D>> propellerFunction_;
 
-        //- Current force of the propeller on the fluid
+        mutable autoPtr<volVectorField::Internal> forcePtr_;
+
+        //- Current force of the fluid on the propeller
         mutable vector force_;
 
-        //- Current moment of the propeller on the fluid
+        //- Current moment of the fluid on the propeller
         mutable vector moment_;
 
         //- Optional switch to enable logging of integral properties
@@ -158,6 +161,8 @@ protected:
 
         //- Optional log file
         mutable autoPtr<functionObjects::logFile> logFile_;
+
+        autoPtr<propellerDiskAdjustment> adjustment_;
 
 
     // Protected Member Functions
@@ -172,20 +177,18 @@ protected:
         }
 
         //- Return the rotation speed
-        virtual scalar n() const
-        {
-            return n_;
-        }
+        scalar n() const;
 
-        //- No rotation speed correction
-        virtual void correctn(const scalar T) const
-        {}
+        //- Rotation speed correction
+        void correctn(const scalar T) const;
 
         //- Computes the thickness of the disk in streamwise direction
         scalar diskThickness(const vector& centre) const;
 
         //- Return the normalised flow-rate through the disk
         scalar J(const vectorField& U, const vector& nHat) const;
+
+        friend class propellerDiskAdjustment;
 
 
 private:
@@ -237,13 +240,13 @@ public:
             return centre_;
         }
 
-        //- Return the current force of the propeller on the fluid
+        //- Return the current force of the fluid on the propeller
         vector force() const
         {
             return force_;
         }
 
-        //- Return the current moment of the propeller on the fluid
+        //- Return the current moment of the fluid on the propeller
         vector moment() const
         {
             return moment_;

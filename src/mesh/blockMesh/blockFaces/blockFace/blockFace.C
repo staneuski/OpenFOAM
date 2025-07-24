@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2016-2018 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2016-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -73,7 +73,7 @@ Foam::autoPtr<Foam::blockFace> Foam::blockFace::New
 (
     const dictionary& dict,
     const label index,
-    const searchableSurfaces& geometry,
+    const searchableSurfaceList& geometry,
     Istream& is
 )
 {
@@ -124,9 +124,7 @@ void Foam::blockFace::write(Ostream& os, const dictionary& d) const
 
 Foam::Ostream& Foam::operator<<(Ostream& os, const blockFace& p)
 {
-    os << p.vertices_ << endl;
-
-    return os;
+    return os << p.vertices_;
 }
 
 

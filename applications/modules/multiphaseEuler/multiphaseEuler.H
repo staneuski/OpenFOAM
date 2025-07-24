@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -52,7 +52,9 @@ See also
 #define multiphaseEuler_H
 
 #include "fluidSolver.H"
-#include "phaseSystem.H"
+#include "momentumTransferSystem.H"
+#include "heatTransferSystem.H"
+#include "populationBalanceSystem.H"
 #include "phaseCompressibleMomentumTransportModel.H"
 #include "buoyancy.H"
 #include "pressureReference.H"
@@ -94,6 +96,8 @@ protected:
         //  Defaults to 1
         int nEnergyCorrectors;
 
+        phaseSystem::alphaControl alphaControls;
+
 
     //- Optional LTS reciprocal time-step field
     tmp<volScalarField> trDeltaT;
@@ -107,15 +111,19 @@ protected:
 
     // Phase properties
 
-        autoPtr<phaseSystem> fluidPtr_;
-
-        phaseSystem& fluid_;
+        phaseSystem fluid_;
 
         phaseSystem::phaseModelList& phases_;
 
         phaseSystem::phaseModelPartialList& movingPhases_;
 
         surfaceScalarField& phi_;
+
+        momentumTransferSystem momentumTransferSystem_;
+
+        heatTransferSystem heatTransferSystem_;
+
+        populationBalanceSystem populationBalanceSystem_;
 
 
     // Thermophysical properties
@@ -124,7 +132,7 @@ protected:
 
         //- Reference to the buoyant pressure for buoyant cases
         //  otherwise to the pressure
-        volScalarField& p_rgh;
+        volScalarField& p_rgh_;
 
 
     // Pressure reference
@@ -189,8 +197,7 @@ private:
         //- Return the list of pressure equation compressibility contributions
         PtrList<fvScalarMatrix> compressibilityEqns
         (
-            const PtrList<volScalarField>& dmdts,
-            const PtrList<volScalarField>& d2mdtdps
+            const PtrList<volScalarField::Internal>& dmdts
         ) const;
 
 
@@ -207,8 +214,18 @@ public:
         //- Reference to the moving phases
         const phaseSystem::phaseModelPartialList& movingPhases;
 
+        //- Reference to the momentum transfer system
+        const momentumTransferSystem& momentumTransfer;
+
+        //- Reference to the heat transfer system
+        const heatTransferSystem& heatTransfer;
+
         //- Reference to the pressure field
         const volScalarField& p;
+
+        //- Reference to the buoyant pressure for buoyant cases
+        //  otherwise to the pressure
+        const volScalarField& p_rgh;
 
         //- Reference to the mass-flux field
         const surfaceScalarField& phi;
@@ -245,6 +262,12 @@ public:
         //- Called at the start of the PIMPLE loop
         virtual void prePredictor();
 
+        //- Predict the momentum transport
+        virtual void momentumTransportPredictor();
+
+        //- Predict thermophysical transport
+        virtual void thermophysicalTransportPredictor();
+
         //- Construct and optionally solve the momentum equation
         virtual void momentumPredictor();
 
@@ -256,8 +279,11 @@ public:
         //- Construct and solve the pressure equation in the PISO loop
         virtual void pressureCorrector();
 
-        //- Correct the momentum and thermophysical transport modelling
-        virtual void postCorrector();
+        //- Correct the momentum transport
+        virtual void momentumTransportCorrector();
+
+        //- Correct the thermophysical transport
+        virtual void thermophysicalTransportCorrector();
 
         //- Called after the PIMPLE loop at the end of the time-step
         virtual void postSolve();

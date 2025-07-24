@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -76,9 +76,9 @@ Description
 
     For inhomogeneous mixtures, in addition to the regress variable \c b, it is
     necessary to solve for the mixture-fraction \c ft provided by the \c
-    leanInhomogeneousMixture and also the fuel mass-fraction \fu if there are
+    leanInhomogeneousMixture and also the fuel mass-fraction \c fu if there are
     rich regions in the mixture, provided by the \c inhomogeneousMixture.
-    Details of the extention of the Weller b-Xi combustion model to non-premixed
+    Details of the extension of the Weller b-Xi combustion model to non-premixed
     combustion can be found in the Technical Report TR/HGW/03.
 
     Reference:
@@ -279,16 +279,16 @@ public:
 
     // Member Functions
 
-        //- Called at the start of the PIMPLE loop
-        virtual void prePredictor();
+        //- Predict thermophysical transport
+        virtual void thermophysicalTransportPredictor();
 
         //- Construct and solve the energy equation,
         //  convert to temperature
         //  and update thermophysical and transport properties
         virtual void thermophysicalPredictor();
 
-        //- Correct the momentum and thermophysical transport modelling
-        virtual void postCorrector();
+        //- Correct the thermophysical transport
+        virtual void thermophysicalTransportCorrector();
 
         //- Reset b-Xi and thermodynamics to the unburnt state
         //  for multi-cycle simulations

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -29,21 +29,6 @@ License
 #include "OSHA1stream.H"
 #include "unitConversion.H"
 #include "stringOps.H"
-
-/* * * * * * * * * * * * * * * Static Member Data  * * * * * * * * * * * * * */
-
-namespace Foam
-{
-    defineTypeNameAndDebug(dictionary, 0);
-}
-
-const Foam::dictionary Foam::dictionary::null;
-
-int Foam::dictionary::writeOptionalEntries
-(
-    Foam::debug::infoSwitch("writeOptionalEntries", 0)
-);
-
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
@@ -341,11 +326,16 @@ Foam::dictionary::dictionary(const fileName& name)
 
 Foam::dictionary::dictionary
 (
-    const word& name,
+    const fileName& name,
     const dictionary& parentDict
 )
 :
-    dictionaryName(name),
+    dictionaryName
+    (
+        parentDict.name().size()
+      ? parentDict.name()/name
+      : name
+    ),
     parent_(parentDict),
     filePtr_(nullptr)
 {}

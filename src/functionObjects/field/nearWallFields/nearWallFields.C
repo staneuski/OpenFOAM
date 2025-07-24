@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -59,6 +59,9 @@ void Foam::functionObjects::nearWallFields::calcAddressing()
 
     DebugInFunction << "nPatchFaces: " << globalWalls.size() << endl;
 
+    // Get the mesh searching engine
+    const meshSearch& searchEngine = meshSearch::New(mesh_);
+
     // Construct cloud
     lagrangian::Cloud<findCellParticle> cloud
     (
@@ -85,7 +88,7 @@ void Foam::functionObjects::nearWallFields::calcAddressing()
             (
                 new findCellParticle
                 (
-                    mesh_,
+                    searchEngine,
                     patch.Cf()[patchFacei],
                     patch.faceCells()[patchFacei],
                     nLocateBoundaryHits,
@@ -214,7 +217,7 @@ bool Foam::functionObjects::nearWallFields::read(const dictionary& dict)
     fvMeshFunctionObject::read(dict);
 
     dict.lookup("fields") >> fieldSet_;
-    patchSet_ = patchSet(dict);
+    patchSet_ = mesh_.boundaryMesh().patchSet(dict);
     distance_ = dict.lookup<scalar>("distance");
 
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -33,6 +33,41 @@ namespace solvers
 {
     defineTypeNameAndDebug(twoPhaseSolver, 0);
 }
+}
+
+
+// * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
+
+bool Foam::solvers::twoPhaseSolver::read()
+{
+    VoFSolver::read();
+
+    const dictionary& alphaControls = mesh.solution().solverDict(alpha1.name());
+
+    nAlphaSubCyclesPtr = Function1<scalar>::New
+    (
+        alphaControls.found("nAlphaSubCycles")
+          ? "nAlphaSubCycles"
+          : "nSubCycles",
+        dimless,
+        dimless,
+        alphaControls
+    );
+
+    nAlphaCorr = alphaControls.lookupOrDefaultBackwardsCompatible<label>
+    (
+        {"nCorrectors", "nAlphaCorr"},
+        1
+    );
+
+    MULESCorr = alphaControls.lookupOrDefault<Switch>("MULESCorr", false);
+
+    alphaApplyPrevCorr =
+        alphaControls.lookupOrDefault<Switch>("alphaApplyPrevCorr", false);
+
+    MULEScontrols.read(alphaControls);
+
+    return true;
 }
 
 
@@ -88,6 +123,8 @@ Foam::solvers::twoPhaseSolver::twoPhaseSolver
 {
     mesh.schemes().setFluxRequired(alpha1.name());
 
+    read();
+
     if (alphaRestart)
     {
         Info << "Restarting alpha" << endl;
@@ -118,7 +155,6 @@ void Foam::solvers::twoPhaseSolver::preSolve()
 
 void Foam::solvers::twoPhaseSolver::prePredictor()
 {
-    VoFSolver::prePredictor();
     alphaPredictor();
     mixture.correct();
 }

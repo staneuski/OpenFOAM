@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -293,6 +293,23 @@ public:
             const word& patchFieldType
         );
 
+        //- Constructor from internal field and patch field type
+        template<template<class> class PrimitiveField2>
+        GeometricField
+        (
+            const IOobject&,
+            const DimensionedField<Type, GeoMesh, PrimitiveField2>&,
+            const word& patchFieldType
+        );
+
+        //- Constructor from temporary internal field and patch field type
+        GeometricField
+        (
+            const IOobject&,
+            const tmp<Internal>&,
+            const word& patchFieldType
+        );
+
         //- Construct as copy resetting IO parameters and patch field types
         template<template<class> class PrimitiveField2>
         GeometricField
@@ -354,7 +371,7 @@ public:
         );
 
         //- Return a temporary field constructed from name, mesh, dimensionSet
-        //  and patch field type.
+        //  and patch field type
         static tmp<GeometricField<Type, GeoMesh, PrimitiveField>> New
         (
             const word& name,
@@ -364,7 +381,7 @@ public:
         );
 
         //- Return a temporary field constructed from mesh, dimensioned<Type>
-        //  and patch field type.
+        //  and patch field type
         static tmp<GeometricField<Type, GeoMesh, PrimitiveField>> New
         (
             const word& name,
@@ -374,7 +391,7 @@ public:
         );
 
         //- Return a temporary field constructed from mesh, dimensioned<Type>
-        //  and patch field types.
+        //  and patch field types
         static tmp<GeometricField<Type, GeoMesh, PrimitiveField>> New
         (
             const word& name,
@@ -392,6 +409,15 @@ public:
             const tmp<GeometricField<Type, GeoMesh, PrimitiveField>>&
         );
 
+        //- Rename field, reset patch field type and return
+        template<template<class> class PrimitiveField2>
+        static tmp<GeometricField<Type, GeoMesh, PrimitiveField>> New
+        (
+            const word& newName,
+            const GeometricField<Type, GeoMesh, PrimitiveField2>&,
+            const word& patchFieldType
+        );
+
         //- Rename temporary field, reset patch field type and return
         static tmp<GeometricField<Type, GeoMesh, PrimitiveField>> New
         (
@@ -400,7 +426,26 @@ public:
             const word& patchFieldType
         );
 
-        //- Rename and reset patch fields types of temporary field and return
+        //- Return a temporary field constructed from name,
+        //  internal field and patch field type
+        template<template<class> class PrimitiveField2>
+        static tmp<GeometricField<Type, GeoMesh, PrimitiveField>> New
+        (
+            const word& name,
+            const DimensionedField<Type, GeoMesh, PrimitiveField2>&,
+            const word& patchFieldType
+        );
+
+        //- Return a temporary field constructed from name,
+        //  temporary internal field and patch field type
+        static tmp<GeometricField<Type, GeoMesh, PrimitiveField>> New
+        (
+            const word& name,
+            const tmp<Internal>&,
+            const word& patchFieldType
+        );
+
+        //- Rename and reset patch fields types of field and return
         template<template<class> class PrimitiveField2>
         static tmp<GeometricField<Type, GeoMesh, PrimitiveField>> New
         (
@@ -421,8 +466,8 @@ public:
             const HashTable<word>& fieldSourceTypes = HashTable<word>()
         );
 
-        //- Return a temporary field constructed from IOobject, internal
-        //  field and patch field types
+        //- Return a temporary field constructed from IOobject,
+        //  internal field and patch field types
         template<template<class> class PrimitiveField2>
         static tmp<GeometricField<Type, GeoMesh, PrimitiveField>> New
         (
@@ -433,8 +478,8 @@ public:
             const HashTable<word>& fieldSourceTypes = HashTable<word>()
         );
 
-        //- Return a temporary field constructed from IOobject, tmp internal
-        //  field and patch field types
+        //- Return a temporary field constructed from IOobject,
+        //  temporary internal field and patch field types
         static tmp<GeometricField<Type, GeoMesh, PrimitiveField>> New
         (
             const word& newName,
@@ -509,7 +554,17 @@ public:
 
         //- Reset the field contents to the given field
         //  Used for mesh to mesh mapping
-        void reset(const tmp<GeometricField>&);
+        template<template<class> class PrimitiveField2>
+        void reset(const GeometricField<Type, GeoMesh, PrimitiveField2>&);
+
+        //- Reset the field contents to the given tmp-field
+        //  Used for mesh to mesh mapping
+        void reset(const tmp<GeometricField<Type, GeoMesh, PrimitiveField>>&);
+
+        //- Reset the field contents to the given tmp-field
+        //  Used for mesh to mesh mapping
+        template<template<class> class PrimitiveField2>
+        void reset(const tmp<GeometricField<Type, GeoMesh, PrimitiveField2>>&);
 
         //- Does the field need a reference level for solution
         bool needReference() const;
@@ -611,15 +666,14 @@ public:
         (
             GeometricField<Type, GeoMesh, PrimitiveField>&&
         );
-        void operator=
-        (
-            const tmp<GeometricField<Type, GeoMesh, PrimitiveField>>&
-        );
-
         template<template<class> class PrimitiveField2>
         void operator=
         (
             const GeometricField<Type, GeoMesh, PrimitiveField2>&
+        );
+        void operator=
+        (
+            const tmp<GeometricField<Type, GeoMesh, PrimitiveField>>&
         );
         template<template<class> class PrimitiveField2>
         void operator=
@@ -633,6 +687,10 @@ public:
         void operator==
         (
             const GeometricField<Type, GeoMesh, PrimitiveField2>&
+        );
+        void operator==
+        (
+            const tmp<GeometricField<Type, GeoMesh, PrimitiveField>>&
         );
         template<template<class> class PrimitiveField2>
         void operator==

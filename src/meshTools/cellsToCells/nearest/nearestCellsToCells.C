@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2013-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,8 +25,7 @@ License
 
 #include "nearestCellsToCells.H"
 #include "pointIndexHit.H"
-#include "indexedOctree.H"
-#include "treeDataCell.H"
+#include "meshSearch.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -56,6 +55,8 @@ bool Foam::cellsToCellss::nearest::findInitialSeeds
 {
     const vectorField& srcCcs = srcMesh.cellCentres();
 
+    const meshSearch& tgtSearchEngine = meshSearch::New(tgtMesh);
+
     for (label i = startSeedI; i < srcCellIDs.size(); i++)
     {
         label srcI = srcCellIDs[i];
@@ -63,8 +64,9 @@ bool Foam::cellsToCellss::nearest::findInitialSeeds
         if (mapFlag[srcI])
         {
             const point& srcCc = srcCcs[srcI];
+
             pointIndexHit hit =
-                tgtMesh.cellTree().findNearest(srcCc, great);
+                tgtSearchEngine.cellTree().findNearest(srcCc, great);
 
             if (hit.hit())
             {
@@ -116,7 +118,6 @@ Foam::scalar Foam::cellsToCellss::nearest::calculateAddressing
     List<DynamicList<label>> tgtToSrc(tgtMesh.nCells());
 
     const scalarField& srcVc = srcMesh.cellVolumes();
-    const scalarField& tgtVc = tgtMesh.cellVolumes();
 
     {
         label srcCelli = srcSeedI;
@@ -202,13 +203,13 @@ Foam::scalar Foam::cellsToCellss::nearest::calculateAddressing
     // transfer addressing into persistent storage
     forAll(srcToTgtCellAddr, i)
     {
-        srcToTgtCellWght[i] = scalarList(srcToTgt[i].size(), srcVc[i]);
+        srcToTgtCellWght[i] = scalarList(srcToTgt[i].size(), scalar(1));
         srcToTgtCellAddr[i].transfer(srcToTgt[i]);
     }
 
     forAll(tgtToSrcCellAddr, i)
     {
-        tgtToSrcCellWght[i] = scalarList(tgtToSrc[i].size(), tgtVc[i]);
+        tgtToSrcCellWght[i] = scalarList(tgtToSrc[i].size(), scalar(1));
         tgtToSrcCellAddr[i].transfer(tgtToSrc[i]);
     }
 
@@ -417,7 +418,6 @@ void Foam::cellsToCellss::nearest::normalise
         {
             srcToTgtAddr[srcCelli].resize(1);
             srcToTgtWght[srcCelli].resize(1);
-            srcToTgtWght[srcCelli][0] = 1;
         }
     }
 }

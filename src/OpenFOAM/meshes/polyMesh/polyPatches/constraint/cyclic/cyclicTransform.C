@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2020-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2020-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -60,31 +60,28 @@ Type sum(const tmp<Field<Type>>& x, const bool global)
 
 namespace Foam
 {
-    template<>
-    const char* NamedEnum<cyclicTransform::transformTypes, 4>::names[] =
-    {
-        "unspecified",
-        "none",
-        "rotational",
-        "translational"
-    };
-
-    const NamedEnum<cyclicTransform::transformTypes, 4>
-        cyclicTransform::transformTypeNames;
-
-    const wordList cyclicTransform::keywords =
-    {
-        "transformType",
-        "transform",
-        "rotationAxis",
-        "rotationCentre",
-        "rotationAngle",
-        "separation",
-        "separationVector"
-    };
-
     defineTypeNameAndDebug(cyclicTransform, 0);
 }
+
+const Foam::NamedEnum<Foam::cyclicTransform::transformTypes, 4>
+Foam::cyclicTransform::transformTypeNames
+{
+    "unspecified",
+    "none",
+    "rotational",
+    "translational"
+};
+
+const Foam::wordList Foam::cyclicTransform::keywords
+{
+    "transformType",
+    "transform",
+    "rotationAxis",
+    "rotationCentre",
+    "rotationAngle",
+    "separation",
+    "separationVector"
+};
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -586,6 +583,57 @@ void Foam::cyclicTransform::write(Ostream& os) const
     }
 
     os.precision(oldPrecision);
+}
+
+
+Foam::string Foam::cyclicTransform::str() const
+{
+    OStringStream oss;
+
+    switch (transformType_)
+    {
+        case UNSPECIFIED:
+            break;
+
+        case NONE:
+            break;
+
+        case ROTATIONAL:
+        {
+            oss << "axis=" << rotationAxis_
+                << ", centre=" << rotationCentre_
+                << ", angle=";
+
+            if (transformComplete_)
+            {
+                oss << unitDegrees.toUser(rotationAngle_);
+            }
+            else
+            {
+                oss << '?';
+            }
+
+            break;
+        }
+
+        case TRANSLATIONAL:
+        {
+            oss << "separation=";
+
+            if (transformComplete_)
+            {
+                oss << separation_;
+            }
+            else
+            {
+                oss << '?';
+            }
+
+            break;
+        }
+    }
+
+    return oss.str();
 }
 
 

@@ -31,6 +31,7 @@ Description
 
 Usage
     Example specification:
+    \verbatim
     <LagrangianPatchName>
     {
         type            processorCyclic;
@@ -170,6 +171,12 @@ public:
             PstreamBuffers&,
             const LagrangianScalarInternalDynamicField& fraction
         );
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using processorLagrangianPatchField<Type>::operator=;
 };
 
 

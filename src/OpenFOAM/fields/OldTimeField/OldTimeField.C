@@ -52,7 +52,7 @@ void Foam::OldTimeField<FieldType>::storeOldTimesInner() const
             tfield0_.ref().OldTimeField<Field0Type>::storeOldTimesInner();
 
             // Set the old-field to this field
-            tfield0_.ref() == field();
+            tfield0_.ref() = field();
             tfield0_.ref().OldTimeField<Field0Type>::timeIndex_ = timeIndex_;
 
             // If we have an old-old field, then the old field is state and
@@ -82,7 +82,7 @@ void Foam::OldTimeField<FieldType>::nullOldestTimeInner()
         }
         else
         {
-            tfield0_ = tmp<FieldType>(NullObjectRef<FieldType>());
+            tfield0_ = tmp<Field0Type>(NullObjectRef<FieldType>());
         }
     }
 }
@@ -94,7 +94,7 @@ void Foam::OldTimeField<FieldType>::setBase(const OldTimeBaseField& otbf) const
 {
     if (!tfield0_.valid())
     {
-        otbf.tfield0_.clear();
+        otbf.tfield0_ = tmp<typename Field0Type::Base>();
     }
     else
     {
@@ -229,7 +229,7 @@ Foam::OldTimeField<FieldType>::~OldTimeField()
 {
     if (tfield0_.valid() && notNull(tfield0_()))
     {
-        tfield0_.clear();
+        tfield0_ = tmp<Field0Type>();
         setBase();
     }
 }
@@ -275,9 +275,10 @@ void Foam::OldTimeField<FieldType>::storeOldTimes() const
 template<class FieldType>
 void Foam::OldTimeField<FieldType>::clearOldTimes()
 {
-    if (tfield0_.valid() && notNull(tfield0_()))
+    if (tfield0_.valid())
     {
-        tfield0_.clear();
+        tfield0_ = tmp<Field0Type>();
+        setBase();
     }
 }
 
@@ -306,7 +307,7 @@ Foam::label Foam::OldTimeField<FieldType>::nOldTimes
         }
         else
         {
-            return tfield0_->nOldTimes(includeNull) + 1;
+            return tfield0_().nOldTimes(includeNull) + 1;
         }
     }
     else
@@ -326,23 +327,24 @@ Foam::OldTimeField<FieldType>::oldTime() const
 
         // Clear the field0Ptr to ensure the old-time field constructor
         // does not construct the old-old-time field
-        tfield0_.clear();
+        tfield0_ = tmp<Field0Type>();
         setBase();
 
         // Construct a copy of the field
-        tfield0_ = new Field0Type
-        (
-            IOobject
+        tfield0_ =
+            OldTimeFieldCopy<FieldType>()
             (
-                field().name() + "_0",
-                field().time().name(),
-                field().db(),
-                IOobject::NO_READ,
-                IOobject::NO_WRITE,
-                field().registerObject()
-            ),
-            field()
-        );
+                IOobject
+                (
+                    field().name() + "_0",
+                    field().time().name(),
+                    field().db(),
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE,
+                    field().registerObject()
+                ),
+                field()
+            );
         setBase();
     }
     else

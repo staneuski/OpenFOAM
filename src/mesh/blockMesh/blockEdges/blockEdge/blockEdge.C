@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -75,7 +75,7 @@ Foam::autoPtr<Foam::blockEdge> Foam::blockEdge::New
 (
     const dictionary& dict,
     const label index,
-    const searchableSurfaces& geometry,
+    const searchableSurfaceList& geometry,
     const pointField& points,
     Istream& is
 )
@@ -146,10 +146,11 @@ Foam::blockEdge::position(const scalarList& lambdas) const
 
 void Foam::blockEdge::write(Ostream& os, const dictionary& d) const
 {
+    os << token::BEGIN_LIST;
     blockVertex::write(os, start_, d);
-    os << tab;
+    os << token::SPACE;
     blockVertex::write(os, end_, d);
-    os << endl;
+    os << token::END_LIST;
 }
 
 
@@ -157,9 +158,12 @@ void Foam::blockEdge::write(Ostream& os, const dictionary& d) const
 
 Foam::Ostream& Foam::operator<<(Ostream& os, const blockEdge& p)
 {
-    os << p.start_ << tab << p.end_ << endl;
-
-    return os;
+    return os
+        << token::BEGIN_LIST
+        << p.start_
+        << token::SPACE
+        << p.end_
+        << token::END_LIST;
 }
 
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -244,6 +244,14 @@ public:
                 const volScalarField& T
             ) const;
 
+            //- Enthalpy/Internal energy
+            //  for given pressure and temperature [J/kg]
+            virtual tmp<volScalarField::Internal> he
+            (
+                const volScalarField::Internal& p,
+                const volScalarField::Internal& T
+            ) const;
+
             //- Enthalpy/Internal energy for cell-set [J/kg]
             virtual tmp<scalarField> he
             (
@@ -259,10 +267,20 @@ public:
             ) const;
 
             //- Enthalpy/Internal energy for source [J/kg]
+            virtual tmp<volScalarField::Internal> he
+            (
+                const volScalarField::Internal& T,
+                const fvSource& model,
+                const volScalarField::Internal& source
+            ) const;
+
+            //- Enthalpy/Internal energy for source [J/kg]
             virtual tmp<scalarField> he
             (
                 const scalarField& T,
-                const fvSource& source
+                const fvSource& model,
+                const scalarField& source,
+                const labelUList& cells
             ) const;
 
             //- Sensible enthalpy [J/kg]
@@ -274,6 +292,14 @@ public:
             (
                 const volScalarField& p,
                 const volScalarField& T
+            ) const;
+
+            //- Sensible enthalpy
+            //  for given pressure and temperature [J/kg]
+            virtual tmp<volScalarField::Internal> hs
+            (
+                const volScalarField::Internal& p,
+                const volScalarField::Internal& T
             ) const;
 
             //- Sensible enthalpy for cell-set [J/kg]
@@ -299,6 +325,14 @@ public:
             (
                 const volScalarField& p,
                 const volScalarField& T
+            ) const;
+
+            //- Absolute enthalpy
+            //  for given pressure and temperature [J/kg]
+            virtual tmp<volScalarField::Internal> ha
+            (
+                const volScalarField::Internal& p,
+                const volScalarField::Internal& T
             ) const;
 
             //- Absolute enthalpy for patch [J/kg/K]

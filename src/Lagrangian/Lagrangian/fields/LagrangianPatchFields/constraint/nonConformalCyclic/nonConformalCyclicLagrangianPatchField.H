@@ -31,6 +31,7 @@ Description
 
 Usage
     Example specification:
+    \verbatim
     <LagrangianPatchName>
     {
         type            nonConformalCyclic;
@@ -143,6 +144,12 @@ public:
             PstreamBuffers&,
             const LagrangianScalarInternalDynamicField& fraction
         );
+
+
+    // Member Operators
+
+        //- Inherit assignment
+        using LagrangianPatchField<Type>::operator=;
 };
 
 

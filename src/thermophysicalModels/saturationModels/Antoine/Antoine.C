@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,6 +35,8 @@ namespace saturationModels
     defineTypeNameAndDebug(Antoine, 0);
     addToRunTimeSelectionTable(saturationPressureModel, Antoine, dictionary);
     addToRunTimeSelectionTable(saturationTemperatureModel, Antoine, dictionary);
+
+    static const coefficient oneP(dimPressure, 1);
 }
 }
 
@@ -45,7 +47,7 @@ template<class FieldType>
 Foam::tmp<FieldType>
 Foam::saturationModels::Antoine::pSat(const FieldType& T) const
 {
-    return dimensionedScalar(dimPressure, 1)*exp(A_ + B_/(C_ + T));
+    return oneP*exp(A_ + B_/(C_ + T));
 }
 
 
@@ -69,7 +71,15 @@ template<class FieldType>
 Foam::tmp<FieldType>
 Foam::saturationModels::Antoine::Tsat(const FieldType& p) const
 {
-    return B_/(log(p*dimensionedScalar(dimless/dimPressure, 1)) - A_) - C_;
+    return B_/(log(p/oneP) - A_) - C_;
+}
+
+
+template<class FieldType>
+Foam::tmp<FieldType>
+Foam::saturationModels::Antoine::TsatPrime(const FieldType& p) const
+{
+    return -(B_/p/sqr(log(p/oneP) - A_));
 }
 
 
@@ -93,16 +103,22 @@ Foam::saturationModels::Antoine::~Antoine()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-IMPLEMENT_PSAT(Antoine, volScalarField::Internal);
+IMPLEMENT_PSAT(saturationModels::Antoine, scalarField);
 
 
-IMPLEMENT_PSAT(Antoine, volScalarField);
+IMPLEMENT_PSAT(saturationModels::Antoine, volScalarField::Internal);
 
 
-IMPLEMENT_TSAT(Antoine, volScalarField::Internal);
+IMPLEMENT_PSAT(saturationModels::Antoine, volScalarField);
 
 
-IMPLEMENT_TSAT(Antoine, volScalarField);
+IMPLEMENT_TSAT(saturationModels::Antoine, scalarField);
+
+
+IMPLEMENT_TSAT(saturationModels::Antoine, volScalarField::Internal);
+
+
+IMPLEMENT_TSAT(saturationModels::Antoine, volScalarField);
 
 
 // ************************************************************************* //

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -36,6 +36,7 @@ License
 #include "wallPolyPatch.H"
 #include "nonConformalCyclicPolyPatch.H"
 #include "cpuLoad.H"
+#include "meshSearch.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -201,11 +202,17 @@ Foam::lagrangian::Cloud<ParticleType>::Cloud
     globalPositionsPtr_(),
     timeIndex_(-1)
 {
-    // Ask for the tetBasePtIs and oldCellCentres to trigger all processors to
-    // build them, otherwise, if some processors have no particles then there
-    // is a comms mismatch.
+    // Request the tet base points so that they are built on all processors.
+    // Constructing tet base points requires communication, so we can't leave
+    // it until the tracking requests them as those calls are not synchronised.
+    // Some processors might not be doing any tracking at all.
     pMesh_.tetBasePtIs();
-    pMesh_.oldCellCentres();
+
+    // Mark the need to store the old-time cell-centres if the mesh is moving
+    if (!ParticleType::instantaneous)
+    {
+        pMesh_.oldCellCentres();
+    }
 
     if (particles.size())
     {
@@ -262,7 +269,7 @@ void Foam::lagrangian::Cloud<ParticleType>::cloudReset
 {
     // Reset particle count and particles only
     // - not changing the cloud object registry or reference to the polyMesh
-    ParticleType::particleCount_ = 0;
+    ParticleType::particleCount = 0;
     IDLList<ParticleType>::operator=(c);
 }
 
@@ -288,7 +295,7 @@ void Foam::lagrangian::Cloud<ParticleType>::move
 )
 {
     // If the time has changed, modify the particles accordingly
-    if (timeIndex_ != pMesh_.time().timeIndex())
+    if (!ParticleType::instantaneous && timeIndex_ != pMesh_.time().timeIndex())
     {
         changeTimeStep();
     }
@@ -465,9 +472,7 @@ void Foam::lagrangian::Cloud<ParticleType>::topoChange
 {
     if (map.reverseCellMap().empty()) return;
 
-    // Ask for the tetBasePtIs to trigger all processors to build
-    // them, otherwise, if some processors have no particles then
-    // there is a comms mismatch.
+    // See comments in the constructor
     pMesh_.tetBasePtIs();
     pMesh_.oldCellCentres();
 
@@ -481,6 +486,8 @@ void Foam::lagrangian::Cloud<ParticleType>::topoChange
 
     const vectorField& positions = globalPositionsPtr_();
 
+    const meshSearch& searchEngine = meshSearch::New(pMesh_);
+
     label lostCount = 0;
 
     label particlei = 0;
@@ -490,7 +497,7 @@ void Foam::lagrangian::Cloud<ParticleType>::topoChange
 
         const label celli = map.reverseCellMap()[iter().cell()];
 
-        if (!iter().locate(pMesh_, pos, celli))
+        if (!iter().locate(searchEngine, pos, celli))
         {
             this->remove(iter);
             lostCount ++;
@@ -510,9 +517,7 @@ void Foam::lagrangian::Cloud<ParticleType>::topoChange
 template<class ParticleType>
 void Foam::lagrangian::Cloud<ParticleType>::mapMesh(const polyMeshMap& map)
 {
-    // Ask for the tetBasePtIs to trigger all processors to build
-    // them, otherwise, if some processors have no particles then
-    // there is a comms mismatch.
+    // See comments in the constructor
     pMesh_.tetBasePtIs();
     pMesh_.oldCellCentres();
 
@@ -530,6 +535,8 @@ void Foam::lagrangian::Cloud<ParticleType>::mapMesh(const polyMeshMap& map)
     }
 
     const vectorField& positions = globalPositionsPtr_();
+
+    const meshSearch& searchEngine = meshSearch::New(pMesh_);
 
     label lostCount = 0;
 
@@ -556,7 +563,7 @@ void Foam::lagrangian::Cloud<ParticleType>::mapMesh(const polyMeshMap& map)
             }
             else if (proci == Pstream::myProcNo())
             {
-                if (!iter().locate(pMesh_, pos, celli))
+                if (!iter().locate(searchEngine, pos, celli))
                 {
                     this->remove(iter);
                     lostCount ++;
@@ -613,7 +620,7 @@ void Foam::lagrangian::Cloud<ParticleType>::mapMesh(const polyMeshMap& map)
                     const label celli = receiveCellIndices[particlei];
                     const vector& pos = receivePositions[particlei ++];
 
-                    if (iter().locate(pMesh_, pos, celli))
+                    if (iter().locate(searchEngine, pos, celli))
                     {
                         this->append(receiveParticles.remove(iter));
                     }
@@ -643,9 +650,7 @@ void Foam::lagrangian::Cloud<ParticleType>::distribute
     const polyDistributionMap& map
 )
 {
-    // Ask for the tetBasePtIs to trigger all processors to build
-    // them, otherwise, if some processors have no particles then
-    // there is a comms mismatch.
+    // See comments in the constructor
     pMesh_.tetBasePtIs();
     pMesh_.oldCellCentres();
 
@@ -661,6 +666,8 @@ void Foam::lagrangian::Cloud<ParticleType>::distribute
             << "Cloud::storeGlobalPositions has not been called."
             << exit(FatalError);
     }
+
+    const meshSearch& searchEngine = meshSearch::New(pMesh_);
 
     const vectorField& positions = globalPositionsPtr_();
 
@@ -734,7 +741,7 @@ void Foam::lagrangian::Cloud<ParticleType>::distribute
         {
             const point& pos = cellParticlePositions[celli][cellParticlei++];
 
-            if (iter().locate(pMesh_, pos, celli))
+            if (iter().locate(searchEngine, pos, celli))
             {
                 this->append(cellParticles[celli].remove(iter));
             }

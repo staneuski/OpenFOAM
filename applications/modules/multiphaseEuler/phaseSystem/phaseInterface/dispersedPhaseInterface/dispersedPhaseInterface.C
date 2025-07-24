@@ -24,6 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "dispersedPhaseInterface.H"
+#include "uniformDimensionedFields.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -50,6 +51,23 @@ namespace Foam
         0
     );
     addToRunTimeSelectionTable(phaseInterface, dispersedPhaseInterface, word);
+}
+
+
+// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
+
+bool Foam::dispersedPhaseInterface::same
+(
+    const phaseInterface& interface,
+    bool strict
+) const
+{
+    return
+        (!strict || isType<dispersedPhaseInterface>(interface))
+     && (strict || isA<dispersedPhaseInterface>(interface))
+     && &dispersed_
+     == &refCast<const dispersedPhaseInterface>(interface).dispersed_
+     && phaseInterface::same(interface, false);
 }
 
 
@@ -142,9 +160,12 @@ Foam::tmp<Foam::volScalarField> Foam::dispersedPhaseInterface::Eo
     const volScalarField& d
 ) const
 {
+    const uniformDimensionedVectorField& g =
+        mesh().lookupObject<uniformDimensionedVectorField>("g");
+
     return
         mag(dispersed().rho() - continuous().rho())
-       *mag(g())
+       *mag(g)
        *sqr(d)
        /sigma();
 }
@@ -152,8 +173,11 @@ Foam::tmp<Foam::volScalarField> Foam::dispersedPhaseInterface::Eo
 
 Foam::tmp<Foam::volScalarField> Foam::dispersedPhaseInterface::Mo() const
 {
+    const uniformDimensionedVectorField& g =
+        mesh().lookupObject<uniformDimensionedVectorField>("g");
+
     return
-        mag(g())
+        mag(g)
        *continuous().fluidThermo().nu()
        *pow3
         (

@@ -109,7 +109,7 @@ void Foam::timeVaryingMappedFvPatchField<Type>::checkTable()
         );
 
         // Read the times for which data is available
-        sampleTimes_ = Time::findTimes(dataDir_);
+        sampleTimes_ = patch_.db().time().findTimes(dataDir_);
 
         if (debug)
         {
@@ -129,7 +129,7 @@ void Foam::timeVaryingMappedFvPatchField<Type>::checkTable()
     (
         sampleTimes_,
         startSampleTime_,
-        time().value(),
+        time().userTimeValue(),
         lo,
         hi
     );
@@ -138,7 +138,7 @@ void Foam::timeVaryingMappedFvPatchField<Type>::checkTable()
     {
         FatalErrorInFunction
             << "Cannot find starting sampling values for current time "
-            << time().value() << nl
+            << time().userTimeValue() << nl
             << "Have sampling values for times "
             << pointToPointPlanarInterpolation::timeNames(sampleTimes_) << nl
             << "In directory " <<  dataDir_ << " of field " << fieldTableName_
@@ -310,8 +310,13 @@ Foam::timeVaryingMappedFvPatchField<Type>::timeVaryingMappedFvPatchField
 
     if (dict.found("offset"))
     {
-        offset_ =
-            Function1<Type>::New("offset", dimTime, iF.dimensions(), dict);
+        offset_ = Function1<Type>::New
+        (
+            "offset",
+            time().userUnits(),
+            iF.dimensions(),
+            dict
+        );
     }
 
     if
@@ -395,13 +400,7 @@ void Foam::timeVaryingMappedFvPatchField<Type>::map
     const fieldMapper& mapper
 )
 {
-    mapper(startSampledValues_, tiptf.startSampledValues_);
-    mapper(endSampledValues_, tiptf.endSampledValues_);
-
-    // Clear interpolator
-    mapperPtr_.clear();
-    startSampleTime_ = -1;
-    endSampleTime_ = -1;
+    reset(tiptf);
 }
 
 
@@ -451,7 +450,7 @@ Foam::tmp<Foam::Field<Type>> Foam::timeVaryingMappedFvPatchField<Type>::map()
         const scalar start = sampleTimes_[startSampleTime_].value();
         const scalar end = sampleTimes_[endSampleTime_].value();
 
-        const scalar s = (time().value() - start)/(end - start);
+        const scalar s = (time().userTimeValue() - start)/(end - start);
 
         if (debug)
         {

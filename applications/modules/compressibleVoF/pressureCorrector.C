@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -40,6 +40,7 @@ License
 
 void Foam::solvers::compressibleVoF::pressureCorrector()
 {
+    volScalarField& p_rgh = p_rgh_;
     volVectorField& U = U_;
     surfaceScalarField& phi(phi_);
 
@@ -191,9 +192,9 @@ void Foam::solvers::compressibleVoF::pressureCorrector()
 
                 phi = phiHbyA + p_rghEqnIncomp.flux();
 
-                p = p_rgh + rho*buoyancy.gh;
+                p = p_rgh + rho*buoyancy.gh + buoyancy.pRef;
                 fvConstraints().constrain(p);
-                p_rgh = p - rho*buoyancy.gh;
+                p_rgh = p - rho*buoyancy.gh - buoyancy.pRef;
                 p_rgh.correctBoundaryConditions();
 
                 U = HbyA
@@ -209,7 +210,7 @@ void Foam::solvers::compressibleVoF::pressureCorrector()
         mixture_.correct();
 
         // Correct p_rgh for consistency with p and the updated densities
-        p_rgh = p - rho*buoyancy.gh;
+        p_rgh = p - rho*buoyancy.gh - buoyancy.pRef;
         p_rgh.correctBoundaryConditions();
     }
 

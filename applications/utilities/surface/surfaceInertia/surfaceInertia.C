@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 
     scalar m = 0.0;
     vector cM = Zero;
-    tensor J = Zero;
+    symmTensor J = Zero;
 
     if (args.optionFound("shellProperties"))
     {
@@ -109,29 +109,7 @@ int main(int argc, char *argv[])
     }
 
     vector eVal = eigenValues(J);
-
-    tensor eVec = eigenVectors(J);
-
-    label pertI = 0;
-
-    randomGenerator rndGen(57373);
-
-    while ((magSqr(eVal) < vSmall) && pertI < 10)
-    {
-        WarningInFunction
-            << "No eigenValues found, shape may have symmetry, "
-            << "perturbing inertia tensor diagonal" << endl;
-
-        J.xx() *= 1.0 + small*rndGen.scalar01();
-        J.yy() *= 1.0 + small*rndGen.scalar01();
-        J.zz() *= 1.0 + small*rndGen.scalar01();
-
-        eVal = eigenValues(J);
-
-        eVec = eigenVectors(J);
-
-        pertI++;
-    }
+    tensor eVec = eigenVectors(J, eVal);
 
     bool showTransform = true;
 
@@ -183,9 +161,7 @@ int main(int argc, char *argv[])
                 if (magDotProduct > maxMagDotProduct)
                 {
                     maxMagDotProduct = magDotProduct;
-
                     match.first() = cI;
-
                     match.second() = pI;
                 }
             }
@@ -214,9 +190,7 @@ int main(int argc, char *argv[])
             principal = tPrincipal;
 
             vector tEVal = eVal;
-
             tEVal[(match.second() + 1) % 3] = eVal[(match.second() + 2) % 3];
-
             tEVal[(match.second() + 2) % 3] = eVal[(match.second() + 1) % 3];
 
             eVal = tEVal;
@@ -231,18 +205,15 @@ int main(int argc, char *argv[])
             permutationDelta += 3;
 
             List<vector> tPrincipal = principal;
-
             vector tEVal = eVal;
 
             for (label i = 0; i < 3; i++)
             {
                 tPrincipal[i] = principal[(i + permutationDelta) % 3];
-
                 tEVal[i] = eVal[(i + permutationDelta) % 3];
             }
 
             principal = tPrincipal;
-
             eVal = tEVal;
         }
 
@@ -273,7 +244,6 @@ int main(int argc, char *argv[])
                     maxMagDotProduct = magDotProduct;
 
                     match.first() = cI;
-
                     match.second() = pI;
                 }
             }
@@ -299,25 +269,13 @@ int main(int argc, char *argv[])
             principal = tPrincipal;
 
             vector tEVal = eVal;
-
             tEVal[(matchedAlready + 1) % 3] = eVal[(matchedAlready + 2) % 3];
-
             tEVal[(matchedAlready + 2) % 3] = eVal[(matchedAlready + 1) % 3];
 
             eVal = tEVal;
         }
 
         eVec = tensor(principal[0], principal[1], principal[2]);
-
-        // {
-        //     tensor R = rotationTensor(vector(1, 0, 0), eVec.x());
-
-        //     R = rotationTensor(R & vector(0, 1, 0), eVec.y()) & R;
-
-        //     Info<< "R = " << nl << R << endl;
-
-        //     Info<< "R - eVec.T() " << R - eVec.T() << endl;
-        // }
     }
     else
     {

@@ -6,13 +6,12 @@ cd ${0%/*} || exit 1    # Run from this directory
 
 # Mesh
 runApplication blockMesh
-runApplication topoSet
 
 # Run
 runApplication decomposePar
 runParallel -s populationBalanceSetPhaseSizeDistribution foamPostProcess \
     -solver multiphaseEuler -func populationBalanceSetPhaseSizeDistribution
-runParallel $(getApplication)
+runParallel foamRun
 runApplication reconstructPar -latestTime
 
 # Post-process

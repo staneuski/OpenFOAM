@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -67,8 +67,6 @@ class polyTopoChangeMap;
 class polyMeshMap;
 class polyDistributionMap;
 class polyMeshTetDecomposition;
-class treeDataCell;
-template<class Type> class indexedOctree;
 
 /*---------------------------------------------------------------------------*\
                           Class polyMesh Declaration
@@ -95,24 +93,10 @@ public:
             TOPO_PATCH_CHANGE
         };
 
-        //- Enumeration defining the decomposition of the cell for
-        //  inside/outside test
-        enum cellDecomposition
-        {
-            FACE_PLANES,      //- Faces considered as planes
-
-            FACE_CENTRE_TRIS, //- Faces decomposed into triangles
-                              //  using face-centre
-
-            FACE_DIAG_TRIS,   //- Faces decomposed into triangles diagonally
-
-            CELL_TETS         //- Cell decomposed into tets
-        };
-
 
 private:
 
-    // Permanent data
+    // Private Member Data
 
         // Primitive mesh data
 
@@ -151,9 +135,6 @@ private:
 
             //- Base point for face decomposition into tets
             mutable autoPtr<labelIOList> tetBasePtIsPtr_;
-
-            //- Search tree to allow spatial cell searching
-            mutable autoPtr<indexedOctree<treeDataCell>> cellTreePtr_;
 
 
         // Zoning information
@@ -279,7 +260,7 @@ public:
         //- Return whether the given IOobject relates to a mesh on disk
         static bool found(const IOobject& io);
 
-        //- Construct from IOobject
+        //- Construct from IOobject.
         explicit polyMesh(const IOobject& io);
 
         //- Move construct from IOobject or from components.
@@ -430,9 +411,6 @@ public:
 
             //- Return the tetBasePtIs
             const labelIOList& tetBasePtIs() const;
-
-            //- Return the cell search tree
-            const indexedOctree<treeDataCell>& cellTree() const;
 
             //- Return point zones
             const pointZoneList& pointZones() const
@@ -593,6 +571,9 @@ public:
 
         // Storage management
 
+            //- Print a list of all the currently allocated mesh data
+            void printAllocated() const;
+
             //- Clear geometry
             void clearGeom();
 
@@ -608,52 +589,11 @@ public:
             //- Clear tet base points
             void clearTetBasePtIs();
 
-            //- Clear cell tree data
-            void clearCellTree();
-
             //- Remove all files from mesh instance
             void removeFiles(const fileName& instanceDir) const;
 
             //- Remove all files from mesh instance()
             void removeFiles() const;
-
-
-        // Position search functions
-
-            //- Find the cell, tetFacei and tetPti for point p
-            void findCellFacePt
-            (
-                const point& p,
-                label& celli,
-                label& tetFacei,
-                label& tetPti
-            ) const;
-
-            //- Find the tetFacei and tetPti for point p in celli.
-            //  tetFacei and tetPtI are set to -1 if not found
-            void findTetFacePt
-            (
-                const label celli,
-                const point& p,
-                label& tetFacei,
-                label& tetPti
-            ) const;
-
-            //- Test if point p is in the celli
-            bool pointInCell
-            (
-                const point& p,
-                label celli,
-                const cellDecomposition = CELL_TETS
-            ) const;
-
-            //- Find cell enclosing this location and return index
-            //  If not found -1 is returned
-            label findCell
-            (
-                const point& p,
-                const cellDecomposition = CELL_TETS
-            ) const;
 
 
         // Write

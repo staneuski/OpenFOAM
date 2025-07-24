@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2016-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2016-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -97,6 +97,10 @@ Usage
       - \par -output
         Path name of the output dictionary, defaults to the input dictionary
 
+      - \par -quiet
+        Operate without outputting to the terminal or raising errors. Just use
+        an exit code to indicate success or failure.
+
     Example usage:
       - Change simulation to run for one timestep only:
         \verbatim
@@ -167,6 +171,7 @@ Usage
 #include "IFstream.H"
 #include "OFstream.H"
 #include "includeEntry.H"
+#include "mergeDictionaries.H"
 
 using namespace Foam;
 
@@ -284,6 +289,17 @@ void substitute(dictionary& dict, const string& substitutions)
     List<Tuple3<word, string, label>> namedArgs;
     dictArgList({substitutions, 0}, args, namedArgs);
 
+    forAll(args, i)
+    {
+        const Pair<word> dAk(dictAndKeyword(args[i].first()));
+        dictionary& subDict(dict.scopedDict(dAk.first()));
+        IStringStream entryStream
+        (
+            dAk.second() + ';'
+        );
+        subDict.set(entry::New(entryStream).ptr());
+    }
+
     forAll(namedArgs, i)
     {
         const Pair<word> dAk(dictAndKeyword(namedArgs[i].first()));
@@ -374,6 +390,11 @@ int main(int argc, char *argv[])
         "path name",
         "Path name of the output dictionary"
     );
+    argList::addBoolOption
+    (
+        "quiet",
+        "Operate without outputting to the terminal or raising errors"
+    );
 
     argList args(argc, argv);
 
@@ -390,6 +411,10 @@ int main(int argc, char *argv[])
     {
         entry::disableFunctionEntries = true;
     }
+
+    // Do not write info if the quiet option is set
+    const bool quiet = args.optionFound("quiet");
+    if (quiet) messageStream::level = 0;
 
     // Set write precision
     if (args.optionFound("writePrecision"))
@@ -457,7 +482,14 @@ int main(int argc, char *argv[])
     else
     {
         dictPtr = new dictionary(dictPath);
-        dictFormat = readDict(*dictPtr, args.path()/dictPath);
+        dictFormat =
+            readDict
+            (
+                *dictPtr,
+                dictPath.isAbsolute()
+              ? dictPath
+              : args.path()/dictPath
+            );
     }
 
     dictionary& dict = localDictPtr ? *localDictPtr : *dictPtr;
@@ -497,17 +529,8 @@ int main(int argc, char *argv[])
         }
     }
 
-
-    // Second dictionary for -diff
-    fileName diffFileName;
-    dictionary diffDict;
-
-    if (args.optionReadIfPresent("diff", diffFileName))
-    {
-        readDict(diffDict, diffFileName);
-    }
-
     word entryName;
+    fileName diffFileName;
     if (args.optionReadIfPresent("entry", entryName))
     {
         const word scopedName(entryName);
@@ -596,9 +619,11 @@ int main(int argc, char *argv[])
         }
         else
         {
-            // Optionally remove a second dictionary
-            if (args.optionFound("diff"))
+            if (args.optionReadIfPresent("diff", diffFileName))
             {
+                dictionary diffDict;
+                readDict(diffDict, diffFileName);
+
                 const Pair<word> dAk(dictAndKeyword(scopedName));
 
                 dictionary& subDict(dict.scopedDict(dAk.first()));
@@ -621,7 +646,6 @@ int main(int argc, char *argv[])
                     }
                 }
             }
-
 
             const entry* entPtr = dict.lookupScopedEntryPtr
             (
@@ -688,6 +712,22 @@ int main(int argc, char *argv[])
         substitute(dict, substitutions);
         changed = true;
     }
+    else if (args.optionFound("merge"))
+    {
+        dictionary fromDict;
+        if (args.optionFound("dict"))
+        {
+            const fileName fromDictFileName(args.optionRead<fileName>("merge"));
+            readDict(fromDict, fromDictFileName);
+        }
+        else
+        {
+            const string substitutions(args.optionRead<string>("merge"));
+            substitute(fromDict, substitutions);
+        }
+        mergeDictionaries(dict, fromDict, false);
+        changed = true;
+    }
     else if (args.optionFound("keywords"))
     {
         forAllConstIter(dictionary, dict, iter)
@@ -695,8 +735,11 @@ int main(int argc, char *argv[])
             Info<< iter().keyword() << endl;
         }
     }
-    else if (args.optionFound("diff"))
+    else if (args.optionReadIfPresent("diff", diffFileName))
     {
+        dictionary diffDict;
+        readDict(diffDict, diffFileName);
+
         remove(dict, diffDict);
         dict.dictionary::write(Info, false);
     }
@@ -719,7 +762,13 @@ int main(int argc, char *argv[])
                 args.optionLookupOrDefault<fileName>("output", dictPath)
             );
 
-            OFstream os(args.path()/outputDictPath, dictFormat);
+            OFstream os
+            (
+                outputDictPath.isAbsolute()
+              ? outputDictPath
+              : args.path()/outputDictPath,
+                dictFormat
+            );
             IOobject::writeBanner(os);
             if (dictPtr->found(IOobject::foamFile))
             {

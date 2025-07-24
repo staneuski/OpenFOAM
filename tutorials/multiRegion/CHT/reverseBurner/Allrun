@@ -6,9 +6,7 @@ cd ${0%/*} || exit 1    # Run from this directory
 
 runApplication blockMesh
 
-runApplication splitMeshRegions -cellZonesOnly -overwrite
-
-runApplication topoSet -region gas
+runApplication splitMeshRegions -cellZonesOnly
 
 paraFoam -region gas -touch
 paraFoam -region solid -touch
@@ -17,7 +15,7 @@ runApplication decomposePar -allRegions
 
 runParallel setFields -region gas
 
-runParallel $(getApplication)
+runParallel foamMultiRun
 
 runApplication reconstructPar -allRegions -newTimes
 

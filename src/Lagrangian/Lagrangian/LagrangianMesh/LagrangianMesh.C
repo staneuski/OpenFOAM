@@ -30,10 +30,10 @@ License
 #include "LagrangianMeshLocation.H"
 #include "LagrangianModels.H"
 #include "ListOps.H"
+#include "meshSearch.H"
 #include "meshObjects.H"
 #include "Time.H"
 #include "tracking.H"
-#include "treeDataCell.H"
 #include "debug.H"
 
 #include "internalLagrangianPatch.H"
@@ -44,6 +44,10 @@ License
 #include "calculatedLagrangianPatchFields.H"
 #include "internalLagrangianFieldSources.H"
 #include "zeroLagrangianFieldSources.H"
+
+#include "polyTopoChangeMap.H"
+#include "polyMeshMap.H"
+#include "polyDistributionMap.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -58,12 +62,9 @@ namespace Foam
     const word LagrangianMesh::stateName("state");
     const word LagrangianMesh::fractionName("fraction");
 
-    template<>
-    const char* NamedEnum<LagrangianMesh::permutationAlgorithm, 2>::names[] =
-        {"copy", "inPlace"};
-
     const NamedEnum<LagrangianMesh::permutationAlgorithm, 2>
-        LagrangianMesh::permutationAlgorithmNames_;
+    LagrangianMesh::permutationAlgorithmNames_
+    {"copy", "inPlace"};
 
     LagrangianMesh::permutationAlgorithm
         LagrangianMesh::permutationAlgorithm_ =
@@ -74,12 +75,9 @@ namespace Foam
             LagrangianMesh::permutationAlgorithm::copy
         );
 
-    template<>
-    const char* NamedEnum<LagrangianMesh::partitioningAlgorithm, 2>::names[] =
-        {"bin", "quick"};
-
     const NamedEnum<LagrangianMesh::partitioningAlgorithm, 2>
-        LagrangianMesh::partitioningAlgorithmNames_;
+    LagrangianMesh::partitioningAlgorithmNames_
+    {"bin", "quick"};
 
     LagrangianMesh::partitioningAlgorithm
         LagrangianMesh::partitioningAlgorithm_ =
@@ -1068,10 +1066,13 @@ Foam::LagrangianMesh::LagrangianMesh
     checkFieldSize(facei_);
     checkFieldSize(faceTrii_);
 
-    // Ask for the tetBasePtIs and oldCellCentres to trigger all processors to
-    // build them, otherwise, if some processors have no elements then there is
-    // a comms mismatch.
+    // Request the tet base points so that they are built on all processors.
+    // Constructing tet base points requires communication, so we can't leave
+    // it until the tracking requests them as those calls are not synchronised.
+    // Some processors might not be doing any tracking at all.
     mesh_.tetBasePtIs();
+
+    // Mark the need to store the old-time cell-centres if the mesh is moving
     mesh_.oldCellCentres();
 }
 
@@ -1323,9 +1324,11 @@ Foam::LagrangianMesh::location Foam::LagrangianMesh::locate
     const scalar fraction
 ) const
 {
+    const meshSearch& searchEngine = meshSearch::New(mesh());
+
     // Look for a containing cell and set the process if found
     remote procCelli;
-    procCelli.elementi = mesh().cellTree().findInside(position);
+    procCelli.elementi = searchEngine.findCell(position);
     procCelli.proci = procCelli.elementi >= 0 ? Pstream::myProcNo() : -1;
 
     // Pick a unique processor
@@ -1338,7 +1341,7 @@ Foam::LagrangianMesh::location Foam::LagrangianMesh::locate
         result =
             tracking::locate
             (
-                mesh_, position,
+                searchEngine, position,
                 coordinates, celli, facei, faceTrii, fraction
             )
           ? location::inCell
@@ -1362,11 +1365,13 @@ Foam::List<Foam::LagrangianMesh::location> Foam::LagrangianMesh::locate
     const scalarList& fraction
 ) const
 {
+    const meshSearch& searchEngine = meshSearch::New(mesh());
+
     // Look for containing cells and set the process if found
     List<remote> procCelli(position.size());
     forAll(position, i)
     {
-        procCelli[i].elementi = mesh().cellTree().findInside(position[0]);
+        procCelli[i].elementi = searchEngine.findCell(position[i]);
         procCelli[i].proci =
             procCelli[i].elementi >= 0 ? Pstream::myProcNo() : -1;
     }
@@ -1383,7 +1388,7 @@ Foam::List<Foam::LagrangianMesh::location> Foam::LagrangianMesh::locate
         result =
             tracking::locate
             (
-                mesh_, position[i],
+                searchEngine, position[i],
                 coordinates[i], celli[i], facei[i], faceTrii[i], fraction[i]
             )
           ? location::inCell
@@ -1760,9 +1765,13 @@ void Foam::LagrangianMesh::reset(const bool initial, const bool final)
 
     if (initial)
     {
+        coordinates_.storeOldTimes();
         coordinates_.oldTime();
+        celli_.storeOldTimes();
         celli_.oldTime();
+        facei_.storeOldTimes();
         facei_.oldTime();
+        faceTrii_.storeOldTimes();
         faceTrii_.oldTime();
 
         #define OLD_TIME_TYPE_FIELDS(Type, GeoField)                           \
@@ -1937,6 +1946,8 @@ void Foam::LagrangianMesh::storePosition()
 
 void Foam::LagrangianMesh::topoChange(const polyTopoChangeMap& map)
 {
+    if (map.reverseCellMap().empty()) return;
+
     NotImplemented;
 
     meshObjects::topoChange<LagrangianMesh>(*this, map);

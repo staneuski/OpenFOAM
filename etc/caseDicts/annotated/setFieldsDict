@@ -13,36 +13,31 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-defaultFieldValues
-(
-    volScalarFieldValue alpha1 0
-    volVectorFieldValue U (0 0 0)
-);
+defaultValues
+{
+    alpha.water 0;
+    U           (0 0 0);
+}
 
-regions
-(
+zones
+{
     // Set cell values
-    // (does zerogradient on boundaries)
-    boxToCell
+    cells
     {
+        type        box;
+
         box (0 0 -1) (0.1461 0.292 1);
 
-        fieldValues
-        (
-            volScalarFieldValue alpha1 1
-        );
+        values
+        {
+            alpha.water 1;
+        }
     }
+}
 
-    // Set patch values (using ==)
-    boxToFace
-    {
-        box (0 0 -1) (0.1461 0.292 1);
-
-        fieldValues
-        (
-            volScalarFieldValue alpha1 1
-        );
-    }
-);
+extrapolatePatches
+{
+    "inlet|outlet"   (alpha.water);
+}
 
 // ************************************************************************* //
