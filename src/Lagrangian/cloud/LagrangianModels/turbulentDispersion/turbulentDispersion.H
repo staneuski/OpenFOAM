@@ -25,7 +25,10 @@ Class
     Foam::turbulentDispersion
 
 Description
-    ...
+    Model for turbulent dispersion. This model creates a random turbulent
+    velocity fluctuation based on the carrier's turbulent properties. It then
+    uses the drag model to construct a corresponding force which it applies for
+    a duration equal to the carrier's turbulent time scale.
 
 Usage
     Example specification:
@@ -33,6 +36,7 @@ Usage
     <LagrangianModelName>
     {
         type        turbulentDispersion;
+        Cmu         0.09;
     }
     \endverbatim
 
@@ -75,6 +79,14 @@ private:
 
         //- Reference to the momentum transport model
         const momentumTransportModel& momentumTransportModel_;
+
+        //- Model coefficient, equal to 0.09^0.75 by default
+        const dimensionedScalar Cmu75_;
+
+        //- Maximum number of individual eddies considered per step, equal to
+        //  32 by default. If there are more than this then the combined effect
+        //  of the eddies is represented approximately.
+        const label maxDiscreteEddies_;
 
         //- Carrier turbulent kinetic energy
         const CarrierField<scalar>& kc_;

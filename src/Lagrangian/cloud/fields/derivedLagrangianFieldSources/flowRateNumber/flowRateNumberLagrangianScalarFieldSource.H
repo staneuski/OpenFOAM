@@ -68,7 +68,7 @@ Usage
     {
         type            flowRateNumber;
         uniformSize     volume; // number, surfaceArea, mass
-        volumetricFlowRate 1 [g/s];
+        volumetricFlowRate 1 [ml/s];
     }
     \endverbatim
 
@@ -150,6 +150,13 @@ public:
 
 
     // Member Functions
+
+        //- Return the volumetric flow rate for this time-step
+        dimensionedScalar Q
+        (
+            const LagrangianInjection&,
+            const LagrangianSubMesh&
+        ) const;
 
         //- Return the value for an instantaneous injection
         virtual tmp<LagrangianSubScalarField> value
