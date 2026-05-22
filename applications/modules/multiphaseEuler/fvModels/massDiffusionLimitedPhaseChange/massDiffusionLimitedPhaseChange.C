@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2024-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2024-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -69,7 +69,7 @@ void Foam::fv::massDiffusionLimitedPhaseChange::readCoeffs
     (
         sidedInterfaceCompositionModel::New
         (
-            interfaceCompositionDict,
+            modelSubDicts(interfaceCompositionDict),
             interface
         ).ptr()
     );
@@ -87,7 +87,7 @@ void Foam::fv::massDiffusionLimitedPhaseChange::readCoeffs
     (
         blendedSidedDiffusiveMassTransferModel::New
         (
-            diffusiveMassTransferDict,
+            blendedModelSubDicts(diffusiveMassTransferDict),
             interface,
             blendingDict<blendedSidedDiffusiveMassTransferModel>
             (
@@ -357,7 +357,7 @@ void Foam::fv::massDiffusionLimitedPhaseChange::addSup
     const label index = this->index(phaseNames(), alpha.group());
 
     const ThermoRefPair<multicomponentThermo>& mcThermos =
-        thermos().thermos<multicomponentThermo>();
+        multicomponentThermos(false, false);
 
     const word specieName = heOrYi.member();
 

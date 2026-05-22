@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,8 +25,9 @@ Class
     Foam::functionEntries::codeStream
 
 Description
-    Dictionary entry that contains C++ OpenFOAM code that is compiled to
-    generate the entry itself.
+    Compiles and executes C++ OpenFOAM code string expressions
+
+    inserting the result into the dictionary or dictionary entry.
 
     \c \#codeStream reads three entries: \c code, \c codeInclude (optional),
     \c codeOptions (optional) to generate the library source code stored in the
@@ -51,11 +52,10 @@ Description
     after the $ symbol inside angled brackets <>. So, $<vector>var or
     $<vector>{var} substitutes a variable named var as a vector.
 
-    The variable values are no longer embedded into the code but looked-up at
-    run-time making the code corresponding to each \c \#codeStream independent
-    of the values in the dictionary and of each other.  Hence the \c
-    \#codeStream code does not need to be recompiled when the values in the
-    dictionary are changed, only if the code is changed.
+    The variable values are looked-up at run-time making the code corresponding
+    to each \c \#codeStream independent of the values in the dictionary and of
+    each other.  Hence the \c \#codeStream code does not need to be recompiled
+    when the values in the dictionary are changed, only if the code is changed.
 
 Usage
     Example to set the internal field of a field:
@@ -186,18 +186,24 @@ SourceFiles
 #define codeStream_H
 
 #include "functionEntry.H"
+#include "OTstream.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
+
 class dlLibraryTable;
 
 namespace functionEntries
 {
 
 // Forward declaration of friend classes
+class codeDict;
+class streamEntry;
 class calcEntry;
+class codeBlockEntry;
+class codeBlockStreamEntry;
 
 /*---------------------------------------------------------------------------*\
                          Class codeStream Declaration
@@ -217,7 +223,40 @@ class codeStream
         static const dictionary& topDict(const dictionary&);
 
         //- Return true for master only reading of global dictionary
-        static bool masterOnlyRead(const dictionary& dict);
+        static bool masterOnlyRead
+        (
+            const word& typeName,
+            const dictionary& dict
+        );
+
+        //- Return the code string
+        static string codeString
+        (
+            const word& typeName,
+            const word& templateFunctionName,
+            const label index,
+            const dictionary& codeDict,
+            Istream&
+        );
+
+        //- Return the code string
+        static string codeString
+        (
+            const label index,
+            const dictionary& codeDict,
+            Istream&
+        );
+
+        //- Construct, compile, load and return streaming function
+        static void* compile
+        (
+            const word& typeName,
+            const dictionary& contextDict,
+            const dictionary& codeDict,
+            const word& codeOptions,
+            const wordList& compileFiles,
+            word& codeName
+        );
 
         //- Construct, compile, load and return streaming function
         static streamingFunctionType getFunction
@@ -226,8 +265,8 @@ class codeStream
             const dictionary& codeDict
         );
 
-        //- Compile and execute the code and return the resulting string
-        static string run
+        //- Compile and execute the code and return the result in an OTstream
+        static OTstream resultStream
         (
             const dictionary& contextDict,
             Istream& is
@@ -244,36 +283,65 @@ public:
         //- Name of the dictionary variables in the source code
         static const wordList codeDictVars;
 
+        //- Name of the code options file to be used
+        static const word codeOptions;
+
         //- Name of the C code template to be used
-        static const word codeTemplateC;
+        static const wordList compileFiles;
 
 
     // Related types
 
         //- Declare friendship with the calcEntry class
+        friend class codeDict;
+        friend class streamEntry;
         friend class calcEntry;
+        friend class codeBlockEntry;
+        friend class codeBlockStreamEntry;
 
 
     //- Runtime type information
-    ClassName("codeStream");
+    FunctionTypeName("#codeStream");
 
 
     // Constructors
 
-        //- Disallow default bitwise copy construction
-        codeStream(const codeStream&) = delete;
+        //- Construct from function type and parent dictionary
+        codeStream
+        (
+            const functionName&,
+            const label lineNumber,
+            const dictionary&
+        );
+
+        //- Construct from line number, dictionary and Istream
+        codeStream
+        (
+            const label lineNumber,
+            const dictionary& parentDict,
+            Istream& is
+        );
+
+        //- Copy construct
+        codeStream(const codeStream&) = default;
+
+        //- Clone
+        virtual autoPtr<entry> clone(const dictionary&) const
+        {
+            return autoPtr<entry>(new codeStream(*this));
+        }
 
 
     // Member Functions
 
-        //- Execute the functionEntry in a sub-dict context
-        static bool execute(dictionary& contextDict, Istream&);
+        //- Expand the functionEntry into the contextDict
+        virtual bool execute(dictionary& contextDict, Istream&);
 
-        //- Execute the functionEntry in a primitiveEntry context
+        //- Expand the functionEntry into the contextEntry
         static bool execute
         (
             const dictionary& contextDict,
-            primitiveEntry&,
+            primitiveEntry& contextEntry,
             Istream&
         );
 

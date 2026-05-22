@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -38,10 +38,7 @@ Foam::autoPtr<Foam::polyPatch> Foam::polyPatch::New
     const polyBoundaryMesh& bm
 )
 {
-    if (debug)
-    {
-        InfoInFunction << "Constructing polyPatch" << endl;
-    }
+    DebugInFunction << "Constructing polyPatch" << endl;
 
     wordConstructorTable::iterator cstrIter =
         wordConstructorTablePtr_->find(patchType);
@@ -56,7 +53,7 @@ Foam::autoPtr<Foam::polyPatch> Foam::polyPatch::New
             << exit(FatalError);
     }
 
-    return autoPtr<polyPatch>
+    autoPtr<polyPatch> ppPtr
     (
         cstrIter()
         (
@@ -64,10 +61,22 @@ Foam::autoPtr<Foam::polyPatch> Foam::polyPatch::New
             size,
             start,
             index,
-            bm,
-            patchType
+            bm
         )
     );
+
+    if
+    (
+        patchType != word::null
+     && ppPtr->constraint()
+     && findIndex(ppPtr->inGroups(), patchType) == -1
+     && name != patchType
+    )
+    {
+        ppPtr->inGroups().append(patchType);
+    }
+
+    return ppPtr;
 }
 
 
@@ -79,10 +88,7 @@ Foam::autoPtr<Foam::polyPatch> Foam::polyPatch::New
     const polyBoundaryMesh& bm
 )
 {
-    if (debug)
-    {
-        InfoInFunction << "Constructing polyPatch" << endl;
-    }
+    DebugInFunction << "Constructing polyPatch" << endl;
 
     word patchType(dict.lookup("type"));
     dict.readIfPresent("geometricType", patchType);
@@ -100,10 +106,7 @@ Foam::autoPtr<Foam::polyPatch> Foam::polyPatch::New
     const polyBoundaryMesh& bm
 )
 {
-    if (debug)
-    {
-        InfoInFunction << "Constructing polyPatch" << endl;
-    }
+    DebugInFunction << "Constructing polyPatch" << endl;
 
     dictionaryConstructorTable::iterator cstrIter =
         dictionaryConstructorTablePtr_->find(patchType);
@@ -128,7 +131,20 @@ Foam::autoPtr<Foam::polyPatch> Foam::polyPatch::New
         }
     }
 
-    return autoPtr<polyPatch>(cstrIter()(name, dict, index, bm, patchType));
+    autoPtr<polyPatch> ppPtr(cstrIter()(name, dict, index, bm));
+
+    if
+    (
+        patchType != word::null
+     && ppPtr->constraint()
+     && findIndex(ppPtr->inGroups(), patchType) == -1
+     && name != patchType
+    )
+    {
+        ppPtr->inGroups().append(patchType);
+    }
+
+    return ppPtr;
 }
 
 

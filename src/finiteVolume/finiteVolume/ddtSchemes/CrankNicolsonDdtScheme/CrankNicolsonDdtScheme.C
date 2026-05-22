@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -269,9 +269,9 @@ tmp<GeoField> CrankNicolsonDdtScheme<Type>::offCentre_
 
 
 template<class Type>
-const FieldField<volMesh::PatchField, Type>& ff
+const FieldField<fvMesh::PatchField, Type>& ff
 (
-    const FieldField<volMesh::PatchField, Type>& bf
+    const FieldField<fvMesh::PatchField, Type>& bf
 )
 {
     return bf;
@@ -330,7 +330,7 @@ CrankNicolsonDdtScheme<Type>::CrankNicolsonDdtScheme
             (
                 "ocCoeff",
                 mesh.time().userUnits(),
-                unitFraction,
+                units::fraction,
                 dict
             );
     }
@@ -706,7 +706,7 @@ CrankNicolsonDdtScheme<Type>::fvcDdt
         (
             ddtName,
             (
-                rDtCoef.value()*
+                rDtCoef*
                 (
                     mesh().V()*alpha()*rho()*vf()
                   - mesh().V0()*alpha.oldTime()()*rho.oldTime()()*vf.oldTime()()

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -54,12 +54,12 @@ void Foam::solvers::isothermalFluid::correctPressure()
 
     // Thermodynamic density needs to be updated by psi*d(p) after the
     // pressure solution
-    const volScalarField psip0(psi*p);
+    const volScalarField p0("p0", p);
 
     const surfaceScalarField rhof(fvc::interpolate(rho));
 
     const volScalarField rAU("rAU", 1.0/UEqn.A());
-    const surfaceScalarField rhorAUf("rhorAUf", fvc::interpolate(rho*rAU));
+    surfaceScalarField rhorAUf("rhorAUf", fvc::interpolate(rho*rAU));
 
     tmp<volScalarField> rAtU
     (
@@ -76,8 +76,8 @@ void Foam::solvers::isothermalFluid::correctPressure()
     );
 
     const volScalarField& rAAtU = pimple.consistent() ? rAtU() : rAU;
-    const surfaceScalarField& rhorAAtUf =
-        pimple.consistent() ? rhorAtUf() : rhorAUf;
+    surfaceScalarField& rhorAAtUf =
+        pimple.consistent() ? rhorAtUf.ref() : rhorAUf;
 
     volVectorField HbyA(constrainHbyA(rAU*UEqn.H(), U, p));
 
@@ -104,7 +104,10 @@ void Foam::solvers::isothermalFluid::correctPressure()
             constrainPhid
             (
                 fvc::relative(phiHbyA, rho, U)/rhof,
-                p
+                U,
+                p,
+                rhorAUf,
+                rhorAAtUf
             )
         );
 
@@ -208,7 +211,7 @@ void Foam::solvers::isothermalFluid::correctPressure()
         const bool constrained = fvConstraints().constrain(p);
 
         // Thermodynamic density update
-        thermo_.correctRho(psi*p - psip0);
+        thermo_.correctRho(p - p0);
 
         if (constrained)
         {

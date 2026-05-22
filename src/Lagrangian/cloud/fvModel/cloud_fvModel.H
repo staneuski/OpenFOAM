@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -37,7 +37,7 @@ SourceFiles
 #ifndef cloud_fvModel_H
 #define cloud_fvModel_H
 
-#include "fvModel.H"
+#include "fvSource.H"
 #include "coupled.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -53,7 +53,7 @@ namespace fv
 
 class cloud
 :
-    public fvModel
+    public fvSource
 {
     // Private Data
 
@@ -63,13 +63,44 @@ class cloud
         //- Cloud reference (for convenience)
         const Foam::cloud& cloud_;
 
+        //- Carried cloud reference (for convenience)
+        const clouds::carried& carriedCloud_;
+
         //- Coupled cloud reference (for convenience)
         const clouds::coupled& coupledCloud_;
 
 
     // Private Member Functions
 
+        //- Fail with a message indicating that a source could not be added
+        template<class Type>
+        void fail(const fvMatrix<Type>& eqn) const;
+
+        //- Fail with a message indicating that a source could not be added
+        template<class Type, class ... AlphaRhoFieldTypes>
+        void fail
+        (
+            const fvMatrix<Type>& eqn,
+            const AlphaRhoFieldTypes& ... alphaRhoFields
+        ) const;
+
+
         // Sources
+
+            //- Return the material source for the given phase
+            tmp<volScalarField::Internal> S
+            (
+                const word& phaseName,
+                const dimensionSet& dims
+            ) const;
+
+            //- Return the material source for the given phase
+            template<class Type>
+            tmp<fvMatrix<Type>> Sfield
+            (
+                const VolField<Type>& field,
+                const dimensionSet& dims
+            ) const;
 
             //- Add a source term to an equation
             template<class Type>
@@ -79,6 +110,14 @@ class cloud
                 fvMatrix<Type>& eqn
             ) const;
 
+            //- Add a source term to a phase continuity equation or a scalar
+            //  equation
+            void addSupType
+            (
+                const volScalarField& alphaOrField,
+                fvMatrix<scalar>& eqn
+            ) const;
+
             //- Add a source term to a compressible equation
             template<class Type>
             void addSupType
@@ -86,6 +125,15 @@ class cloud
                 const volScalarField& rho,
                 const VolField<Type>& field,
                 fvMatrix<Type>& eqn
+            ) const;
+
+            //- Add a source term to a compressible phase continuity equation
+            //  or a compressible scalar equation
+            void addSupType
+            (
+                const volScalarField& alphaOrRho,
+                const volScalarField& rhoOrField,
+                fvMatrix<scalar>& eqn
             ) const;
 
             //- Add a source term to a phase equation

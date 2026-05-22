@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2020-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2020-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -52,17 +52,18 @@ template<class TurbulenceThermophysicalTransportModel>
 eddyDiffusivity<TurbulenceThermophysicalTransportModel>::eddyDiffusivity
 (
     const momentumTransportModel& momentumTransport,
-    const thermoModel& thermo
+    const thermoModel& thermo,
+    const word& type
 )
 :
     TurbulenceThermophysicalTransportModel
     (
-        typeName,
+        type,
         momentumTransport,
         thermo
     ),
 
-    Prt_("Prt", dimless, this->coeffDict()),
+    Prt_("Prt", dimless, this->typeDict(type)),
 
     alphat_
     (
@@ -71,7 +72,7 @@ eddyDiffusivity<TurbulenceThermophysicalTransportModel>::eddyDiffusivity
             IOobject::groupName
             (
                 "alphat",
-                this->momentumTransport().alphaRhoPhi().group()
+                this->thermo().phaseName()
             ),
             momentumTransport.time().name(),
             momentumTransport.mesh(),
@@ -90,7 +91,7 @@ bool eddyDiffusivity<TurbulenceThermophysicalTransportModel>::read()
 {
     if (TurbulenceThermophysicalTransportModel::read())
     {
-        Prt_.read(this->coeffDict());
+        Prt_.read(this->typeDict());
 
         return true;
     }
@@ -98,6 +99,41 @@ bool eddyDiffusivity<TurbulenceThermophysicalTransportModel>::read()
     {
         return false;
     }
+}
+
+
+template<class TurbulenceThermophysicalTransportModel>
+tmp<volScalarField>
+eddyDiffusivity<TurbulenceThermophysicalTransportModel>::D
+(
+    const volScalarField& Yi
+) const
+{
+    FatalErrorInFunction
+        << type() << " supports single component systems only, " << nl
+        << "    for multi-component transport select"
+           " nonUnityLewisEddyDiffusivity or unityLewisEddyDiffusivity"
+        << exit(FatalError);
+
+    return tmp<volScalarField>(nullptr);
+}
+
+
+template<class TurbulenceThermophysicalTransportModel>
+tmp<scalarField>
+eddyDiffusivity<TurbulenceThermophysicalTransportModel>::D
+(
+    const volScalarField& Yi,
+    const label patchi
+) const
+{
+    FatalErrorInFunction
+        << type() << " supports single component systems only, " << nl
+        << "    for multi-component transport select"
+           " nonUnityLewisEddyDiffusivity or unityLewisEddyDiffusivity"
+        << exit(FatalError);
+
+    return tmp<scalarField>(nullptr);
 }
 
 
@@ -145,7 +181,7 @@ eddyDiffusivity<TurbulenceThermophysicalTransportModel>::q() const
         IOobject::groupName
         (
             "q",
-            this->momentumTransport().alphaRhoPhi().group()
+            this->thermo().phaseName()
         ),
        -fvc::interpolate(this->alpha()*this->kappaEff())
        *fvc::snGrad(this->thermo().T())

@@ -9,8 +9,8 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
-    location    "";
-    object      caseProperties;
+    location    "constant";
+    object      boundaryConditions;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -47,28 +47,24 @@ outlet
     U
     {
         type            pressureInletOutletVelocity;
-        value           uniform (0 0 0);
     }
 
     T
     {
         type            inletOutlet;
         inletValue      uniform $!outerInlet/T;
-        value           $inletValue;
     }
 
     k
     {
         type            inletOutlet;
         inletValue      uniform $!innerInlet/k;
-        value           $inletValue;
     }
 
     epsilon
     {
         type            inletOutlet;
         inletValue      uniform $!innerInlet/epsilon;
-        value           $inletValue;
     }
 }
 

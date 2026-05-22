@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,7 +35,7 @@ void Foam::swirlFlowRateInletVelocityFvPatchVectorField::updateValues
     const RhoType& rho
 )
 {
-    const scalar t = db().time().value();
+    const scalar t = time().value();
     const scalarField ts(size(), t);
 
     // Compute geometry
@@ -74,7 +74,7 @@ Foam::swirlFlowRateInletVelocityFvPatchVectorField::
 swirlFlowRateInletVelocityFvPatchVectorField
 (
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -110,7 +110,7 @@ swirlFlowRateInletVelocityFvPatchVectorField
         Function2<scalar>::New
         (
             "radialVelocity",
-            db().time().userUnits(),
+            time().userUnits(),
             dimLength,
             dimVelocity,
             dict
@@ -125,7 +125,7 @@ swirlFlowRateInletVelocityFvPatchVectorField
             Function1<scalar>::New
             (
                 "volumetricFlowRate",
-                db().time().userUnits(),
+                time().userUnits(),
                 dimVolumetricFlux,
                 dict
             );
@@ -137,7 +137,7 @@ swirlFlowRateInletVelocityFvPatchVectorField
             Function1<scalar>::New
             (
                 "massFlowRate",
-                db().time().userUnits(),
+                time().userUnits(),
                 dimMassFlux,
                 dict
             );
@@ -153,7 +153,7 @@ swirlFlowRateInletVelocityFvPatchVectorField
 
     if (dict.found("omega") || dict.found("rpm"))
     {
-        omega_ = new Function1s::omega(db().time(), dict);
+        omega_ = new Function1s::omega(time(), dict);
     }
     else if (dict.found("tangentialVelocity"))
     {
@@ -161,7 +161,7 @@ swirlFlowRateInletVelocityFvPatchVectorField
             Function2<scalar>::New
             (
                 "tangentialVelocity",
-                db().time().userUnits(),
+                time().userUnits(),
                 dimLength,
                 dimVelocity,
                 dict
@@ -193,7 +193,7 @@ swirlFlowRateInletVelocityFvPatchVectorField
 (
     const swirlFlowRateInletVelocityFvPatchVectorField& ptf,
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -214,7 +214,7 @@ Foam::swirlFlowRateInletVelocityFvPatchVectorField::
 swirlFlowRateInletVelocityFvPatchVectorField
 (
     const swirlFlowRateInletVelocityFvPatchVectorField& ptf,
-    const DimensionedField<vector, volMesh>& iF
+    const DimensionedField<vector, fvMesh>& iF
 )
 :
     fixedValueFvPatchField<vector>(ptf, iF),
@@ -280,7 +280,7 @@ void Foam::swirlFlowRateInletVelocityFvPatchVectorField::write
     fvPatchField<vector>::write(os);
     writeEntry(os, "origin", origin_);
     writeEntry(os, "axis", axis_);
-    writeEntry(os, db().time().userUnits(), unitAny, flowRate_());
+    writeEntry(os, time().userUnits(), units::any, flowRate_());
     if (!volumetric_)
     {
         writeEntryIfDifferent<word>(os, "rho", "rho", rhoName_);
@@ -289,7 +289,7 @@ void Foam::swirlFlowRateInletVelocityFvPatchVectorField::write
     writeEntry
     (
         os,
-        db().time().userUnits(),
+        time().userUnits(),
         dimLength,
         dimVelocity,
         radialVelocity_()
@@ -303,7 +303,7 @@ void Foam::swirlFlowRateInletVelocityFvPatchVectorField::write
         writeEntry
         (
             os,
-            db().time().userUnits(),
+            time().userUnits(),
             dimLength,
             dimVelocity,
             tangentialVelocity_()

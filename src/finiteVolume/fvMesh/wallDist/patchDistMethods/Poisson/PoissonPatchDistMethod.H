@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2020 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -81,10 +81,6 @@ Description
         {
             solver          GAMG;
             smoother        GaussSeidel;
-            cacheAgglomeration true;
-            nCellsInCoarsestLevel 10;
-            agglomerator    faceAreaPair;
-            mergeLevels     1;
             tolerance       1e-5;
             relTol          0;
         }
@@ -119,7 +115,7 @@ class Poisson
 :
     public patchDistMethod
 {
-    // Private Member Data
+    // Private Data
 
         //- Cache yPsi for moving meshes
         tmp<volScalarField> tyPsi_;

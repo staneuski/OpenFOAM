@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -42,7 +42,7 @@ fanDirectionLagrangianVectorFieldSource
         Function1<vector>::New
         (
             "normal",
-            field.db().time().userUnits(),
+            field.time().userUnits(),
             dimless,
             dict
         )
@@ -52,8 +52,8 @@ fanDirectionLagrangianVectorFieldSource
         Function1<scalar>::New
         (
             "thetaInner",
-            field.db().time().userUnits(),
-            unitDegrees,
+            field.time().userUnits(),
+            units::degrees,
             dict
         )
     ),
@@ -62,8 +62,8 @@ fanDirectionLagrangianVectorFieldSource
         Function1<scalar>::New
         (
             "thetaOuter",
-            field.db().time().userUnits(),
-            unitDegrees,
+            field.time().userUnits(),
+            units::degrees,
             dict
         )
     ),
@@ -106,44 +106,25 @@ Foam::fanDirectionLagrangianVectorFieldSource::
 Foam::tmp<Foam::LagrangianSubVectorField>
 Foam::fanDirectionLagrangianVectorFieldSource::direction
 (
-    const LagrangianInjection& injection,
     const LagrangianSubVectorField& axis
 ) const
 {
     const LagrangianSubMesh& subMesh = axis.mesh();
 
     // Restart the generator if necessary and set the time index up to date
-    rndGen_.start(timeIndex_ == field_.db().time().timeIndex());
-    timeIndex_ = field_.db().time().timeIndex();
+    rndGen_.start(timeIndex_ == field_.time().timeIndex());
+    timeIndex_ = field_.time().timeIndex();
 
     // Construct a direction in the plane of the fan
     const tmp<LagrangianSubVectorField> normal =
-        Function1LagrangianFieldSource::value
-        (
-            injection,
-            subMesh,
-            dimless,
-            normal_()
-        );
+        Function1LagrangianFieldSource::value(subMesh, dimless, normal_());
     const tmp<LagrangianSubVectorField> tangential(axis ^ normal);
 
     // Pick a random angle within the fan angles
     const tmp<LagrangianSubScalarField> tthetaInner =
-        Function1LagrangianFieldSource::value
-        (
-            injection,
-            subMesh,
-            dimless,
-            thetaInner_()
-        );
+        Function1LagrangianFieldSource::value(subMesh, dimless, thetaInner_());
     const tmp<LagrangianSubScalarField> tthetaOuter =
-        Function1LagrangianFieldSource::value
-        (
-            injection,
-            subMesh,
-            dimless,
-            thetaOuter_()
-        );
+        Function1LagrangianFieldSource::value(subMesh, dimless, thetaOuter_());
     const tmp<LagrangianSubScalarField> tfrac =
         LagrangianSubScalarField::New
         (
@@ -167,9 +148,23 @@ Foam::fanDirectionLagrangianVectorFieldSource::direction
 
 void Foam::fanDirectionLagrangianVectorFieldSource::write(Ostream& os) const
 {
-    writeEntry(os, field_.db().time().userUnits(), unitNone, normal_());
-    writeEntry(os, field_.db().time().userUnits(), unitDegrees, thetaInner_());
-    writeEntry(os, field_.db().time().userUnits(), unitDegrees, thetaOuter_());
+    writeEntry(os, field_.time().userUnits(), units::none, normal_());
+
+    writeEntry
+    (
+        os,
+        field_.time().userUnits(),
+        units::degrees,
+        thetaInner_()
+    );
+
+    writeEntry
+    (
+        os,
+        field_.time().userUnits(),
+        units::degrees,
+        thetaOuter_()
+    );
 
     writeEntry(os, "fanDirectionRndGen", rndGen_);
 }

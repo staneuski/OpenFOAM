@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "constant";
     object      momentumTransport;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -23,7 +24,7 @@ RAS
 
     nutMaxCoeff         1e8;
 
-    kEpsilonCoeffs
+    kEpsilon
     {
         Cmu         0.09;
         C1          1.44;

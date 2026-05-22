@@ -29,8 +29,9 @@ laminarFlameSpeed
 flameWrinkling
 {
     model           equilibrium;
+    // model           transport;
 
-    equilibrium
+    eq
     {
         model      constant;
         XiEq       5;
@@ -43,7 +44,13 @@ flameWrinkling
         // model      cubic;
         // XiShapeCoeff  0.5;
     }
-}
 
+    generationRate
+    {
+        model           KTS;
+    }
+
+    #print
+}
 
 // ************************************************************************* //

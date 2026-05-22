@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       volScalarField;
+    location    "0/fluid";
     object      k;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -24,7 +25,7 @@ boundaryField
 {
     inlet
     {
-        type            turbulentIntensityKineticEnergyInlet;
+        type            turbulentKineticEnergy;
         intensity       0.01;
         value           $internalField;
     }
@@ -33,7 +34,6 @@ boundaryField
     {
         type            inletOutlet;
         inletValue      $internalField;
-        value           $internalField;
     }
 
     topAndBottom

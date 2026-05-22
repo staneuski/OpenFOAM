@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       volVectorField;
+    location    "0";
     object      U;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -30,7 +31,6 @@ boundaryField
     outlet
     {
         type            pressureInletOutletVelocity;
-        value           uniform $Uinlet;
     }
 
     "slip.*"

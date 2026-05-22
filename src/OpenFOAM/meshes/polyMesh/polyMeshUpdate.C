@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -30,7 +30,7 @@ Description
 #include "polyTopoChangeMap.H"
 #include "Time.H"
 #include "globalMeshData.H"
-#include "pointMesh.H"
+#include "DemandDrivenMeshObject.H"
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
@@ -44,13 +44,6 @@ void Foam::polyMesh::topoChangeZones(const polyTopoChangeMap& map)
 
 void Foam::polyMesh::topoChange(const polyTopoChangeMap& map)
 {
-    if (debug)
-    {
-        InfoInFunction
-            << "Updating addressing and (optional) pointMesh/pointFields"
-            << endl;
-    }
-
     // Update boundaryMesh (note that patches themselves already ok)
     boundary_.topoChange();
 
@@ -118,7 +111,6 @@ void Foam::polyMesh::topoChange(const polyTopoChangeMap& map)
     }
 
     meshObjects::topoChange<polyMesh>(*this, map);
-    meshObjects::topoChange<pointMesh>(*this, map);
 
     // Reset valid directions (could change by faces put into empty patches)
     geometricD_ = Zero;
@@ -134,7 +126,6 @@ void Foam::polyMesh::mapMesh(const polyMeshMap& map)
     cellZones_.mapMesh(map);
 
     meshObjects::mapMesh<polyMesh>(*this, map);
-    meshObjects::mapMesh<pointMesh>(*this, map);
 }
 
 
@@ -146,7 +137,6 @@ void Foam::polyMesh::distribute(const polyDistributionMap& map)
     cellZones_.distribute(map);
 
     meshObjects::distribute<polyMesh>(*this, map);
-    meshObjects::distribute<pointMesh>(*this, map);
 }
 
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -277,6 +277,13 @@ const Foam::objectRegistry& Foam::LagrangianPatchField<Type>::db() const
 
 
 template<class Type>
+const Foam::Time& Foam::LagrangianPatchField<Type>::time() const
+{
+    return patch_.boundaryMesh().mesh().time();
+}
+
+
+template<class Type>
 const Foam::LagrangianPatch& Foam::LagrangianPatchField<Type>::patch() const
 {
     return patch_;
@@ -378,7 +385,7 @@ template<class Type>
 void Foam::LagrangianPatchField<Type>::initEvaluate
 (
     PstreamBuffers&,
-    const LagrangianScalarInternalDynamicField& fraction
+    const LagrangianInternalScalarDynamicField& fraction
 )
 {}
 
@@ -387,7 +394,7 @@ template<class Type>
 void Foam::LagrangianPatchField<Type>::evaluate
 (
     PstreamBuffers&,
-    const LagrangianScalarInternalDynamicField& fraction
+    const LagrangianInternalScalarDynamicField& fraction
 )
 {}
 

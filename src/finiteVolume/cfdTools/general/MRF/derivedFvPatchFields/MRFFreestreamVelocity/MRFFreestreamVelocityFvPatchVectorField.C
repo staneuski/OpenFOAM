@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -33,7 +33,7 @@ Foam::MRFFreestreamVelocityFvPatchVectorField::
 MRFFreestreamVelocityFvPatchVectorField
 (
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -48,7 +48,7 @@ MRFFreestreamVelocityFvPatchVectorField
 (
     const MRFFreestreamVelocityFvPatchVectorField& pvf,
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -62,7 +62,7 @@ Foam::MRFFreestreamVelocityFvPatchVectorField::
 MRFFreestreamVelocityFvPatchVectorField
 (
     const MRFFreestreamVelocityFvPatchVectorField& pvf,
-    const DimensionedField<vector, volMesh>& iF
+    const DimensionedField<vector, fvMesh>& iF
 )
 :
     freestreamVelocityFvPatchVectorField(pvf, iF),
@@ -80,7 +80,7 @@ void Foam::MRFFreestreamVelocityFvPatchVectorField::updateCoeffs()
         return;
     }
 
-    const scalar time = this->db().time().value();
+    const scalar time = this->time().value();
     const vector Omega = MRFzone(db()).Omega();
     const scalar omega = mag(Omega);
     const vector axis(Omega/omega);

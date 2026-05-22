@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -38,10 +38,10 @@ void Foam::flowRateInletVelocityFvPatchVectorField::setWallDist()
     {
         const labelHashSet otherPatchIDs
         (
-            patch().patch().boundaryMesh().findIndices<wallPolyPatch>()
+            patch().poly().boundaryMesh().findIndices<wallPolyPatch>()
         );
 
-        const patchPatchDist pwd(patch().patch(), otherPatchIDs);
+        const patchPatchDist pwd(patch().poly(), otherPatchIDs);
 
         y_ = pwd/gMax(pwd);
     }
@@ -76,7 +76,7 @@ void Foam::flowRateInletVelocityFvPatchVectorField::updateValues
 
     const scalar avgU =
        scale
-      *flowRate_->value(db().time().value())
+      *flowRate_->value(time().value())
       /gSum(alpha*rho*profile*patch().magSf());
 
     operator==(- avgU*profile*patch().nf());
@@ -124,21 +124,13 @@ void Foam::flowRateInletVelocityFvPatchVectorField::updateValues
 }
 
 
-bool Foam::flowRateInletVelocityFvPatchVectorField::canEvaluate()
-{
-    return
-        Pstream::parRun()
-     || !patch().boundaryMesh().mesh().time().processorCase();
-}
-
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::flowRateInletVelocityFvPatchVectorField::
 flowRateInletVelocityFvPatchVectorField
 (
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -151,7 +143,7 @@ flowRateInletVelocityFvPatchVectorField
     rhoInlet_(dict.lookupOrDefault<scalar>("rhoInlet", dimDensity, -vGreat)),
     alphaName_(dict.lookupOrDefault<word>("alpha", word::null)),
     y_(),
-    area_(NaN)
+    area_(-vGreat)
 {
     if (dict.found("meanVelocity"))
     {
@@ -161,7 +153,7 @@ flowRateInletVelocityFvPatchVectorField
             Function1<scalar>::New
             (
                 "meanVelocity",
-                db().time().userUnits(),
+                time().userUnits(),
                 dimVelocity,
                 dict
             );
@@ -174,7 +166,7 @@ flowRateInletVelocityFvPatchVectorField
             Function1<scalar>::New
             (
                 "volumetricFlowRate",
-                db().time().userUnits(),
+                time().userUnits(),
                 dimVolumetricFlux,
                 dict
             );
@@ -187,7 +179,7 @@ flowRateInletVelocityFvPatchVectorField
             Function1<scalar>::New
             (
                 "massFlowRate",
-                db().time().userUnits(),
+                time().userUnits(),
                 dimMassFlux,
                 dict
             );
@@ -205,12 +197,7 @@ flowRateInletVelocityFvPatchVectorField
         profile_ = Function1<scalar>::New("profile", dimless, dimless, dict);
     }
 
-    if (canEvaluate())
-    {
-        setWallDist();
-    }
-
-    if (!canEvaluate() || dict.found("value"))
+    if (!p.time().completeCase() || dict.found("value"))
     {
         fvPatchField<vector>::operator=
         (
@@ -229,7 +216,7 @@ flowRateInletVelocityFvPatchVectorField
 (
     const flowRateInletVelocityFvPatchVectorField& ptf,
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -241,13 +228,8 @@ flowRateInletVelocityFvPatchVectorField
     rhoName_(ptf.rhoName_),
     rhoInlet_(ptf.rhoInlet_),
     alphaName_(ptf.alphaName_),
-    y_
-    (
-        profile_.valid() && canEvaluate()
-      ? mapper(ptf.y_)
-      : tmp<scalarField>(new scalarField())
-    ),
-    area_(NaN)
+    y_(),
+    area_(-vGreat)
 {}
 
 
@@ -255,7 +237,7 @@ Foam::flowRateInletVelocityFvPatchVectorField::
 flowRateInletVelocityFvPatchVectorField
 (
     const flowRateInletVelocityFvPatchVectorField& ptf,
-    const DimensionedField<vector, volMesh>& iF
+    const DimensionedField<vector, fvMesh>& iF
 )
 :
     fixedValueFvPatchField<vector>(ptf, iF),
@@ -281,13 +263,8 @@ void Foam::flowRateInletVelocityFvPatchVectorField::map
 {
     fixedValueFvPatchVectorField::map(ptf, mapper);
 
-    const flowRateInletVelocityFvPatchVectorField& tiptf =
-        refCast<const flowRateInletVelocityFvPatchVectorField>(ptf);
-
-    if (profile_.valid() && canEvaluate())
-    {
-        mapper(y_, tiptf.y_);
-    }
+    y_.clear();
+    area_ = -vGreat;
 }
 
 
@@ -298,13 +275,8 @@ void Foam::flowRateInletVelocityFvPatchVectorField::reset
 {
     fixedValueFvPatchVectorField::reset(ptf);
 
-    const flowRateInletVelocityFvPatchVectorField& tiptf =
-        refCast<const flowRateInletVelocityFvPatchVectorField>(ptf);
-
-    if (profile_.valid() && canEvaluate())
-    {
-        y_.reset(tiptf.y_);
-    }
+    y_.clear();
+    area_ = -vGreat;
 }
 
 
@@ -315,11 +287,16 @@ void Foam::flowRateInletVelocityFvPatchVectorField::updateCoeffs()
         return;
     }
 
-    if (!canEvaluate())
+    if (!patch().time().completeCase())
     {
         FatalErrorInFunction
             << "Cannot evaluate flow rate on a non-parallel processor case"
             << exit(FatalError);
+    }
+
+    if (area_ < 0)
+    {
+        setWallDist();
     }
 
     if (alphaName_ != word::null)
@@ -341,7 +318,7 @@ void Foam::flowRateInletVelocityFvPatchVectorField::updateCoeffs()
 void Foam::flowRateInletVelocityFvPatchVectorField::write(Ostream& os) const
 {
     fvPatchField<vector>::write(os);
-    writeEntry(os, db().time().userUnits(), unitAny, flowRate_());
+    writeEntry(os, time().userUnits(), units::any, flowRate_());
     if (profile_.valid())
     {
         writeEntry(os, profile_());

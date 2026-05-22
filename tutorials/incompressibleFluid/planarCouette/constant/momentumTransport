@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "constant";
     object      momentumTransport;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -19,7 +20,7 @@ laminar
 {
     model               Maxwell;
 
-    MaxwellCoeffs
+    Maxwell
     {
         nuM             1;
         lambda          5;

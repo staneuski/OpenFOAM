@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2024-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -41,7 +41,7 @@ Usage
     \verbatim
         packingDispersionModel Usher;
 
-        UsherCoeffs
+        Usher
         {
             alphaGel        0.1;
             alphap          0.8;
@@ -59,7 +59,7 @@ Usage
     \verbatim
         packingDispersionModel Usher;
 
-        UsherCoeffs
+        Usher
         {
             alphaGel        0.025;
             alphap          0.09;
@@ -113,7 +113,7 @@ class Usher
         dimensionedScalar sigma02_;
 
 
-    // Private member functions
+    // Private Member Functions
 
         template<class T>
         inline auto sigma1(const T& alphad) const;

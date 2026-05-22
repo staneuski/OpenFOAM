@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -33,7 +33,7 @@ Foam::translatingWallVelocityFvPatchVectorField::
 translatingWallVelocityFvPatchVectorField
 (
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -43,7 +43,7 @@ translatingWallVelocityFvPatchVectorField
         Function1<vector>::New
         (
             "U",
-            db().time().userUnits(),
+            time().userUnits(),
             dimVelocity,
             dict
         )
@@ -59,7 +59,7 @@ translatingWallVelocityFvPatchVectorField
 (
     const translatingWallVelocityFvPatchVectorField& ptf,
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -72,7 +72,7 @@ Foam::translatingWallVelocityFvPatchVectorField::
 translatingWallVelocityFvPatchVectorField
 (
     const translatingWallVelocityFvPatchVectorField& twvpvf,
-    const DimensionedField<vector, volMesh>& iF
+    const DimensionedField<vector, fvMesh>& iF
 )
 :
     fixedValueFvPatchField<vector>(twvpvf, iF),
@@ -89,7 +89,7 @@ void Foam::translatingWallVelocityFvPatchVectorField::updateCoeffs()
         return;
     }
 
-    const vector U = U_->value(db().time().value());
+    const vector U = U_->value(time().value());
 
     // Remove the component of U normal to the wall in case the wall is not flat
     const vectorField n(patch().nf());
@@ -102,7 +102,7 @@ void Foam::translatingWallVelocityFvPatchVectorField::updateCoeffs()
 void Foam::translatingWallVelocityFvPatchVectorField::write(Ostream& os) const
 {
     fvPatchVectorField::write(os);
-    writeEntry(os, db().time().userUnits(), dimVelocity, U_());
+    writeEntry(os, time().userUnits(), dimVelocity, U_());
     writeEntry(os, "value", *this);
 }
 

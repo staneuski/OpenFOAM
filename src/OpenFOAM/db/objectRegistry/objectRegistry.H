@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -67,13 +67,14 @@ class objectRegistry
         fileName dbDir_;
 
         //- Current event
-        mutable label event_;
+        mutable uint64_t event_;
 
         //- Table of temporary object names with current state
         mutable HashTable<Pair<bool>> cacheTemporaryObjects_;
 
-        //- State of cacheTemporaryObjects_, set true after reading
-        mutable bool cacheTemporaryObjectsSet_;
+        //- State of cacheTemporaryObjects_. 0 means as yet uninitialised. 1
+        //  means initialised. -1 means deactivated (during destruction).
+        mutable label cacheTemporaryObjectsState_;
 
         //- Accumulated list of temporary objects available to cache
         //  Used to provide diagnostics in case the requested object is not
@@ -180,6 +181,9 @@ public:
             //- Return the sorted list of names of IOobjects of given class name
             wordList sortedToc(const word& className) const;
 
+            //- Return the list of names and types of IOobjects
+            List<Pair<word>> tocTypes() const;
+
             //- Return the list of names of the IOobjects of given type
             template<class Type>
             wordList toc() const;
@@ -231,10 +235,12 @@ public:
             const Type& lookupType(const word& group = word::null) const;
 
             //- Return new event number.
-            label getEvent() const;
+            uint64_t getEvent() const;
 
-            //- Return the object registry
-            const objectRegistry& thisDb() const
+            //- Return the objectRegistry
+            //  Required for consistent interface for DemandDrivenMeshObject
+            //  instantiated on objectRegistry
+            const objectRegistry& db() const
             {
                 return *this;
             }
@@ -254,12 +260,15 @@ public:
             //- Remove all regIOobject owned by the registry
             void clear();
 
-            //- Return true if given name is in the cacheTemporaryObjects set
-            bool cacheTemporaryObject(const word& name) const;
+            //- Add the given name to the cacheTemporaryObjects set
+            void cacheTemporary(const word& name) const;
 
             //- Cache the given object
             template<class Object>
             bool cacheTemporaryObject(Object& ob) const;
+
+            //- Return true if given name is in the cacheTemporaryObjects set
+            bool temporaryObjectCached(const word& name) const;
 
             //- Reset the cache state of the given object
             //  in the cacheTemporaryObjects set

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,55 +24,56 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "removeEntry.H"
-#include "dictionary.H"
 #include "stringListOps.H"
-#include "IStringStream.H"
-#include "OStringStream.H"
-#include "addToMemberFunctionSelectionTable.H"
+#include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
-
-const Foam::word Foam::functionEntries::removeEntry::typeName
-(
-    Foam::functionEntries::removeEntry::typeName_()
-);
-
-// Don't lookup the debug switch here as the debug switch dictionary
-// might include removeEntry
-int Foam::functionEntries::removeEntry::debug(0);
 
 namespace Foam
 {
 namespace functionEntries
 {
-    addToMemberFunctionSelectionTable
+    defineFunctionTypeNameAndDebug(removeEntry, 0);
+    addToRunTimeSelectionTable(functionEntry, removeEntry, dictionary);
+}
+}
+
+
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+Foam::functionEntries::removeEntry::removeEntry
+(
+    const label lineNumber,
+    const dictionary& parentDict,
+    Istream& is
+)
+:
+    functionEntry
     (
-        functionEntry,
-        removeEntry,
-        execute,
-        dictionaryIstream
-    );
-}
-}
+        typeName,
+        lineNumber,
+        parentDict,
+        is,
+        readArgOrList(typeName, is)
+    ),
+    patterns_(readList<wordRe>(stream()))
+{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 bool Foam::functionEntries::removeEntry::execute
 (
-    dictionary& parentDict,
+    dictionary& contextDict,
     Istream& is
 )
 {
-    const wordList dictKeys = parentDict.toc();
+    const wordList dictKeys = contextDict.toc();
+    const labelList indices = findStrings(patterns_, dictKeys);
 
-    const wordReList patterns = readList<wordRe>(is);
-
-    const labelList indices = findStrings(patterns, dictKeys);
-
-    forAll(indices, indexI)
+    forAll(indices, i)
     {
-        parentDict.remove(dictKeys[indices[indexI]]);
+        contextDict.remove(dictKeys[indices[i]]);
     }
 
     return true;

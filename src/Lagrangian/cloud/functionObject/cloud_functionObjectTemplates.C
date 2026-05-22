@@ -40,14 +40,15 @@ Foam::functionObjects::cloud::cloud
     regionFunctionObject(name, runTime, dict),
     cloudPtr_
     (
-        new Type
+        Foam::cloud::New<Type>
         (
             refCast<const polyMesh>(obr_),
             name,
             Foam::cloud::contextType::functionObject,
+            dict,
             IOobject::READ_IF_PRESENT,
             IOobject::NO_WRITE
-        )
+        ).ptr()
     )
 {
     // Ensure LagrangianModels are constructed before time is incremented

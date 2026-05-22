@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -101,8 +101,8 @@ SourceFiles
 #ifndef XiModel_H
 #define XiModel_H
 
-#include "psiuMulticomponentThermo.H"
-#include "fluidThermoThermophysicalTransportModels.H"
+#include "ubRhoThermo.H"
+#include "compressibleMomentumTransportModels.H"
 #include "runTimeSelectionTables.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -122,13 +122,10 @@ protected:
     // Protected data
 
         //- Thermo
-        const psiuMulticomponentThermo& thermo_;
-
-        //- Thermo-physical transport
-        const fluidThermoThermophysicalTransportModel& thermoTransport_;
+        const ubRhoThermo& thermo_;
 
         //- Turbulence
-        const compressibleMomentumTransportModel& turbulence_;
+        const compressibleMomentumTransportModel& momentumTransport_;
 
         const volScalarField& Su_;
 
@@ -140,7 +137,7 @@ protected:
         volScalarField Xi_;
 
 
-    // Protected member functions
+    // Protected Member Functions
 
         //- Update coefficients from given dictionary
         virtual bool readCoeffs(const dictionary& dict) = 0;
@@ -161,8 +158,8 @@ public:
             dictionary,
             (
                 const dictionary& dict,
-                const psiuMulticomponentThermo& thermo,
-                const fluidThermoThermophysicalTransportModel& turbulence,
+                const ubRhoThermo& thermo,
+                const compressibleMomentumTransportModel& turbulence,
                 const volScalarField& Su
             ),
             (
@@ -179,8 +176,8 @@ public:
         //- Construct from components
         XiModel
         (
-            const psiuMulticomponentThermo& thermo,
-            const fluidThermoThermophysicalTransportModel& turbulence,
+            const ubRhoThermo& thermo,
+            const compressibleMomentumTransportModel& turbulence,
             const volScalarField& Su
         );
 
@@ -194,8 +191,8 @@ public:
         static autoPtr<XiModel> New
         (
             const dictionary& combustionProperties,
-            const psiuMulticomponentThermo& thermo,
-            const fluidThermoThermophysicalTransportModel& turbulence,
+            const ubRhoThermo& thermo,
+            const compressibleMomentumTransportModel& momentumTransport,
             const volScalarField& Su
         );
 
@@ -213,14 +210,7 @@ public:
         }
 
         //- Return the flame diffusivity
-        virtual tmp<volScalarField> Db() const
-        {
-            return volScalarField::New
-            (
-                "Db",
-                turbulence_.rho()*turbulence_.nuEff()
-            );
-        }
+        virtual tmp<volScalarField> Db() const = 0;
 
         //- Add Xi to the multivariateSurfaceInterpolationScheme table
         //  if required

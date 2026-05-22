@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,7 +25,7 @@ Class
     Foam::clouds::particle
 
 Description
-    Cloud with spherical, variable density, particles
+    Cloud with spherical particles with thermodynamic modelling
 
 SourceFiles
     particle.C
@@ -35,9 +35,10 @@ SourceFiles
 #ifndef particle_H
 #define particle_H
 
-#include "massive.H"
-#include "coupledToFluid.H"
+#include "thermal.H"
+#include "coupledToThermalFluid.H"
 #include "sphericalCoupled.H"
+#include "massiveCoupledToFluid.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -47,26 +48,22 @@ namespace clouds
 {
 
 /*---------------------------------------------------------------------------*\
-                           Class particle Declaration
+                        Class particle Declaration
 \*---------------------------------------------------------------------------*/
 
 class particle
 :
     public cloud,
+    public carried,
     public spherical,
-    public massive,
-    public coupledToFluid,
-    public sphericalCoupled
+    public thermal,
+    public coupledToThermalFluid,
+    public sphericalCoupled,
+    public massiveCoupledToFluid
 {
 protected:
 
     // Protected Member Functions
-
-        //- Initialisation hook
-        virtual void initialise(const bool predict);
-
-        //- Partition hook
-        virtual void partition();
 
         //- Return the acceleration with which to do second-order tracking
         virtual tmp<LagrangianSubVectorField> dUdt
@@ -84,6 +81,9 @@ protected:
             const bool final
         );
 
+        //- Partition hook
+        virtual void partition();
+
 
 public:
 
@@ -95,14 +95,12 @@ public:
 
     // Constructors
 
-        //- Construct from a mesh and a name
+        //- Construct from a mesh and context
         particle
         (
-            const polyMesh& mesh,
-            const word& name,
+            LagrangianMesh& mesh,
             const contextType context,
-            const IOobject::readOption readOption=IOobject::READ_IF_PRESENT,
-            const IOobject::writeOption writeOption=IOobject::AUTO_WRITE
+            const dictionary& dict
         );
 
 
@@ -113,7 +111,7 @@ public:
     // Member Functions
 
         //- Solve the cloud's evolution over the current time-step
-        virtual void solve();
+        virtual void solve(const bool initial, const bool final);
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

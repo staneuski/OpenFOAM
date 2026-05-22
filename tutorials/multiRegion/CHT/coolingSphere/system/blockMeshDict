@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "system";
     object      blockMeshDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -36,8 +37,6 @@ geometry
         radius 0.5;
     }
 }
-
-convertToMeters 1;
 
 vertices
 (

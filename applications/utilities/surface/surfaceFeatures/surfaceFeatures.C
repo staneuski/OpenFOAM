@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2018-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2018-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -33,7 +33,6 @@ Description
 #include "featureEdgeMesh.H"
 #include "extendedFeatureEdgeMesh.H"
 #include "surfaceFeatures.H"
-#include "triSurfaceFields.H"
 #include "vtkWritePolyData.H"
 #include "systemDict.H"
 
@@ -198,7 +197,7 @@ namespace Foam
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         const scalar includedAngle =
-            dict.lookup<scalar>("includedAngle", unitDegrees);
+            dict.lookup<scalar>("includedAngle", units::degrees);
 
         autoPtr<surfaceFeatures> set
         (
@@ -253,7 +252,7 @@ namespace Foam
             {
                 treeBoundBox bb(subsetDict.lookup("insideBox")());
 
-                Info<< "Selecting edges inside bb " << bb;
+                Info<< indent << "Selecting edges inside bb " << bb;
                 if (writeObj)
                 {
                     Info << " see insideBox.obj";
@@ -453,7 +452,7 @@ namespace Foam
                 closenessDict.lookupOrDefault<scalar>
                 (
                     "internalAngleTolerance",
-                    unitDegrees,
+                    units::degrees,
                     80
                 )
             );
@@ -463,7 +462,7 @@ namespace Foam
                 closenessDict.lookupOrDefault<scalar>
                 (
                     "externalAngleTolerance",
-                    unitDegrees,
+                    units::degrees,
                     80
                 )
             );
@@ -483,7 +482,7 @@ namespace Foam
 
             if (faceCloseness)
             {
-                Pair<tmp<triSurfaceScalarField>> closenessFields
+                Pair<tmp<scalarIOField>> closenessFields
                 (
                     searchSurf.extractCloseness
                     (
@@ -520,7 +519,7 @@ namespace Foam
 
             if (pointCloseness)
             {
-                Pair<tmp<triSurfacePointScalarField >> closenessFields
+                Pair<tmp<scalarIOField >> closenessFields
                 (
                     searchSurf.extractPointCloseness
                     (
@@ -542,10 +541,10 @@ namespace Foam
                     const faceList faces(searchSurf.faces());
                     const Map<label>& meshPointMap = searchSurf.meshPointMap();
 
-                    const triSurfacePointScalarField&
+                    const scalarIOField&
                         internalClosenessPointField = closenessFields.first();
 
-                    const triSurfacePointScalarField&
+                    const scalarIOField&
                         externalClosenessPointField = closenessFields.second();
 
                     scalarField internalCloseness(searchSurf.nPoints(), great);
@@ -583,7 +582,7 @@ namespace Foam
             Info<< nl << "Extracting curvature of surface at the points."
                 << endl;
 
-            triSurfacePointScalarField k
+            scalarIOField k
             (
                 IOobject
                 (
@@ -592,8 +591,6 @@ namespace Foam
                     searchableSurface::geometryDir(runTime),
                     runTime
                 ),
-                surf,
-                dimLength,
                 surf.curvature()
             );
 
@@ -622,10 +619,12 @@ namespace Foam
             {
                 const triPointRef& tri = surf[fi].tri(surf.points());
 
-                const Tuple2<point, scalar> circle = tri.circumCircle();
-                const point& c = circle.first();
-                const scalar rSqr =
-                    min(sqr(4*circle.second()), sqr(searchDistance));
+                const Tuple2<point, scalar> crSqr = tri.circumCircleSqr();
+
+                if (crSqr.second() < 0) continue;
+
+                const point& c = crSqr.first();
+                const scalar rSqr = min(16*crSqr.second(), sqr(searchDistance));
 
                 pointIndexHitList hitList;
 
@@ -644,7 +643,7 @@ namespace Foam
                 );
             }
 
-            triSurfaceScalarField featureProximityField
+            scalarIOField featureProximityField
             (
                 IOobject
                 (
@@ -655,8 +654,6 @@ namespace Foam
                     IOobject::NO_READ,
                     IOobject::NO_WRITE
                 ),
-                surf,
-                dimLength,
                 featureProximity
             );
 

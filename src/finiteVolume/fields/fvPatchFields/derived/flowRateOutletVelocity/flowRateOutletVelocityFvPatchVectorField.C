@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -49,7 +49,7 @@ void Foam::flowRateOutletVelocityFvPatchVectorField::updateValues
     // Remove any reverse flow
     nUp = max(nUp, scalar(0));
 
-    const scalar flowRate = flowRate_->value(db().time().value());
+    const scalar flowRate = flowRate_->value(time().value());
     const scalar estimatedFlowRate = gSum(rho*(this->patch().magSf()*nUp));
 
     if (estimatedFlowRate/flowRate > 0.5)
@@ -75,7 +75,7 @@ Foam::flowRateOutletVelocityFvPatchVectorField::
 flowRateOutletVelocityFvPatchVectorField
 (
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -91,7 +91,7 @@ flowRateOutletVelocityFvPatchVectorField
             Function1<scalar>::New
             (
                 "volumetricFlowRate",
-                db().time().userUnits(),
+                time().userUnits(),
                 dimVolumetricFlux,
                 dict
             );
@@ -103,7 +103,7 @@ flowRateOutletVelocityFvPatchVectorField
             Function1<scalar>::New
             (
                 "massFlowRate",
-                db().time().userUnits(),
+                time().userUnits(),
                 dimMassFlux,
                 dict
             );
@@ -137,7 +137,7 @@ flowRateOutletVelocityFvPatchVectorField
 (
     const flowRateOutletVelocityFvPatchVectorField& ptf,
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -153,7 +153,7 @@ Foam::flowRateOutletVelocityFvPatchVectorField::
 flowRateOutletVelocityFvPatchVectorField
 (
     const flowRateOutletVelocityFvPatchVectorField& ptf,
-    const DimensionedField<vector, volMesh>& iF
+    const DimensionedField<vector, fvMesh>& iF
 )
 :
     fixedValueFvPatchField<vector>(ptf, iF),
@@ -209,7 +209,7 @@ void Foam::flowRateOutletVelocityFvPatchVectorField::updateCoeffs()
 void Foam::flowRateOutletVelocityFvPatchVectorField::write(Ostream& os) const
 {
     fvPatchField<vector>::write(os);
-    writeEntry(os, db().time().userUnits(), unitAny, flowRate_());
+    writeEntry(os, time().userUnits(), units::any, flowRate_());
     if (!volumetric_)
     {
         writeEntryIfDifferent<word>(os, "rho", "rho", rhoName_);

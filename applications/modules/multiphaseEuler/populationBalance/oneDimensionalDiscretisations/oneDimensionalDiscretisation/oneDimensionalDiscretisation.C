@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -63,8 +63,8 @@ Foam::oneDimensionalDiscretisation::New
 
     const word oddType(dict.lookup("type"));
 
-    Info<< indent << "Selecting one-dimensional discretisation for "
-        << name << ": " << oddType << endl;
+    Info<< indentOrNl << "Selecting " << typeName << ' '
+        << oddType << " for " << name << endl;
 
     dictionaryConstructorTable::iterator cstrIter =
         dictionaryConstructorTablePtr_->find(oddType);
@@ -78,6 +78,8 @@ Foam::oneDimensionalDiscretisation::New
             << dictionaryConstructorTablePtr_->sortedToc()
             << exit(FatalIOError);
     }
+
+    printDictionary print(dict);
 
     return cstrIter()(name, dims, n, dict);
 }

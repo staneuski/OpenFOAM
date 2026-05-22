@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "constant";
     object      dynamicMeshDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -17,17 +18,18 @@ FoamFile
 // Enable motion for an NCC simulation by changing 'mover-disabled' to 'mover'
 mover
 {
-    type            motionSolver;
+    type            solidBody;
 
-    libs            ("libfvMotionSolvers.so");
-
-    motionSolver    solidBody;
+    libs            ("libpointMeshMovers.so");
 
     cellZone        rotatingZone;
 
-    solidBodyMotionFunction  rotatingMotion;
+    solidBodyMotionFunction
+    {
+        type            rotatingMotion;
 
-    #include        "rotatingZoneProperties"
+        #include        "rotatingZoneProperties"
+    }
 }
 
 // ************************************************************************* //

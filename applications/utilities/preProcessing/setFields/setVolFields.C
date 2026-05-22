@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -51,17 +51,22 @@ void setVolField
 
         VolField<Type> field(fieldHeader, mesh);
 
-        const Type value = pTraits<Type>(fieldValueStream);
+        const dimensioned<Type> value
+        (
+            fieldName,
+            field.dimensions(),
+            fieldValueStream
+        );
 
         if (&selectedCells == &labelList::null())
         {
-            field.primitiveFieldRef() = value;
+            field.primitiveFieldRef() = value.value();
         }
         else
         {
             forAll(selectedCells, celli)
             {
-                field[selectedCells[celli]] = value;
+                field[selectedCells[celli]] = value.value();
             }
         }
 
@@ -116,7 +121,12 @@ void setPatchField
         typename VolField<Type>::Boundary& fieldBf = field.boundaryFieldRef();
 
         // Read the value
-        const Type value = pTraits<Type>(fieldValueStream);
+        const dimensioned<Type> value
+        (
+            fieldName,
+            field.dimensions(),
+            fieldValueStream
+        );
 
         // Determine the number of non-processor patches
         label nNonProcPatches = 0;
@@ -175,7 +185,7 @@ void setPatchField
                     }
                     else
                     {
-                        fieldBfCopy[patches[i]][patchFaces[i]] = value;
+                        fieldBfCopy[patches[i]][patchFaces[i]] = value.value();
                         nonProcPatchNChangedFaces[patches[i]] ++;
                     }
                 }
@@ -277,7 +287,7 @@ void setPatchFields
 (
     const fvMesh& mesh,
     const dictionary& fieldsDict,
-    const labelList& selectedCells
+    const labelList& selectedFaces
 )
 {
     forAllConstIter(dictionary, fieldsDict, iter)
@@ -314,7 +324,7 @@ void setPatchFields
                     fieldName,                                                 \
                     fieldHeader,                                               \
                     mesh,                                                      \
-                    selectedCells,                                             \
+                    selectedFaces,                                             \
                     iter().stream()                                            \
                 );
 

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -79,8 +79,8 @@ public:
         instability
         (
             const dictionary& dict,
-            const psiuMulticomponentThermo& thermo,
-            const fluidThermoThermophysicalTransportModel& turbulence,
+            const ubRhoThermo& thermo,
+            const compressibleMomentumTransportModel& turbulence,
             const volScalarField& Su
         );
 
@@ -95,7 +95,7 @@ public:
     // Member Functions
 
         //- Return the flame-wrinkling generation rate
-        virtual tmp<volScalarField> G() const;
+        virtual tmp<volScalarField::Internal> G() const;
 
 
     // Member Operators

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2020 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -62,7 +62,7 @@ SourceFiles
 #ifndef includeEtcEntry_H
 #define includeEtcEntry_H
 
-#include "functionEntry.H"
+#include "includeEntry.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -72,51 +72,62 @@ namespace functionEntries
 {
 
 /*---------------------------------------------------------------------------*\
-                       Class includeEtcEntry Declaration
+                    Class includeEtcEntry Declaration
 \*---------------------------------------------------------------------------*/
 
 class includeEtcEntry
 :
-    public functionEntry
+    public includeEntry
 {
-    // Private Member Functions
+protected:
+
+    // Protected Member Functions
 
         //- Expand include fileName and return
-        static fileName includeEtcFileName
+        virtual fileName includeFileName
         (
+            const fileName& dir,
             const fileName&,
             const dictionary&
-        );
+        ) const;
 
 
 public:
 
-    // Static Data Members
-
-        //- Report which file is included to stdout
-        static bool log;
-
-
     //- Runtime type information
-    ClassName("includeEtc");
+    FunctionTypeName("#includeEtc");
 
 
     // Constructors
 
-        //- Disallow default bitwise copy construction
-        includeEtcEntry(const includeEtcEntry&) = delete;
+        //- Construct from line number, dictionary and Istream
+        includeEtcEntry
+        (
+            const label lineNumber,
+            const dictionary& parentDict,
+            Istream& is
+        );
+
+        //- Copy construct
+        includeEtcEntry(const includeEtcEntry&) = default;
+
+        //- Clone
+        virtual autoPtr<entry> clone(const dictionary&) const
+        {
+            return autoPtr<entry>(new includeEtcEntry(*this));
+        }
 
 
     // Member Functions
 
-        //- Execute the functionEntry in a sub-dict context
-        static bool execute(dictionary& parentDict, Istream&);
+        //- Expand the functionEntry into the contextDict
+        virtual bool execute(dictionary& contextDict, Istream&);
 
-        //- Execute the functionEntry in a primitiveEntry context
+        //- Expand the functionEntry into the contextEntry
         static bool execute
         (
-            const dictionary& parentDict,
-            primitiveEntry&,
+            const dictionary& contextDict,
+            primitiveEntry& contextEntry,
             Istream&
         );
 

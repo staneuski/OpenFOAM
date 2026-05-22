@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -257,15 +257,21 @@ Foam::phaseSystem::phaseSystem
         1e-8/pow(average(mesh_.V()), 1.0/3.0)
     ),
 
-    surfaceTensionCoefficientModels_
-    (
+    surfaceTensionCoefficientModels_()
+{
+    Info<< indentOrNl << "Constructing " << typeName << " from "
+        << relativeObjectPath().c_str() << endl;
+
+    printDictionary print(*this);
+
+    // Surface tension models
+    surfaceTensionCoefficientModels_ =
         generateInterfacialModels<surfaceTensionCoefficientModel>
         (
             *this,
             subDict(modelName<surfaceTensionCoefficientModel>())
-        )
-    )
-{
+        );
+
     // Groupings
     label movingPhasei = 0;
     label stationaryPhasei = 0;
@@ -508,7 +514,7 @@ Foam::phaseSystem::sigma(const phaseInterfaceKey& key) const
 {
     if (surfaceTensionCoefficientModels_.found(key))
     {
-        return surfaceTensionCoefficientModels_[key]->sigma();
+        return surfaceTensionCoefficientModels_[key].sigma();
     }
     else
     {
@@ -527,7 +533,7 @@ Foam::phaseSystem::sigma(const phaseInterfaceKey& key, const label patchi) const
 {
     if (surfaceTensionCoefficientModels_.found(key))
     {
-        return surfaceTensionCoefficientModels_[key]->sigma(patchi);
+        return surfaceTensionCoefficientModels_[key].sigma(patchi);
     }
     else
     {
@@ -913,7 +919,21 @@ bool Foam::phaseSystem::read()
             readOK &= phaseModels_[phasei].read();
         }
 
-        // models ...
+        cAlphas_ =
+            found("interfaceCompression")
+          ? generateInterfacialValues<scalar>
+            (
+                *this,
+                subDict("interfaceCompression")
+            )
+          : cAlphaTable();
+
+        surfaceTensionCoefficientModels_ =
+            generateInterfacialModels<surfaceTensionCoefficientModel>
+            (
+                *this,
+                subDict(modelName<surfaceTensionCoefficientModel>())
+            );
 
         return readOK;
     }
@@ -939,9 +959,9 @@ Foam::tmp<Foam::volScalarField> Foam::byDt(const volScalarField& vf)
 
 Foam::tmp<Foam::surfaceScalarField> Foam::byDt(const surfaceScalarField& sf)
 {
-    if (fv::localEulerDdt::enabled(sf.mesh()))
+    if (fv::localEulerDdt::enabled(sf.mesh()()))
     {
-        return fv::localEulerDdt::localRDeltaTf(sf.mesh())*sf;
+        return fv::localEulerDdt::localRDeltaTf(sf.mesh()())*sf;
     }
     else
     {

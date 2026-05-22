@@ -9,15 +9,14 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "system";
     object      controlDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-libs            ("libatmosphericModels.so");
-
 solver          fluid;
 
-startFrom       latestTime;
+startFrom       startTime;
 
 startTime       0;
 

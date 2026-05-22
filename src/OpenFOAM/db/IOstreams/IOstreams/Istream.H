@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -67,6 +67,9 @@ class Istream
         //- The last token put back on the stream
         token putBackToken_;
 
+        //- The line number of the stream before the last token is put back
+        label putBackLineNumber_;
+
 
 public:
 
@@ -93,6 +96,21 @@ public:
 
     // Member Functions
 
+        // Check
+
+            //- Return true if next operation might succeed
+            bool good() const
+            {
+                return putBack_ || IOstream::good();
+            }
+
+            //- Return true if end of input seen
+            bool eof() const
+            {
+                return !putBack_ && IOstream::eof();
+            }
+
+
         // Read functions
 
             //- Put back token
@@ -102,6 +120,9 @@ public:
             //- Get the put back token if there is one and return true.
             //  Return false if no put back token is available.
             bool getBack(token&);
+
+            //- Peek at the put back token and return true if available
+            bool peekBack();
 
             //- Peek at the put back token without removing it.
             //  Returns false if no put back token is available and set the

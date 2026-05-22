@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,24 +24,24 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "diffusiveMassTransferModel.H"
-#include "generateInterfacialModels.H"
 
 // * * * * * * * * * * * * * * * * Selector  * * * * * * * * * * * * * * * * //
 
 Foam::autoPtr<Foam::diffusiveMassTransferModel>
 Foam::diffusiveMassTransferModel::New
 (
-    const dictionary& dict,
+    const UPtrList<const dictionary>& subDicts,
     const phaseInterface& interface
 )
 {
     const dictionary& modelDict =
-        modelSubDict<diffusiveMassTransferModel>(dict);
+        modelSubDict<diffusiveMassTransferModel>(subDicts);
 
     const word diffusiveMassTransferModelType(modelDict.lookup("type"));
 
-    Info<< "Selecting diffusiveMassTransferModel for "
-        << interface.name() << ": " << diffusiveMassTransferModelType << endl;
+    Info<< indentOrNl << "Selecting " << typeName << ' '
+        << diffusiveMassTransferModelType << " for " << interface.name()
+        << endl;
 
     dictionaryConstructorTable::iterator cstrIter =
         dictionaryConstructorTablePtr_->find(diffusiveMassTransferModelType);
@@ -55,6 +55,8 @@ Foam::diffusiveMassTransferModel::New
             << dictionaryConstructorTablePtr_->sortedToc()
             << exit(FatalIOError);
     }
+
+    printDictionary print(modelDict);
 
     return cstrIter()(modelDict, interface);
 }

@@ -136,7 +136,7 @@ public:
         CONSTRUCT
         (
             const fvPatch&,
-            const DimensionedField<TYPE, volMesh>&,
+            const DimensionedField<TYPE, fvMesh>&,
             const dictionary&
         );
 
@@ -146,7 +146,7 @@ public:
         (
             const CLASS&,
             const fvPatch&,
-            const DimensionedField<TYPE, volMesh>&,
+            const DimensionedField<TYPE, fvMesh>&,
             const fieldMapper&
         );
 
@@ -160,13 +160,13 @@ public:
         CONSTRUCT
         (
             const CLASS&,
-            const DimensionedField<TYPE, volMesh>&
+            const DimensionedField<TYPE, fvMesh>&
         );
 
         //- Construct and return a clone setting internal field reference
         virtual tmp<FVPATCHF> clone
         (
-            const DimensionedField<TYPE, volMesh>& iF
+            const DimensionedField<TYPE, fvMesh>& iF
         ) const
         {
             return tmp<FVPATCHF>

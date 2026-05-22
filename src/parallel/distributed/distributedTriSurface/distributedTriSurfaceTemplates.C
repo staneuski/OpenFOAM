@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,7 +24,6 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "distributedTriSurface.H"
-#include "triSurfaceFields.H"
 #include "distributionMap.H"
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -37,9 +36,6 @@ License
 //    List<Type>& values
 //) const
 //{
-//    typedef DimensionedField<Type, triSurfaceGeoMesh> DimensionedSurfField;
-//
-//
 //    // Get query data (= local index of triangle)
 //    // ~~~~~~~~~~~~~~
 //
@@ -58,7 +54,7 @@ License
 //    // Do my tests
 //    // ~~~~~~~~~~~
 //
-//    const DimensionedSurfField& fld = lookupObject<DimensionedSurfField>
+//    const IOField<Type>& fld = lookupObject<IOField<Type>>
 //    (
 //        fieldName
 //    );
@@ -86,22 +82,20 @@ void Foam::searchableSurfaces::distributedTriSurface::distributeFields
     const distributionMap& map
 )
 {
-    typedef DimensionedField<Type, triSurfaceGeoMesh> DimensionedSurfField;
-
-    HashTable<DimensionedSurfField*> fields
+    HashTable<IOField<Type>*> fields
     (
-        objectRegistry::lookupClass<DimensionedSurfField>()
+        objectRegistry::lookupClass<IOField<Type>>()
     );
 
     for
     (
-        typename HashTable<DimensionedSurfField*>::iterator fieldIter =
+        typename HashTable<IOField<Type>*>::iterator fieldIter =
             fields.begin();
         fieldIter != fields.end();
         ++fieldIter
     )
     {
-        DimensionedSurfField& field = *fieldIter();
+        IOField<Type>& field = *fieldIter();
 
         label oldSize = field.size();
 

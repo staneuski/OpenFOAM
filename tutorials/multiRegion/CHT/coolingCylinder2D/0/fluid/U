@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       volVectorField;
+    location    "0/fluid";
     object      U;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -30,7 +31,6 @@ boundaryField
     outlet
     {
         type            pressureInletOutletVelocity;
-        value           $internalField;
     }
 
     topAndBottom

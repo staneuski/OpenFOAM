@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2019-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2019-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,8 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "rigidBodyState.H"
-#include "motionSolver_fvMeshMover.H"
-#include "motionSolver.H"
+#include "pointMeshMover_fvMeshMover.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -51,10 +50,10 @@ namespace functionObjects
 const Foam::RBD::rigidBodyMotion&
 Foam::functionObjects::rigidBodyState::motion() const
 {
-    const fvMeshMovers::motionSolver& mover =
-        refCast<const fvMeshMovers::motionSolver>(mesh_.mover());
+    const fvMeshMovers::pointMeshMover& mover =
+        refCast<const fvMeshMovers::pointMeshMover>(mesh_.mover());
 
-    return (refCast<const RBD::rigidBodyMotion>(mover.motion()));
+    return (refCast<const RBD::rigidBodyMotion>(mover.mover()));
 }
 
 
@@ -89,7 +88,7 @@ bool Foam::functionObjects::rigidBodyState::read(const dictionary& dict)
 {
     fvMeshFunctionObject::read(dict);
 
-    units();
+    units::table();
 
     angleUnits_.readIfPresent("angleUnits", dict);
     angularVelocityUnits_.readIfPresent("angularVelocityUnits", dict);

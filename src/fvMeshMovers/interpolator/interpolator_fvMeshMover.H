@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,7 +35,7 @@ Usage
     \verbatim
     mover   interpolator;
 
-    interpolatorCoeffs
+    interpolator
     {
         field               wantedDisplacement;
         displacement        yes;
@@ -59,7 +59,7 @@ SourceFiles
 #define interpolator_fvMeshMover_H
 
 #include "fvMeshMover.H"
-#include "dynamicMeshPointInterpolator.H"
+#include "interpolator_pointMeshMover.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -78,17 +78,12 @@ class interpolator
 {
     // Private Data
 
-        dynamicMeshPointInterpolator pointInterpolator_;
+        pointMeshMovers::interpolator pointInterpolator_;
 
         const Switch displacement_;
 
         //- Starting points
         autoPtr<pointVectorField> points0_;
-
-        //- Optional list of vectorFields to update for mesh motion
-        //  For modern solvers using Uf and correctPhi to update the flux
-        //  after motion it is not necessary to specify a "velocityFields" list
-        velocityMotionCorrection velocityMotionCorrection_;
 
 
 public:

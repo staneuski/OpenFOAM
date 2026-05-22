@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -27,10 +27,12 @@ License
 #include "IOobject.H"
 #include "HashSet.H"
 #include "inputModeEntry.H"
-#include "calcIncludeEntry.H"
+#include "codeIncludeEntry.H"
 #include "stringOps.H"
 #include "etcFiles.H"
 #include "wordAndDictionary.H"
+#include "ITstream.H"
+#include "OTstream.H"
 #include "OSspecific.H"
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -42,12 +44,7 @@ Foam::dictionary::dictionary
     Istream& is
 )
 :
-    dictionaryName
-    (
-        parentDict.name().size()
-      ? parentDict.name()/name
-      : name
-    ),
+    dictionaryName(pathName(parentDict, name)),
     parent_(parentDict),
     filePtr_(nullptr)
 {
@@ -63,9 +60,6 @@ Foam::dictionary::dictionary(Istream& is, const bool keepHeader)
 {
     // Reset input mode as this is a "top-level" dictionary
     functionEntries::inputModeEntry::clear();
-
-    // Clear the cache of #calc include files
-    functionEntries::calcIncludeEntry::clear();
 
     read(is, keepHeader);
 }
@@ -125,12 +119,10 @@ bool Foam::dictionary::read(Istream& is, const bool keepHeader)
         return false;
     }
 
-    // Cache the current name and file/stream pointer
-    const fileName name0(name());
+    // Cache the file/stream pointer
     const Istream* filePtr0 = filePtr_;
 
-    // Set the name and file/stream pointer to the given stream
-    name() = is.name();
+    // Set the file/stream pointer to the given stream
     filePtr_ = &is;
 
     token currToken(is);
@@ -157,8 +149,7 @@ bool Foam::dictionary::read(Istream& is, const bool keepHeader)
         return false;
     }
 
-    // Reset the name and file/stream pointer to the original
-    name() = name0;
+    // Reset the file/stream pointer to the original
     filePtr_ = filePtr0;
 
     return true;
@@ -209,9 +200,6 @@ Foam::Istream& Foam::operator>>(Istream& is, dictionary& dict)
 {
     // Reset input mode assuming this is a "top-level" dictionary
     functionEntries::inputModeEntry::clear();
-
-    // Clear the cache of #calc include files
-    functionEntries::calcIncludeEntry::clear();
 
     dict.clear();
     dict.name() = is.name();
@@ -497,7 +485,8 @@ bool Foam::readConfigFile
     dictionary& parentDict,
     const fileName& configFilesPath,
     const word& configFilesDir,
-    const word& region
+    const word& region,
+    const string& command
 )
 {
     word funcType;
@@ -555,16 +544,24 @@ bool Foam::readConfigFile
     // Insert the 'field' and/or 'fields' and 'objects' entries corresponding
     // to both the arguments and the named arguments
     DynamicList<wordAndDictionary> fieldArgs;
+    bool print = false;
     forAll(args, i)
     {
-        fieldArgs.append
-        (
-            wordAndDictionary
+        if (const_cast<const wordRe&>(args[i].first()).strip(" \n") == "print")
+        {
+            print = true;
+        }
+        else
+        {
+            fieldArgs.append
             (
-                expandArg(args[i].first(), funcDict, args[i].second()),
-                dictionary::null
-            )
-        );
+                wordAndDictionary
+                (
+                    expandArg(args[i].first(), funcDict, args[i].second()),
+                    dictionary::null
+                )
+            );
+        }
     }
     forAll(namedArgs, i)
     {
@@ -720,10 +717,27 @@ bool Foam::readConfigFile
         }
 
         FatalIOErrorInFunction(funcDict0)
-            << nl << "in " << configType << " entry:" << nl
-            << argStringLine.first().c_str() << nl
-            << nl << "in dictionary " << parentDict.name().c_str()
-            << " starting at line " << argStringLine.second() << nl;
+            << nl << "In " << configType << " entry:" << nl
+            << "    " << argStringLine.first().c_str() << nl;
+
+        if (command != string::null)
+        {
+            FatalIOErrorInFunction(funcDict0)
+                << nl << "In command:" << nl
+                << "    " << command.c_str() << endl;
+        }
+
+        if (argStringLine.second() >= 0)
+        {
+            FatalIOErrorInFunction(funcDict0)
+                << nl << "In dictionary:" << nl
+                << "    " << parentDict.name().c_str()
+                << " starting at line " << argStringLine.second() << nl;
+        }
+
+        FatalIOErrorInFunction(funcDict0)
+            << nl << "Including file:" << nl
+            << "    " << path.c_str() << nl;
 
         word funcType;
         List<Tuple2<wordRe, label>> args;
@@ -757,25 +771,30 @@ bool Foam::readConfigFile
             << exit(FatalIOError);
     }
 
-    // Re-parse the funcDict to execute the functionEntries
+    // Expand the funcDict executing the functionEntries
     // now that the argument entries have been added
     dictionary funcArgsDict;
     funcArgsDict.add(entryName, funcDict);
 
     {
-        OStringStream os;
+        OTstream os(fileStream.name());
         funcArgsDict.write(os);
         funcArgsDict = dictionary
         (
             funcType,
             funcDict,
-            IStringStream(os.str())()
+            ITstream(os.name(), os)()
         );
     }
 
     // Merge this configuration dictionary into parentDict
     parentDict.merge(funcArgsDict);
     parentDict.subDict(entryName).name() = funcDict.name();
+
+    if (print)
+    {
+        printDictionary::set(parentDict.subDict(entryName));
+    }
 
     return true;
 }

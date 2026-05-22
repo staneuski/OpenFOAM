@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -41,7 +41,7 @@ inline void Foam::multicomponentThermo::setSpecieActive
     const label speciei
 ) const
 {
-    const_cast<List<bool>&>(speciesActive())[speciei] = true;
+    const_cast<boolList&>(speciesActive())[speciei] = true;
     const_cast<volScalarField&>(Y()[speciei]).writeOpt() = IOobject::AUTO_WRITE;
 }
 
@@ -51,7 +51,7 @@ inline void Foam::multicomponentThermo::setSpecieInactive
     const label speciei
 ) const
 {
-    const_cast<List<bool>&>(speciesActive())[speciei] = false;
+    const_cast<boolList&>(speciesActive())[speciei] = false;
     const_cast<volScalarField&>(Y()[speciei]).writeOpt() = IOobject::NO_WRITE;
 }
 
@@ -104,17 +104,17 @@ inline Foam::label Foam::multicomponentThermo::specieIndex
 }
 
 
-inline Foam::volScalarFieldListSlicer
+inline Foam::GeometricFieldListSlicer<Foam::scalar>
 Foam::multicomponentThermo::implementation::Yslicer() const
 {
-    return volScalarFieldListSlicer(mesh(), Y_);
+    return GeometricFieldListSlicer<scalar>(mesh(), Y_);
 }
 
 
 inline Foam::scalarFieldListSlice
 Foam::multicomponentThermo::implementation::cellComposition
 (
-    const volScalarFieldListSlicer& Yslicer,
+    const GeometricFieldListSlicer<scalar>& Yslicer,
     const label celli
 ) const
 {
@@ -125,7 +125,7 @@ Foam::multicomponentThermo::implementation::cellComposition
 inline Foam::scalarFieldListSlice
 Foam::multicomponentThermo::implementation::patchFaceComposition
 (
-    const volScalarFieldListSlicer& Yslicer,
+    const GeometricFieldListSlicer<scalar>& Yslicer,
     const label patchi,
     const label facei
 ) const
@@ -134,14 +134,14 @@ Foam::multicomponentThermo::implementation::patchFaceComposition
 }
 
 
-inline Foam::DimensionedFieldListAndSlicer<Foam::scalar, Foam::volMesh>
+inline Foam::DimensionedFieldListAndSlicer<Foam::scalar, Foam::fvMesh>
 Foam::multicomponentThermo::implementation::Yslicer
 (
     const fvSource& model,
     const volScalarField::Internal& source
 ) const
 {
-    PtrList<DimensionedField<scalar, volMesh>> result(Y_.size());
+    PtrList<DimensionedField<scalar, fvMesh>> result(Y_.size());
 
     forAll(Y_, i)
     {
@@ -162,7 +162,7 @@ Foam::multicomponentThermo::implementation::Yslicer
 inline Foam::scalarFieldListSlice
 Foam::multicomponentThermo::implementation::sourceCellComposition
 (
-    const DimensionedFieldListAndSlicer<scalar, volMesh>& Yslicer,
+    const DimensionedFieldListAndSlicer<scalar, fvMesh>& Yslicer,
     const label i
 ) const
 {

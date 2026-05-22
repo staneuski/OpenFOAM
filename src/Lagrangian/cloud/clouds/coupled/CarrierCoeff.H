@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,8 +35,9 @@ SourceFiles
 #ifndef CarrierCoeff_H
 #define CarrierCoeff_H
 
+#include "CarrierEqnBase.H"
 #include "DimensionedField.H"
-#include "volMesh.H"
+#include "fvMesh.H"
 #include "LagrangianCoeff.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -53,11 +54,11 @@ class CarrierCoeff
 {
     // Private Data
 
-        //- Reference to the mesh
-        const fvMesh& mesh_;
+        //- Reference to the equation
+        const CarrierEqnBase& eqn_;
 
         //- Coefficient
-        autoPtr<DimensionedField<Type, volMesh>> S_;
+        autoPtr<DimensionedField<Type, fvMesh>> S_;
 
 
     // Private Member Functions
@@ -70,9 +71,8 @@ public:
 
     // Constructors
 
-        //- Construct from a reference to the field
-        template<class PsiType>
-        CarrierCoeff(const VolField<PsiType>& psi);
+        //- Construct from a reference to the equation
+        CarrierCoeff(const CarrierEqnBase& eqn);
 
         //- Construct as copy
         CarrierCoeff(const CarrierCoeff<Type, Implicit>& coeff);
@@ -93,7 +93,7 @@ public:
         void clear();
 
         //- Access the field
-        const DimensionedField<Type, volMesh>& S() const;
+        const DimensionedField<Type, fvMesh>& S() const;
 
         //- In-place negation
         void negate();
@@ -106,6 +106,12 @@ public:
 
         //- Subtraction assignment
         void operator-=(const LagrangianCoeff<Type, Implicit>& lCoeff);
+
+        //- Multiply assignment
+        void operator*=(const dimensionedScalar& s);
+
+        //- Division assignment
+        void operator/=(const dimensionedScalar& s);
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

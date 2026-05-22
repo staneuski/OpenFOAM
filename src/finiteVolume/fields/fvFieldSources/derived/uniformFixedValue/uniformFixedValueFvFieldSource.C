@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -31,7 +31,7 @@ License
 template<class Type>
 Foam::uniformFixedValueFvFieldSource<Type>::uniformFixedValueFvFieldSource
 (
-    const DimensionedField<Type, volMesh>& iF,
+    const DimensionedField<Type, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -41,7 +41,7 @@ Foam::uniformFixedValueFvFieldSource<Type>::uniformFixedValueFvFieldSource
         Function1<Type>::New
         (
             "uniformValue",
-            this->db().time().userUnits(),
+            this->time().userUnits(),
             iF.dimensions(),
             dict
         )
@@ -53,7 +53,7 @@ template<class Type>
 Foam::uniformFixedValueFvFieldSource<Type>::uniformFixedValueFvFieldSource
 (
     const uniformFixedValueFvFieldSource<Type>& field,
-    const DimensionedField<Type, volMesh>& iF
+    const DimensionedField<Type, fvMesh>& iF
 )
 :
     fvFieldSource<Type>(field, iF),
@@ -71,22 +71,22 @@ Foam::uniformFixedValueFvFieldSource<Type>::~uniformFixedValueFvFieldSource()
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
 template<class Type>
-Foam::tmp<Foam::DimensionedField<Type, Foam::volMesh>>
+Foam::tmp<Foam::DimensionedField<Type, Foam::fvMesh>>
 Foam::uniformFixedValueFvFieldSource<Type>::sourceValue
 (
     const fvSource& model,
-    const DimensionedField<scalar, volMesh>& source
+    const DimensionedField<scalar, fvMesh>& source
 ) const
 {
     return
-        DimensionedField<Type, volMesh>::New
+        DimensionedField<Type, fvMesh>::New
         (
             model.name() + ":" + this->internalField().name() + "SourceValue",
             this->internalField().mesh(),
             dimensioned<Type>
             (
                 this->internalField().dimensions(),
-                uniformValue_->value(this->db().time().value())
+                uniformValue_->value(this->time().value())
             )
         );
 }
@@ -107,22 +107,22 @@ Foam::uniformFixedValueFvFieldSource<Type>::sourceValue
             new Field<Type>
             (
                 source.size(),
-                uniformValue_->value(this->db().time().value())
+                uniformValue_->value(this->time().value())
             )
         );
 }
 
 
 template<class Type>
-Foam::tmp<Foam::DimensionedField<Foam::scalar, Foam::volMesh>>
+Foam::tmp<Foam::DimensionedField<Foam::scalar, Foam::fvMesh>>
 Foam::uniformFixedValueFvFieldSource<Type>::internalCoeff
 (
     const fvSource& model,
-    const DimensionedField<scalar, volMesh>& source
+    const DimensionedField<scalar, fvMesh>& source
 ) const
 {
     return
-        DimensionedField<scalar, volMesh>::New
+        DimensionedField<scalar, fvMesh>::New
         (
             model.name() + ":" + this->internalField().name() + "InternalCoeff",
             this->internalField().mesh(),
@@ -151,7 +151,7 @@ void Foam::uniformFixedValueFvFieldSource<Type>::write(Ostream& os) const
     writeEntry
     (
         os,
-        this->db().time().userUnits(),
+        this->time().userUnits(),
         this->internalField().dimensions(),
         uniformValue_()
     );

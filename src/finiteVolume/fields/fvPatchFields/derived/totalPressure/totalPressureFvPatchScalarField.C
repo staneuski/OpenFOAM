@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,7 +35,7 @@ License
 Foam::totalPressureFvPatchScalarField::totalPressureFvPatchScalarField
 (
     const fvPatch& p,
-    const DimensionedField<scalar, volMesh>& iF,
+    const DimensionedField<scalar, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -49,7 +49,7 @@ Foam::totalPressureFvPatchScalarField::totalPressureFvPatchScalarField
 (
     const totalPressureFvPatchScalarField& ptf,
     const fvPatch& p,
-    const DimensionedField<scalar, volMesh>& iF,
+    const DimensionedField<scalar, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -62,7 +62,7 @@ Foam::totalPressureFvPatchScalarField::totalPressureFvPatchScalarField
 Foam::totalPressureFvPatchScalarField::totalPressureFvPatchScalarField
 (
     const totalPressureFvPatchScalarField& tppsf,
-    const DimensionedField<scalar, volMesh>& iF
+    const DimensionedField<scalar, fvMesh>& iF
 )
 :
     dynamicPressureFvPatchScalarField(tppsf, iF),
@@ -86,19 +86,14 @@ void Foam::totalPressureFvPatchScalarField::updateCoeffs()
         const pressureInletOutletVelocityFvPatchVectorField& Upiov =
             refCast<const pressureInletOutletVelocityFvPatchVectorField>(Up);
 
-        if (Upiov.tangentialVelocity().valid())
-        {
-            const scalar t = this->db().time().value();
+        dynamicPressureFvPatchScalarField::updateCoeffs
+        (
+            p0_,
+            0.5*neg(phip)*magSqr(Upiov.tangentialVelocity())
+          - 0.5*neg(phip)*magSqr(Up)
+        );
 
-            dynamicPressureFvPatchScalarField::updateCoeffs
-            (
-                p0_,
-                0.5*neg(phip)*magSqr(Upiov.tangentialVelocity()->value(t))
-              - 0.5*neg(phip)*magSqr(Up)
-            );
-
-            return;
-        }
+        return;
     }
 
     dynamicPressureFvPatchScalarField::updateCoeffs

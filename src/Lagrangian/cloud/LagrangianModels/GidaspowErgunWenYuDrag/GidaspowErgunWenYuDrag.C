@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -26,7 +26,7 @@ License
 #include "GidaspowErgunWenYuDrag.H"
 #include "SchillerNaumannDrag.H"
 #include "addToRunTimeSelectionTable.H"
-#include "coupledToIncompressibleFluid.H"
+#include "coupledToConstantDensityFluid.H"
 #include "coupledToFluid.H"
 #include "sphericalCoupled.H"
 
@@ -59,8 +59,9 @@ Foam::Lagrangian::GidaspowErgunWenYuDrag::calcD
     const clouds::spherical& sCloud = cloud<clouds::spherical>();
     const clouds::sphericalCoupled& scCloud = cloud<clouds::sphericalCoupled>();
 
-    const LagrangianSubScalarField Re = scCloud.Re(model, subMesh);
-    const LagrangianSubScalarSubField d(sCloud.d(model, subMesh));
+    tmp<LagrangianSubScalarSubField> td = sCloud.d(model, subMesh);
+    const LagrangianSubScalarSubField& d = td();
+    const LagrangianSubScalarField& Re = scCloud.Re(model, subMesh);
 
     const LagrangianSubScalarField alpha(min(sCloud.alpha(subMesh), alphaMax_));
     const LagrangianSubScalarField alphac(1 - alpha);
@@ -78,27 +79,22 @@ Foam::Lagrangian::GidaspowErgunWenYuDrag::calcD
 
     assertCloud
     <
-        clouds::coupledToIncompressibleFluid,
+        clouds::coupledToConstantDensityFluid,
         clouds::coupledToFluid
     >();
 
     tmp<LagrangianSubScalarField> tmucByRhoOrMuc =
-        isCloud<clouds::coupledToIncompressibleFluid>()
+        isCloud<clouds::coupledToConstantDensityFluid>()
       ? (
-            cloud<clouds::coupledToIncompressibleFluid>().nuc(model, subMesh)
-           /cloud<clouds::coupledToIncompressibleFluid>().rhoByRhoc
+            cloud<clouds::coupledToConstantDensityFluid>().nuc(model, subMesh)
+           /cloud<clouds::coupledToConstantDensityFluid>().rhoByRhoc
         )
       : tmp<LagrangianSubScalarField>
         (
             cloud<clouds::coupledToFluid>().muc(model, subMesh)
         );
 
-    return
-        LagrangianSubScalarField::New
-        (
-            "D:" + Foam::name(subMesh.group()),
-            CdRe*(constant::mathematical::pi/8)*d*tmucByRhoOrMuc
-        );
+    return CdRe*(constant::mathematical::pi/8)*d*tmucByRhoOrMuc;
 }
 
 
@@ -113,7 +109,7 @@ Foam::Lagrangian::GidaspowErgunWenYuDrag::GidaspowErgunWenYuDrag
 )
 :
     drag(name, mesh, modelDict, stateDict),
-    alphaMax_(modelDict.lookup<scalar>("alphaMax", unitFraction))
+    alphaMax_(modelDict.lookup<scalar>("alphaMax", units::fraction))
 {}
 
 

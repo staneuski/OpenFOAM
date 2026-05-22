@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -59,12 +59,12 @@ void Foam::solvers::isothermalFluid::correctBuoyantPressure()
 
     // Thermodynamic density needs to be updated by psi*d(p) after the
     // pressure solution
-    const volScalarField psip0(psi*p);
+    const volScalarField p0("p0", p);
 
     const surfaceScalarField rhof(fvc::interpolate(rho));
 
     const volScalarField rAU("rAU", 1.0/UEqn.A());
-    const surfaceScalarField rhorAUf("rhorAUf", fvc::interpolate(rho*rAU));
+    surfaceScalarField rhorAUf("rhorAUf", fvc::interpolate(rho*rAU));
 
     tmp<volScalarField> rAtU
     (
@@ -81,8 +81,8 @@ void Foam::solvers::isothermalFluid::correctBuoyantPressure()
     );
 
     const volScalarField& rAAtU = pimple.consistent() ? rAtU() : rAU;
-    const surfaceScalarField& rhorAAtUf =
-        pimple.consistent() ? rhorAtUf() : rhorAUf;
+    surfaceScalarField& rhorAAtUf =
+        pimple.consistent() ? rhorAtUf.ref() : rhorAUf;
 
     volVectorField HbyA(constrainHbyA(rAU*UEqn.H(), U, p_rgh));
 
@@ -116,7 +116,10 @@ void Foam::solvers::isothermalFluid::correctBuoyantPressure()
             constrainPhid
             (
                 fvc::relative(phiHbyA, rho, U)/rhof,
-                p_rgh
+                U,
+                p_rgh,
+                rhorAUf,
+                rhorAAtUf
             )
         );
 
@@ -148,7 +151,7 @@ void Foam::solvers::isothermalFluid::correctBuoyantPressure()
 
         while (pimple.correctNonOrthogonal())
         {
-            tp_rghEqn = p_rghDDtEqn - fvm::laplacian(rhorAAtUf, p);
+            tp_rghEqn = p_rghDDtEqn - fvm::laplacian(rhorAAtUf, p_rgh);
             fvScalarMatrix& p_rghEqn = tp_rghEqn.ref();
 
             // Relax the pressure equation to ensure diagonal-dominance
@@ -230,7 +233,7 @@ void Foam::solvers::isothermalFluid::correctBuoyantPressure()
         const bool constrained = fvConstraints().constrain(p);
 
         // Thermodynamic density update
-        thermo_.correctRho(psi*p - psip0);
+        thermo_.correctRho(p - p0);
 
         if (constrained)
         {

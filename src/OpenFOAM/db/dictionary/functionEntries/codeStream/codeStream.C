@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,10 +25,10 @@ License
 
 #include "codeStream.H"
 #include "dynamicCode.H"
-#include "dynamicCodeContext.H"
 #include "Time.H"
 #include "OSspecific.H"
 #include "PstreamReduceOps.H"
+#include "addToRunTimeSelectionTable.H"
 #include "addToMemberFunctionSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -37,15 +37,9 @@ namespace Foam
 {
 namespace functionEntries
 {
-    defineTypeNameAndDebug(codeStream, 0);
+    defineFunctionTypeNameAndDebug(codeStream, 0);
 
-    addToMemberFunctionSelectionTable
-    (
-        functionEntry,
-        codeStream,
-        execute,
-        dictionaryIstream
-    );
+    addToRunTimeSelectionTable(functionEntry, codeStream, dictionary);
 
     addToMemberFunctionSelectionTable
     (
@@ -68,14 +62,22 @@ const Foam::wordList Foam::functionEntries::codeStream::codeDictVars
     {"dict", word::null, word::null}
 );
 
-const Foam::word Foam::functionEntries::codeStream::codeTemplateC =
-    "codeStreamTemplate.C";
+const Foam::word Foam::functionEntries::codeStream::codeOptions
+(
+    "codeStreamOptions"
+);
+
+const Foam::wordList Foam::functionEntries::codeStream::compileFiles
+{
+    "codeStreamTemplate.C"
+};
 
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 bool Foam::functionEntries::codeStream::masterOnlyRead
 (
+    const word& typeName,
     const dictionary& dict
 )
 {
@@ -83,7 +85,7 @@ bool Foam::functionEntries::codeStream::masterOnlyRead
 
     if (debug)
     {
-        Pout<< "codeStream : dictionary:" << dict.name()
+        Pout<< typeName << " : dictionary:" << dict.name()
             << " master-only-reading:" << topDict.global()
             << endl;
     }
@@ -92,26 +94,82 @@ bool Foam::functionEntries::codeStream::masterOnlyRead
 }
 
 
-Foam::functionEntries::codeStream::streamingFunctionType
-Foam::functionEntries::codeStream::getFunction
+Foam::string Foam::functionEntries::codeStream::codeString
 (
+    const word& typeName,
+    const word& templateFunctionName,
+    const label index,
     const dictionary& contextDict,
-    const dictionary& codeDict
+    Istream& is
+)
+{
+    // Construct code string for codeStream using the context dictionary for
+    // string expansion and variable substitution
+    const dictionary codeDict(typeName, contextDict, is);
+
+    if (codeDict.found("codeInclude"))
+    {
+        IOWarningInFunction(is)
+            << "codeInclude entry not supported within #codeBlock, "
+               "use #codeInclude instead."
+            << endl;
+    }
+
+    return
+    (
+        templateFunctionName + '(' + Foam::name(index) + ")\n"
+        "{\n"
+        "    #line " + Foam::name(codeDict.lookup("code").lineNumber())
+      + " \"" + codeDict.name() + "\"\n"
+      + codeDict.lookup<verbatimString>("code")
+      + "\n}\n\n"
+    );
+}
+
+
+Foam::string Foam::functionEntries::codeStream::codeString
+(
+    const label index,
+    const dictionary& contextDict,
+    Istream& is
+)
+{
+    return codeString
+    (
+        typeName,
+        "CODE_BLOCK_STREAM_FUNCTION",
+        index,
+        contextDict,
+        is
+    );
+}
+
+
+void* Foam::functionEntries::codeStream::compile
+(
+    const word& typeName,
+    const dictionary& contextDict,
+    const dictionary& codeDict,
+    const word& codeOptions,
+    const wordList& compileFiles,
+    word& codeName
 )
 {
     // Get code, codeInclude, ...
-    const dynamicCodeContext context
+    // codeName: codeStream + _<sha1>
+    // codeDir : _<sha1>
+    dynamicCode dynCode
     (
         contextDict,
         codeDict,
+        typeName.remove('#'),
+        word::null,
         codeKeys,
-        codeDictVars
+        codeDictVars,
+        codeOptions,
+        compileFiles,
+        wordList::null()
     );
-
-    // codeName: codeStream + _<sha1>
-    // codeDir : _<sha1>
-    const std::string sha1Str(context.sha1().str(true));
-    dynamicCode dynCode("codeStream" + sha1Str, sha1Str);
 
     // Load library if not already loaded
     // Version information is encoded in the libPath (encoded with the SHA1)
@@ -122,205 +180,86 @@ Foam::functionEntries::codeStream::getFunction
 
     if (debug && !lib)
     {
-        Info<< "Using #codeStream with " << libPath << endl;
+        Info<< "Using " << typeName << " with " << libPath << endl;
     }
 
     // Nothing loaded
     // avoid compilation if possible by loading an existing library
     if (!lib)
     {
-        // Cached access to dl libs.
-        // Guarantees clean up upon destruction of Time.
-        if (libs.open(libPath, false))
-        {
-            lib = libs.findLibrary(libPath);
-        }
-        else
-        {
-            // Uncached opening of libPath. Do not complain if cannot be loaded
-            lib = dlOpen(libPath, false);
-        }
+        lib = dynCode.loadLibrary(libPath);
     }
 
-    // Create library if required
+    // Create library if required and load
     if (!lib)
     {
-        const bool create =
-            Pstream::master()
-         || (regIOobject::fileModificationSkew <= 0);   // not NFS
-
-        if (create)
-        {
-            if (!dynCode.upToDate(context))
-            {
-                // Filter with this context
-                dynCode.reset(context);
-
-                // Compile filtered C template
-                dynCode.addCompileFile(codeTemplateC);
-
-                // Define Make/options
-                dynCode.setMakeOptions
-                (
-                    "EXE_INC = -g \\\n"
-                  + context.options()
-                  + "\n\nLIB_LIBS = \\\n"
-                  + "    -lOpenFOAM \\\n"
-                  + context.libs()
-                );
-
-                if (!dynCode.copyOrCreateFiles(true))
-                {
-                    FatalIOErrorInFunction
-                    (
-                        contextDict
-                    )   << "Failed writing files for" << nl
-                        << dynCode.libRelPath() << nl
-                        << exit(FatalIOError);
-                }
-            }
-
-            if (!dynCode.wmakeLibso())
-            {
-                FatalIOErrorInFunction
-                (
-                    contextDict
-                )   << "Failed wmake " << dynCode.libRelPath() << nl
-                    << exit(FatalIOError);
-            }
-        }
-
-        // Only block if not master only reading of a global dictionary
-        if
+        dynCode.createLibrary
         (
-           !masterOnlyRead(contextDict)
-         && regIOobject::fileModificationSkew > 0
-        )
-        {
-            // Determine and communicate the master file size. Scattering
-            // blocks the other processes until the master has finished
-            // compiling.
-            off_t masterSize = Pstream::master() ? fileSize(libPath) : -1;
-            Pstream::scatter(masterSize);
+            contextDict,
+            masterOnlyRead(typeName, contextDict)
+        );
 
-            // Determine the local file size. This may be incorrect if NFS is
-            // taking its time, in which case we wait and try again.
-            off_t mySize = Pstream::master() ? masterSize : fileSize(libPath);
-
-            if (debug)
-            {
-                Pout<< endl<< "on processor " << Pstream::myProcNo()
-                    << " have masterSize:" << masterSize
-                    << " and localSize:" << mySize
-                    << endl;
-            }
-
-            if (mySize < masterSize)
-            {
-                if (debug)
-                {
-                    Pout<< "Local file " << libPath
-                        << " not of same size (" << mySize
-                        << ") as master ("
-                        << masterSize << "). Waiting for "
-                        << regIOobject::fileModificationSkew
-                        << " seconds." << endl;
-                }
-                Foam::sleep(regIOobject::fileModificationSkew);
-
-                // Recheck local size
-                mySize = Foam::fileSize(libPath);
-
-                if (mySize < masterSize)
-                {
-                    FatalIOErrorInFunction
-                    (
-                        contextDict
-                    )   << "Cannot read (NFS mounted) library " << nl
-                        << libPath << nl
-                        << "on processor " << Pstream::myProcNo()
-                        << " detected size " << mySize
-                        << " whereas master size is " << masterSize
-                        << " bytes." << nl
-                        << "If your case is not NFS mounted"
-                        << " (so distributed) set fileModificationSkew"
-                        << " to 0"
-                        << exit(FatalIOError);
-                }
-            }
-
-            if (debug)
-            {
-                Pout<< endl<< "on processor " << Pstream::myProcNo()
-                    << " after waiting: have masterSize:" << masterSize
-                    << " and localSize:" << mySize
-                    << endl;
-            }
-        }
-
-        if (libs.open(libPath, false))
-        {
-            if (debug)
-            {
-                Pout<< "Opening cached dictionary:" << libPath << endl;
-            }
-
-            lib = libs.findLibrary(libPath);
-        }
-        else
-        {
-            // Uncached opening of libPath
-            if (debug)
-            {
-                Pout<< "Opening uncached dictionary:" << libPath << endl;
-            }
-
-            lib = dlOpen(libPath, true);
-        }
+        lib = dynCode.loadLibrary(libPath);
     }
 
     if (!lib)
     {
-        FatalIOErrorInFunction
-        (
-            contextDict
-        )   << "Failed loading library " << libPath << nl
+        FatalIOErrorInFunction(contextDict)
+            << "Failed loading library " << libPath << nl
             << "Did you add all libraries to the 'libs' entry"
             << " in system/controlDict?"
             << exit(FatalIOError);
     }
 
-    bool haveLib = lib;
-    if (!masterOnlyRead(contextDict))
+    bool allHaveLib = lib;
+    if (!masterOnlyRead(typeName, contextDict))
     {
-        reduce(haveLib, andOp<bool>());
+        reduce(allHaveLib, andOp<bool>());
     }
 
-    if (!haveLib)
+    if (!allHaveLib)
     {
-        FatalIOErrorInFunction
-        (
-            contextDict
-        )   << "Failed loading library " << libPath
+        FatalIOErrorInFunction(contextDict)
+            << "Failed loading library " << libPath
             << " on some processors."
             << exit(FatalIOError);
     }
 
+    codeName = dynCode.codeSha1Name();
+
+    return lib;
+}
+
+
+Foam::functionEntries::codeStream::streamingFunctionType
+Foam::functionEntries::codeStream::getFunction
+(
+    const dictionary& contextDict,
+    const dictionary& codeDict
+)
+{
+    word codeName;
+    void* lib = compile
+    (
+        typeName,
+        contextDict,
+        codeDict,
+        codeOptions,
+        compileFiles,
+        codeName
+    );
 
     // Find the function handle in the library
     const streamingFunctionType function =
         reinterpret_cast<streamingFunctionType>
         (
-            dlSym(lib, dynCode.codeName())
+            dlSym(lib, codeName)
         );
-
 
     if (!function)
     {
-        FatalIOErrorInFunction
-        (
-            contextDict
-        )   << "Failed looking up symbol " << dynCode.codeName()
+        FatalIOErrorInFunction(contextDict)
+            << "Failed looking up symbol " << codeName
             << " in library " << lib << exit(FatalIOError);
     }
 
@@ -328,7 +267,7 @@ Foam::functionEntries::codeStream::getFunction
 }
 
 
-Foam::string Foam::functionEntries::codeStream::run
+Foam::OTstream Foam::functionEntries::codeStream::resultStream
 (
     const dictionary& contextDict,
     Istream& is
@@ -336,29 +275,49 @@ Foam::string Foam::functionEntries::codeStream::run
 {
     if (debug)
     {
-        Info<< "Using #codeStream at line " << is.lineNumber()
+        Info<< "Using " << typeName << " at line " << is.lineNumber()
             << " in file " <<  contextDict.name() << endl;
     }
 
-    dynamicCode::checkSecurity
-    (
-        "functionEntries::codeStream::execute(..)",
-        contextDict
-    );
+    // Construct codeDict for codeStream using the context dictionary
+    // for string expansion and variable substitution
+    const dictionary codeDict(typeName, contextDict, is);
 
-    // Construct codeDict for codeStream
-    // Parent dictionary provided for string expansion and variable substitution
-    const dictionary codeDict("#codeStream", contextDict, is);
-
+    // Compile and link the code library and get the function pointer
     const streamingFunctionType function = getFunction(contextDict, codeDict);
 
     // Use function to write stream
-    OStringStream os(is.format());
-    (*function)(os, contextDict);
+    OTstream ots(is.name(), is.format());
+    ots.lineNumber() = is.lineNumber();
+    (*function)(ots, contextDict);
 
-    // Return the string containing the results of the code execution
-    return os.str();
+    // Return the OTstream containing the results of the code execution
+    return ots;
 }
+
+
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+Foam::functionEntries::codeStream::codeStream
+(
+    const functionName& functionType,
+    const label lineNumber,
+    const dictionary& dict
+)
+:
+    functionEntry(functionType, lineNumber, dict)
+{}
+
+
+Foam::functionEntries::codeStream::codeStream
+(
+    const label lineNumber,
+    const dictionary& parentDict,
+    Istream& is
+)
+:
+    functionEntry(typeName, lineNumber, parentDict)
+{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -369,18 +328,18 @@ bool Foam::functionEntries::codeStream::execute
     Istream& is
 )
 {
-    return insert(contextDict, run(contextDict, is));
+    return insert(contextDict, resultStream(contextDict, is));
 }
 
 
 bool Foam::functionEntries::codeStream::execute
 (
     const dictionary& contextDict,
-    primitiveEntry& thisEntry,
+    primitiveEntry& contextEntry,
     Istream& is
 )
 {
-    return insert(contextDict, thisEntry, run(contextDict, is));
+    return insert(contextDict, contextEntry, resultStream(contextDict, is));
 }
 
 

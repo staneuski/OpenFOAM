@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       volScalarField;
+    location    "0";
     object      T;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -32,7 +33,6 @@ boundaryField
     {
         type            inletOutlet;
         inletValue      uniform $Tout;
-        value           $inletValue;
     }
 
     wall

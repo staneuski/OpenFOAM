@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -30,16 +30,16 @@ License
 Foam::autoPtr<Foam::XiEqModel> Foam::XiEqModel::New
 (
     const dictionary& XiDict,
-    const psiuMulticomponentThermo& thermo,
-    const fluidThermoThermophysicalTransportModel& turbulence,
+    const ubRhoThermo& thermo,
+    const compressibleMomentumTransportModel& turbulence,
     const volScalarField& Su
 )
 {
-    const dictionary& XiEqDict = XiDict.subDict("equilibrium");
+    const dictionary& XiEqDict = XiDict.subDict("eq");
 
     const word modelType(XiEqDict.lookup("model"));
 
-    Info<< "Selecting equilibrium flame-wrinkling XiEq model "
+    Info<< indentOrNl << "Selecting equilibrium flame-wrinkling XiEq model "
         << modelType << endl;
 
     dictionaryConstructorTable::iterator cstrIter =
@@ -55,11 +55,17 @@ Foam::autoPtr<Foam::XiEqModel> Foam::XiEqModel::New
             << exit(FatalIOError);
     }
 
+    printDictionary print
+    (
+        XiEqDict,
+        XiEqDict.optionalTypeDict(modelType)
+    );
+
     return autoPtr<XiEqModel>
     (
         cstrIter()
         (
-            XiEqDict.optionalSubDict(modelType + "Coeffs"),
+            XiEqDict.optionalTypeDict(modelType),
             thermo,
             turbulence,
             Su

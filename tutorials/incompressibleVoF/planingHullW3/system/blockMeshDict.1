@@ -9,7 +9,8 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
-    object      blockMeshDict;
+    location    "system";
+    object      blockMeshDict.1;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -37,9 +38,6 @@ backgroundMesh
     zCells5  40;
     zCells6  8;
 }
-
-
-convertToMeters 1;
 
 vertices
 (

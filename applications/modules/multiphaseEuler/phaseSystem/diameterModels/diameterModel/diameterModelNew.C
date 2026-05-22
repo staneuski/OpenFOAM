@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -45,12 +45,11 @@ Foam::autoPtr<Foam::diameterModel> Foam::diameterModel::New
     else
     {
         modelType = dict.lookup<word>(typeName);
-        modelDictPtr = &dict.optionalSubDict(modelType + "Coeffs");
+        modelDictPtr = &dict.optionalTypeDict(modelType);
     }
     const dictionary& modelDict = *modelDictPtr;
 
-    Info << "Selecting " << typeName << " for phase " << phase.name() << ": "
-        << modelType << endl;
+    Info<< indentOrNl << "Selecting " << typeName << ' ' << modelType << endl;
 
     dictionaryConstructorTable::iterator cstrIter =
         dictionaryConstructorTablePtr_->find(modelType);
@@ -64,6 +63,8 @@ Foam::autoPtr<Foam::diameterModel> Foam::diameterModel::New
            << dictionaryConstructorTablePtr_->sortedToc()
            << exit(FatalIOError);
     }
+
+    printDictionary print(modelDict);
 
     return cstrIter()(modelDict, phase);
 }

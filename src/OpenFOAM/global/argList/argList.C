@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -74,12 +74,6 @@ Foam::argList::initValidTables::initValidTables()
     );
     validParOptions.set("hostRoots", "((host1 dir1) .. (hostN dirN))");
 
-    argList::addBoolOption
-    (
-        "noFunctionObjects",
-        "do not execute functionObjects"
-    );
-
     argList::addOption
     (
         "fileHandler",
@@ -103,7 +97,6 @@ void Foam::argList::initValidTables::clear()
     argList::removeOption("parallel");
     argList::removeOption("roots");
     argList::removeOption("hostRoots");
-    argList::removeOption("noFunctionObjects");
     argList::removeOption("fileHandler");
     argList::removeOption("libs");
 }
@@ -295,8 +288,10 @@ bool Foam::argList::postProcess(int argc, char *argv[])
 }
 
 
-bool Foam::argList::hasArgs(int argc, char *argv[])
+Foam::label Foam::argList::nArgs(int argc, char *argv[])
 {
+    label n = 0;
+
     for (int i=1; i<argc; i++)
     {
         const string arg(argv[i]);
@@ -308,11 +303,11 @@ bool Foam::argList::hasArgs(int argc, char *argv[])
         }
         else
         {
-            return true;
+            n ++;
         }
     }
 
-    return false;
+    return n;
 }
 
 
@@ -1322,7 +1317,11 @@ void Foam::argList::printUsage() const
 
 void Foam::argList::displayDoc(bool source) const
 {
-    const dictionary& docDict = debug::controlDict().subDict("Documentation");
+    const dictionary& docDict =
+        debug::configDict().subDictBackwardsCompatible
+        (
+            {"documentation", "Documentation"}
+        );
     List<fileName> docDirs(docDict.lookup("doxyDocDirs"));
     fileName docExt(docDict.lookup("doxySourceFileExt"));
 

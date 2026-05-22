@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2012-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2012-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -36,7 +36,7 @@ Foam::COxidationHurtMitchell<CloudType>::COxidationHurtMitchell
 )
 :
     SurfaceReactionModel<CloudType>(dict, owner, typeName),
-    Sb_(this->coeffDict().template lookup<scalar>("Sb")),
+    Sb_(this->typeDict().template lookup<scalar>("Sb")),
     CsLocalId_(-1),
     ashLocalId_(-1),
     O2GlobalId_(owner.composition().carrierId("O2")),
@@ -62,7 +62,7 @@ Foam::COxidationHurtMitchell<CloudType>::COxidationHurtMitchell
     const scalar YSolidTot = owner.composition().YMixture0()[idSolid];
     Info<< "    C(s): particle mass fraction = " << YCloc*YSolidTot << endl;
 
-    if (this->coeffDict().readIfPresent("heatOfReaction", heatOfReaction_))
+    if (this->typeDict().readIfPresent("heatOfReaction", heatOfReaction_))
     {
         Info<< "    Using user specified heat of reaction: "
             << heatOfReaction_ << " [J/kg]" << endl;
@@ -124,7 +124,7 @@ Foam::scalar Foam::COxidationHurtMitchell<CloudType>::calculate
     const label idSolid = this->owner().composition().idSolid();
     const scalar Ychar = YMixture[idSolid]*YSolid[CsLocalId_];
 
-    // Surface combustion until combustible fraction is consumed
+    // Surface reaction until combustible fraction is consumed
     if (Ychar < small)
     {
         return 0.0;
@@ -137,7 +137,7 @@ Foam::scalar Foam::COxidationHurtMitchell<CloudType>::calculate
     // Local mass fraction of O2 in the carrier phase
     const scalar YO2 = carrierThermo.Y(O2GlobalId_)[celli];
 
-    // No combustion if no oxygen present
+    // No reaction if no oxygen present
     if (YO2 < small)
     {
         return 0.0;

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,7 +35,6 @@ InClass
 
 // OpenFOAM includes
 #include "domainDecomposition.H"
-#include "emptyFvsPatchField.H"
 #include "faceSet.H"
 #include "surfaceFields.H"
 #include "fvFieldReconstructor.H"
@@ -93,9 +92,15 @@ void Foam::vtkPVFoam::convertSurfaceField
         }
         else
         {
-            const label patchi = mesh.boundaryMesh().whichPatch(facei);
-            const label pFacei = mesh.boundaryMesh()[patchi].whichFace(facei);
-            const Type& t = tf.boundaryField()[patchi][pFacei];
+            const label patchi = mesh.poly().boundary().whichPatch(facei);
+            const label pFacei =
+                mesh.poly().boundary()[patchi].whichFace(facei);
+            const fvPatchField<Type>& ptf =  tf.boundaryField()[patchi];
+
+            const Type& t =
+                isType<emptyFvPatchField<Type>>(ptf)
+              ? tf[faceOwner[facei]]
+              : ptf[pFacei];
 
             for (direction d=0; d<nComp; ++d)
             {
@@ -148,14 +153,17 @@ void Foam::vtkPVFoam::convertSurfaceField
     SubField<Type>(flatFld, nInternalFaces) = tf.internalField();
     forAll(tf.boundaryField(), patchi)
     {
-        const fvsPatchField<Type>& fvs = tf.boundaryField()[patchi];
+        const fvsPatchField<Type>& ptf = tf.boundaryField()[patchi];
 
-        SubField<Type>
-        (
-            flatFld,
-            fvs.size(),
-            fvs.patch().start()
-        ) = fvs;
+        forAll(ptf, patchFacei)
+        {
+            const label facei = mesh.polyFacesBf()[patchi][patchFacei];
+            const scalar fraction =
+                mesh.magSf().boundaryField()[patchi][patchFacei]
+               /mesh.magFaceAreas()[facei];
+
+            flatFld[facei] += fraction*ptf[patchFacei];
+        }
     }
 
     forAll(faceLabels, i)
@@ -244,6 +252,7 @@ void Foam::vtkPVFoam::convertSurfaceFields
         FatalIOError.dontThrowExceptions();
 
         const SurfaceField<Type>& tf = ttf();
+        const fvMesh& mesh = tf.mesh()();
 
         // Convert patches - if activated
         for
@@ -255,7 +264,7 @@ void Foam::vtkPVFoam::convertSurfaceFields
         {
             const word patchName = getPartName(partId);
             const label datasetNo = partDataset_[partId];
-            const label patchId = tf.mesh().boundaryMesh().findIndex(patchName);
+            const label patchId = mesh.poly().boundary().findIndex(patchName);
 
             if (!partStatus_[partId] || datasetNo < 0 || patchId < 0)
             {
@@ -293,7 +302,7 @@ void Foam::vtkPVFoam::convertSurfaceFields
                 continue;
             }
 
-            const faceZoneList& zMesh = tf.mesh().faceZones();
+            const faceZoneList& zMesh = mesh.faceZones();
             const label zoneId = zMesh.findIndex(zoneName);
 
             if (zoneId < 0)
@@ -307,7 +316,7 @@ void Foam::vtkPVFoam::convertSurfaceFields
                 output,
                 arrayRangeFaceZones_,
                 datasetNo,
-                tf.mesh(),
+                mesh,
                 zMesh[zoneId]
             );
         }
@@ -331,7 +340,7 @@ void Foam::vtkPVFoam::convertSurfaceFields
             const autoPtr<faceSet> fSetPtr =
                 reader_->GetDecomposedCase()
               ? procMeshesPtr_->reconstructSet<faceSet>(selectName)
-              : autoPtr<faceSet>(new faceSet(tf.mesh(), selectName));
+              : autoPtr<faceSet>(new faceSet(mesh, selectName));
 
             convertSurfaceField
             (
@@ -339,7 +348,7 @@ void Foam::vtkPVFoam::convertSurfaceFields
                 output,
                 arrayRangeFaceSets_,
                 datasetNo,
-                tf.mesh(),
+                mesh,
                 fSetPtr().toc()
             );
         }

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -50,7 +50,7 @@ template<class Type>
 void Foam::LagrangianModel::addSupType
 (
     const LagrangianSubScalarField& deltaT,
-    const LagrangianSubScalarSubField& m,
+    const LagrangianSubScalarSubField& vOrM,
     const LagrangianSubSubField<Type>& field,
     LagrangianEqn<Type>& eqn
 ) const
@@ -81,7 +81,7 @@ Foam::autoPtr<Foam::LagrangianModel> Foam::LagrangianModel::New
 {
     const word type(modelDict.lookup("type"));
 
-    Info<< "Selecting " << typeName
+    Info<< indentOrNl << "Selecting " << typeName
         << " with name " << name
         << " of type " << type << endl;
 
@@ -119,14 +119,11 @@ Foam::autoPtr<Foam::LagrangianModel> Foam::LagrangianModel::New
             << exit(FatalIOError);
     }
 
-    return
-        cstrIter()
-        (
-            name,
-            mesh,
-            modelDict.optionalSubDict(type + "Coeffs"),
-            stateDict(name, mesh)
-        );
+    const dictionary& coeffsDict = modelDict.optionalTypeDict(type);
+
+    printDictionary print(coeffsDict);
+
+    return cstrIter()(name, mesh, coeffsDict, stateDict(name, mesh));
 }
 
 
@@ -141,12 +138,6 @@ Foam::LagrangianModel::~LagrangianModel()
 Foam::wordList Foam::LagrangianModel::addSupFields() const
 {
     return wordList::null();
-}
-
-
-bool Foam::LagrangianModel::addsSupToField(const word& fieldName) const
-{
-    return findIndex(addSupFields(), fieldName) != -1;
 }
 
 
@@ -184,18 +175,42 @@ void Foam::LagrangianModel::calculate
 {}
 
 
+void Foam::LagrangianModel::preAddSup
+(
+    const LagrangianSubScalarField& deltaT,
+    const bool final
+)
+{}
+
+
 void Foam::LagrangianModel::addSup
 (
     const LagrangianSubScalarField& deltaT,
-    LagrangianSubScalarField& S
+    LagrangianEqn<scalar>& eqn
 ) const
 {}
 
 
-FOR_ALL_FIELD_TYPES(IMPLEMENT_LAGRANGIAN_MODEL_ADD_FIELD_SUP, LagrangianModel)
+FOR_ALL_FIELD_TYPES
+(
+    IMPLEMENT_LAGRANGIAN_MODEL_ADD_FIELD_SUP,
+    LagrangianModel
+)
 
 
-FOR_ALL_FIELD_TYPES(IMPLEMENT_LAGRANGIAN_MODEL_ADD_M_FIELD_SUP, LagrangianModel)
+FOR_ALL_FIELD_TYPES
+(
+    IMPLEMENT_LAGRANGIAN_MODEL_ADD_V_OR_M_FIELD_SUP,
+    LagrangianModel
+)
+
+
+void Foam::LagrangianModel::postAddSup
+(
+    const LagrangianSubScalarField& deltaT,
+    const bool final
+)
+{}
 
 
 void Foam::LagrangianModel::topoChange(const polyTopoChangeMap&)

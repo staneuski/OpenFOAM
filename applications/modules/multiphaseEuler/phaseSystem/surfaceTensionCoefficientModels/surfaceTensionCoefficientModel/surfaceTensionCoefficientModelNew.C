@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -28,21 +28,20 @@ License
 
 // * * * * * * * * * * * * * * * * Selector  * * * * * * * * * * * * * * * * //
 
-Foam::autoPtr<Foam::surfaceTensionCoefficientModel >
+Foam::autoPtr<Foam::surfaceTensionCoefficientModel>
 Foam::surfaceTensionCoefficientModel::New
 (
-    const dictionary& dict,
+    const dictionary& modelDict,
     const phaseInterface& interface,
     const bool outer
 )
 {
-    const dictionary& modelDict =
-        outer ? modelSubDict<surfaceTensionCoefficientModel>(dict) : dict;
-
     const word surfaceTensionCoefficientModelType(modelDict.lookup("type"));
 
-    Info<< "Selecting surfaceTensionCoefficientModel for " << interface.name()
-        << ": " << surfaceTensionCoefficientModelType << endl;
+    Info<< indentOrNl << "Selecting " << typeName << ' '
+        << surfaceTensionCoefficientModelType;
+    if (outer) Info<< " for " << interface.name();
+    Info<< endl;
 
     dictionaryConstructorTable::iterator cstrIter =
         dictionaryConstructorTablePtr_->find
@@ -60,7 +59,26 @@ Foam::surfaceTensionCoefficientModel::New
             << exit(FatalIOError);
     }
 
+    printDictionary print(modelDict);
+
     return cstrIter()(modelDict, interface);
+}
+
+
+Foam::autoPtr<Foam::surfaceTensionCoefficientModel>
+Foam::surfaceTensionCoefficientModel::New
+(
+    const UPtrList<const dictionary>& subDicts,
+    const phaseInterface& interface
+)
+{
+    return
+        New
+        (
+            modelSubDict<surfaceTensionCoefficientModel>(subDicts),
+            interface,
+            true
+        );
 }
 
 

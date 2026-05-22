@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -33,7 +33,7 @@ License
 void Foam::rotatingPressureInletOutletVelocityFvPatchVectorField::
 calcTangentialVelocity()
 {
-    const scalar omega = omega_.value(db().time().value());
+    const scalar omega = omega_.value(time().value());
 
     const vectorField tangentialVelocity
     (
@@ -52,14 +52,14 @@ Foam::rotatingPressureInletOutletVelocityFvPatchVectorField::
 rotatingPressureInletOutletVelocityFvPatchVectorField
 (
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const dictionary& dict
 )
 :
     pressureInletOutletVelocityFvPatchVectorField(p, iF, dict),
     origin_(dict.lookup<vector>("origin", dimLength)),
     axis_(dict.lookup<vector>("axis", dimless)),
-    omega_(db().time(), dict)
+    omega_(time(), dict)
 {
     calcTangentialVelocity();
 }
@@ -70,7 +70,7 @@ rotatingPressureInletOutletVelocityFvPatchVectorField
 (
     const rotatingPressureInletOutletVelocityFvPatchVectorField& pvf,
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -87,7 +87,7 @@ Foam::rotatingPressureInletOutletVelocityFvPatchVectorField::
 rotatingPressureInletOutletVelocityFvPatchVectorField
 (
     const rotatingPressureInletOutletVelocityFvPatchVectorField& pvf,
-    const DimensionedField<vector, volMesh>& iF
+    const DimensionedField<vector, fvMesh>& iF
 )
 :
     pressureInletOutletVelocityFvPatchVectorField(pvf, iF),

@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "constant";
     object      momentumTransport.particles;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -21,7 +22,7 @@ RAS
 
     turbulence      on;
 
-    phasePressureCoeffs
+    phasePressure
     {
         preAlphaExp     500;
         expMax          1000;

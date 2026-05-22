@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -45,12 +45,13 @@ Foam::clouds::shaped::shaped(const cloud& c)
 :
     v(c.derivedField<scalar>(vName, *this, &shaped::calcv)),
     a(c.derivedField<scalar>(*this, &shaped::calca)),
+    aByV(c.derivedField<scalar>(*this, &shaped::calcaByV)),
     alpha
     (
         c.averageField<scalar>
         (
             "alpha",
-            refCast<const fvMesh>(c.mesh().mesh()).V(),
+            refCast<const fvMesh>(c.mesh().poly()).V(),
             v
         )
     )
@@ -61,12 +62,13 @@ Foam::clouds::shaped::shaped(const cloud& c, const grouped& groupedCloud)
 :
     v(c.derivedField<scalar>(vName, *this, &shaped::calcv)),
     a(c.derivedField<scalar>(*this, &shaped::calca)),
+    aByV(c.derivedField<scalar>(*this, &shaped::calcaByV)),
     alpha
     (
         c.averageField<scalar>
         (
             "alpha",
-            refCast<const fvMesh>(c.mesh().mesh()).V(),
+            refCast<const fvMesh>(c.mesh().poly()).V(),
             c.derivedField<scalar>
             (
                 [&]

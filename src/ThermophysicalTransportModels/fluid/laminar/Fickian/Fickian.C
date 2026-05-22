@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -151,7 +151,7 @@ Fickian<BasicThermophysicalTransportModel>::Fickian
 
     DTFuncs_
     (
-        this->coeffDict().found("DT")
+        this->typeDict(type).found("DT")
       ? this->thermo().species().size()
       : 0
     )
@@ -167,7 +167,7 @@ bool Fickian<BasicThermophysicalTransportModel>::read()
     {
         const speciesTable& species = this->thermo().species();
 
-        const dictionary& coeffDict = this->coeffDict();
+        const dictionary& coeffDict = this->typeDict();
 
         coeffDict.lookup("mixtureDiffusionCoefficients")
             >> mixtureDiffusionCoefficients_;
@@ -290,6 +290,34 @@ bool Fickian<BasicThermophysicalTransportModel>::read()
 
 
 template<class BasicThermophysicalTransportModel>
+tmp<volScalarField> Fickian<BasicThermophysicalTransportModel>::D
+(
+    const volScalarField& Yi
+) const
+{
+    return volScalarField::New
+    (
+        "D",
+        this->momentumTransport().rho()
+       *Dm()[this->thermo().specieIndex(Yi)]
+    );
+}
+
+
+template<class BasicThermophysicalTransportModel>
+tmp<scalarField> Fickian<BasicThermophysicalTransportModel>::D
+(
+    const volScalarField& Yi,
+    const label patchi
+) const
+{
+    return
+        this->momentumTransport().rho().boundaryField()[patchi]
+       *Dm()[this->thermo().specieIndex(Yi)].boundaryField()[patchi];
+}
+
+
+template<class BasicThermophysicalTransportModel>
 tmp<volScalarField> Fickian<BasicThermophysicalTransportModel>::DEff
 (
     const volScalarField& Yi
@@ -327,7 +355,7 @@ tmp<surfaceScalarField> Fickian<BasicThermophysicalTransportModel>::q() const
             IOobject::groupName
             (
                 "q",
-                this->momentumTransport().alphaRhoPhi().group()
+                this->thermo().phaseName()
             ),
            -fvc::interpolate(this->alpha()*this->kappaEff())
            *fvc::snGrad(this->thermo().T())

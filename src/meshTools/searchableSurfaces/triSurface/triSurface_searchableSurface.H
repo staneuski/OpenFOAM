@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -64,9 +64,9 @@ SourceFiles
 #include "EdgeMap.H"
 #include "triSurface.H"
 #include "triSurfaceRegionSearch.H"
-#include "triSurfaceFieldsFwd.H"
+#include "scalarIOField.H"
 #include "pointIndexHitList.H"
-#include "unitConversion.H"
+#include "units.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -86,7 +86,7 @@ class triSurface
     public Foam::triSurface,
     public triSurfaceRegionSearch
 {
-    // Private member data
+    // Private Data
 
         //- Supplied fileName override
         fileName fName_;
@@ -329,17 +329,17 @@ public:
             //  indices) get the specified field. Misses do not get set.
             virtual void getField(const List<pointIndexHit>&, labelList&) const;
 
-            //- Return a pair of triSurfaceScalarFields representing the
+            //- Return a pair of scalarIOFields representing the
             //  internal and external closeness of regions of the surface
-            Pair<tmp<triSurfaceScalarField>> extractCloseness
+            Pair<tmp<scalarIOField>> extractCloseness
             (
                 const scalar internalAngleTolerance = degToRad(80),
                 const scalar externalAngleTolerance = degToRad(80)
             ) const;
 
-            //- Return a pair of triSurfaceScalarPointFields representing the
+            //- Return a pair of scalarIOFields representing the
             //  internal and external closeness of regions of the surface
-            Pair<tmp<triSurfacePointScalarField>> extractPointCloseness
+            Pair<tmp<scalarIOField>> extractPointCloseness
             (
                 const scalar internalAngleTolerance = degToRad(80),
                 const scalar externalAngleTolerance = degToRad(80)

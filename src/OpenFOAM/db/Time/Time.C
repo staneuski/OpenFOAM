@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -151,7 +151,7 @@ void Foam::Time::setControls()
 
     // Check if time directory exists
     // If not increase time precision to see if it is formatted differently.
-    if (!fileHandler().exists(timePath(), false, false))
+    if (!fileHandler().exists(timePath(), false, true))
     {
         int oldPrecision = curPrecision_;
         int requiredPrecision = -1;
@@ -167,7 +167,7 @@ void Foam::Time::setControls()
             setTime(startTime_, 0);
 
             // Check the existence of the time directory with the new format
-            if (fileHandler().exists(timePath(), false, false))
+            if (fileHandler().exists(timePath(), false, true))
             {
                 requiredPrecision = curPrecision_;
             }
@@ -381,9 +381,13 @@ Foam::Time::Time
     (
         *this,
         enableFunctionObjects
-      ? argList::validOptions.found("functionObjects")
-        ? args.optionFound("functionObjects")
-        : !args.optionFound("noFunctionObjects")
+      ? (
+            argList::validOptions.found("functionObjects")
+          ? args.optionFound("functionObjects")
+          : argList::validOptions.found("noFunctionObjects")
+          ? !args.optionFound("noFunctionObjects")
+          : true
+        )
       : false
     )
 {
@@ -401,9 +405,11 @@ Foam::Time::Time
                 "InfoSwitches",
                 "OptimisationSwitches",
                 "DebugSwitches",
-                "DimensionedConstants",
                 "DimensionSets",
-                "UnitConversions"
+                "UnitSets",
+                "units",
+                "DimensionedConstants",
+                "dimensionedConstants"
             }
         );
 
@@ -626,6 +632,19 @@ Foam::Time::~Time()
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+Foam::wordList Foam::Time::regionNames() const
+{
+    if (controlDict_.found("regionSolvers"))
+    {
+        return controlDict_.subDict("regionSolvers").toc();
+    }
+    else
+    {
+        return wordList::null();
+    }
+}
+
 
 Foam::word Foam::Time::timeName(const scalar t, const int precision)
 {
@@ -855,20 +874,20 @@ Foam::word Foam::Time::userTimeName() const
 }
 
 
-const Foam::unitConversion& Foam::Time::userUnits() const
+const Foam::unitSet& Foam::Time::userUnits() const
 {
     return userTime_->units();
 }
 
 
-const Foam::unitConversion& Foam::Time::writeIntervalUnits() const
+const Foam::unitSet& Foam::Time::writeIntervalUnits() const
 {
-    static const unitConversion unitSeconds(dimTime);
+    static const unitSet unitSeconds(dimTime);
 
     switch (writeControl_)
     {
         case writeControl::timeStep:
-            return unitless;
+            return units::unitless;
         case writeControl::runTime:
         case writeControl::adjustableRunTime:
             return userUnits();
@@ -877,7 +896,7 @@ const Foam::unitConversion& Foam::Time::writeIntervalUnits() const
             return unitSeconds;
     }
 
-    return unitNone;
+    return units::none;
 }
 
 

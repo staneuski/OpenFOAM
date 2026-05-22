@@ -16,6 +16,12 @@ FoamFile
 
 solver          XiFluid;
 
+userTime
+{
+    type     engine;
+    omega    1500 [rpm];
+}
+
 startFrom       startTime;
 
 startTime       -180;
@@ -26,13 +32,13 @@ endTime         60;
 
 deltaT          0.25;
 
-writeControl    runTime;
+writeControl    adjustableRunTime;
 
 writeInterval   5;
 
 purgeWrite      0;
 
-writeFormat     ascii;
+writeFormat     binary;
 
 writePrecision  6;
 
@@ -44,16 +50,10 @@ timePrecision   6;
 
 runTimeModifiable true;
 
-adjustTimeStep  no;
+adjustTimeStep  yes;
 
-maxCo           0.2;
+maxCo           0.5;
 
 maxDeltaT       1;
-
-userTime
-{
-    type     engine;
-    omega    1500 [rpm];
-}
 
 // ************************************************************************* //

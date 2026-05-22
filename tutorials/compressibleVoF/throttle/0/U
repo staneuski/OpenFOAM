@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       volVectorField;
+    location    "0";
     object      U;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -22,13 +23,11 @@ boundaryField
     inlet
     {
         type            pressureInletOutletVelocity;
-        value           uniform (0 0 0);
     }
 
     outlet
     {
         type            pressureInletOutletVelocity;
-        value           uniform (0 0 0);
     }
 
     walls

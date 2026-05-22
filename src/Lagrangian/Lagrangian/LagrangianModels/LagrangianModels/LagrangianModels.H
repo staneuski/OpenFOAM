@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -63,7 +63,7 @@ class LagrangianModels
     public dictionary,
     public PtrListDictionary<LagrangianModel>
 {
-    // Private Member Data
+    // Private Data
 
         //- Time index to check that all defined sources have been applied
         mutable label checkTimeIndex_;
@@ -155,7 +155,15 @@ public:
 
             //- Return true if the LagrangianModels adds a source term to the
             //  given field's transport equation
-            bool addsSupToField(const word&) const;
+            bool addsSupToField(const word& fieldName) const;
+
+            //- Return true if the LagrangianModels adds a source term to the
+            //  given field's transport equation
+            bool addsSupToField
+            (
+                const word& fieldName,
+                const word& eqnFieldName
+            ) const;
 
             //- Return true if the LagrangianModels adds a source term to the
             //  given field's transport equation
@@ -163,6 +171,20 @@ public:
             bool addsSupToField
             (
                 const LagrangianSubField<Type, PrimitiveField>& field
+            ) const;
+
+            //- Return true if the LagrangianModels adds a source term to the
+            //  given field's transport equation
+            template
+            <
+                class Type,
+                template<class> class PrimitiveField,
+                template<class> class PrimitiveEqnField
+            >
+            bool addsSupToField
+            (
+                const LagrangianSubField<Type, PrimitiveField>& field,
+                const LagrangianSubField<Type, PrimitiveEqnField>& eqnfield
             ) const;
 
 
@@ -200,8 +222,15 @@ public:
 
         // Sources
 
+            //- Hook before source evaluation
+            virtual void preSource
+            (
+                const LagrangianSubScalarField& deltaT,
+                const bool final
+            );
+
             //- Return the fractional source
-            tmp<LagrangianSubScalarField> source
+            tmp<LagrangianEqn<scalar>> source
             (
                 const LagrangianSubScalarField& deltaT
             ) const;
@@ -228,16 +257,16 @@ public:
                 const LagrangianSubField<Type, PrimitiveEqnField>& eqnField
             ) const;
 
-            //- Return source for a mass-weighted equation
+            //- Return source for a volume or mass-weighted equation
             template<class Type, template<class> class PrimitiveField>
             tmp<LagrangianEqn<Type>> source
             (
                 const LagrangianSubScalarField& deltaT,
-                const LagrangianSubField<scalar, PrimitiveField>& m,
+                const LagrangianSubField<scalar, PrimitiveField>& vOrM,
                 const LagrangianSubField<Type, PrimitiveField>& field
             ) const;
 
-            //- Return source for a mass-weighted equation
+            //- Return source for a volume or mass-weighted equation
             template
             <
                 class Type,
@@ -247,10 +276,17 @@ public:
             tmp<LagrangianEqn<Type>> sourceProxy
             (
                 const LagrangianSubScalarField& deltaT,
-                const LagrangianSubField<scalar, PrimitiveField>& m,
+                const LagrangianSubField<scalar, PrimitiveField>& vOrM,
                 const LagrangianSubField<Type, PrimitiveField>& field,
                 const LagrangianSubField<Type, PrimitiveEqnField>& eqnField
             ) const;
+
+            //- Hook after source evaluation
+            virtual void postSource
+            (
+                const LagrangianSubScalarField& deltaT,
+                const bool final
+            );
 
 
         // Mesh changes

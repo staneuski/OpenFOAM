@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       volVectorField;
+    location    "0";
     object      U.gas;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -28,7 +29,6 @@ boundaryField
     {
         type            pressureInletOutletVelocity;
         phi             phi.gas;
-        value           $internalField;
     }
     walls
     {

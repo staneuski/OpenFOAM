@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::turbulentDispersion
+    Foam::Lagrangian::turbulentDispersion
 
 Description
     Model for turbulent dispersion. This model creates a random turbulent
@@ -72,7 +72,7 @@ class turbulentDispersion
 {
 private:
 
-    // Private Member Data
+    // Private Data
 
         //- Pointer to the drag model
         const drag* dragPtr_;
@@ -95,13 +95,13 @@ private:
         const CarrierField<scalar>& epsilonc_;
 
         //- Fraction completed of the current turbulent eddy
-        Tuple2<bool, CloudStateField<scalar>&> fractionTurb_;
+        CloudStateField<scalar> fractionTurb_;
 
         //- Turbulent time-scale
-        Tuple2<bool, CloudStateField<scalar>&> tTurb_;
+        CloudStateField<scalar> tTurb_;
 
         //- Turbulent velocity fluctuation
-        Tuple2<bool, CloudStateField<vector>&> Uturb_;
+        CloudStateField<vector> Uturb_;
 
         //- Random generator
         restartableRandomGenerator rndGen_;
@@ -114,7 +114,7 @@ private:
 
         //- Initialise and return a reference to one of the "turb" fields
         template<class Type>
-        Tuple2<bool, CloudStateField<Type>&> initialiseTurbField
+        tmp<LagrangianDynamicField<Type>> initialiseTurbField
         (
             const word& name,
             const dimensionSet& dims,
@@ -125,7 +125,7 @@ private:
         //  needed for injections. This has to happen after construction as it
         //  depends on the list of all models.
         template<class InjectionFieldSourceType, class Type>
-        void completeTurbField(Tuple2<bool, CloudStateField<Type>&>&);
+        void completeTurbField(LagrangianDynamicField<Type>&);
 
 
 public:
@@ -151,11 +151,18 @@ public:
         //- Return the name of the velocity field
         virtual wordList addSupFields() const;
 
+        //- Return true for the velocity or carrier velocity field
+        virtual bool addsSupToField
+        (
+            const word& fieldName,
+            const word& eqnFieldName
+        ) const;
+
         //- Do post construction steps which require access to other models
         virtual void postConstruct();
 
-        //- Solve equations and/or update continually changing properties
-        virtual void calculate
+        //- Hook before source evaluation
+        virtual void preAddSup
         (
             const LagrangianSubScalarField& deltaT,
             const bool final
@@ -177,6 +184,13 @@ public:
             const LagrangianSubVectorSubField& U,
             LagrangianEqn<vector>& eqn
         ) const;
+
+        //- Hook after source evaluation
+        virtual void postAddSup
+        (
+            const LagrangianSubScalarField& deltaT,
+            const bool final
+        );
 
         //- Write state
         virtual void writeProcessorState(Ostream& os) const;

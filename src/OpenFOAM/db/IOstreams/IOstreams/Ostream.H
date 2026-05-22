@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -95,6 +95,12 @@ public:
 
         // Write functions
 
+            //- Write token
+            virtual Ostream& write(const token&);
+
+            //- Write the compound token tag if the name is a compound token
+            virtual Ostream& writeCompoundTag(const word& typeName);
+
             //- Write character
             virtual Ostream& write(const char) = 0;
 
@@ -106,6 +112,9 @@ public:
 
             //- Write string
             virtual Ostream& write(const string&) = 0;
+
+            //- Write keyType
+            virtual Ostream& write(const keyType&) = 0;
 
             //- Write verbatimString
             virtual Ostream& write(const verbatimString&) = 0;
@@ -155,6 +164,12 @@ public:
             unsigned short& indentLevel()
             {
                 return indentLevel_;
+            }
+
+            //- Return the number of characters in an indent
+            unsigned short indentSize() const
+            {
+                return indentLevel_*indentSize_;
             }
 
             //- Incrememt the indent level
@@ -229,6 +244,21 @@ inline Ostream& operator<<(Ostream& os, IOstreamManip f)
 inline Ostream& indent(Ostream& os)
 {
     os.indent();
+    return os;
+}
+
+//- Indent stream or add newline if indent level == 0
+inline Ostream& indentOrNl(Ostream& os)
+{
+    if (os.indentLevel() == 0)
+    {
+        os.endl();
+    }
+    else
+    {
+        os.indent();
+    }
+
     return os;
 }
 

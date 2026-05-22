@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       volScalarField;
+    location    "0";
     object      k;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -21,7 +22,7 @@ boundaryField
 {
     inlet
     {
-        type        turbulentIntensityKineticEnergyInlet;
+        type        turbulentKineticEnergy;
         intensity   0.005;
         value       uniform 0;
     }
@@ -30,7 +31,6 @@ boundaryField
     {
         type            inletOutlet;
         inletValue      uniform 0;
-        value           uniform 0;
     }
 
     wall

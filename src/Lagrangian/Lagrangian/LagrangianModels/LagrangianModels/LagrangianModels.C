@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -50,6 +50,11 @@ Foam::IOobject Foam::LagrangianModels::io(const LagrangianMesh& mesh) const
     if (!result.headerOk())
     {
         result.readOpt() = IOobject::NO_READ;
+    }
+    else
+    {
+        Info<< indentOrNl << "Constructing " << typeName << " from "
+            << result.relativeObjectPath() << endl;
     }
 
     return result;
@@ -122,6 +127,8 @@ Foam::LagrangianModels::LagrangianModels(const LagrangianMesh& mesh)
     PtrListDictionary<LagrangianModel>::setSize(i);
     addSupFields_.setSize(i);
 
+    printDictionary print(*this);
+
     // Iterate through the dictionary to construct the models
     i = 0;
     forAllConstIter(dictionary, dict, iter)
@@ -168,13 +175,23 @@ Foam::LagrangianModels::~LagrangianModels()
 
 bool Foam::LagrangianModels::addsSupToField(const word& fieldName) const
 {
+    return addsSupToField(fieldName, fieldName);
+}
+
+
+bool Foam::LagrangianModels::addsSupToField
+(
+    const word& fieldName,
+    const word& eqnFieldName
+) const
+{
     const PtrListDictionary<LagrangianModel>& modelList(*this);
 
     forAll(modelList, i)
     {
         const LagrangianModel& model = modelList[i];
 
-        if (model.addsSupToField(fieldName))
+        if (model.addsSupToField(fieldName, eqnFieldName))
         {
             return true;
         }
@@ -270,19 +287,34 @@ void Foam::LagrangianModels::calculate
 }
 
 
-Foam::tmp<Foam::LagrangianSubScalarField>
+void Foam::LagrangianModels::preSource
+(
+    const LagrangianSubScalarField& deltaT,
+    const bool final
+)
+{
+    PtrListDictionary<LagrangianModel>& modelList(*this);
+
+    forAll(modelList, i)
+    {
+        modelList[i].preAddSup(deltaT, final);
+    }
+}
+
+
+Foam::tmp<Foam::LagrangianEqn<Foam::scalar>>
 Foam::LagrangianModels::source(const LagrangianSubScalarField& deltaT) const
 {
     checkApplied();
 
-    tmp<LagrangianSubScalarField> tS =
-        LagrangianSubScalarField::New
+    tmp<LagrangianEqn<scalar>> tEqn
+    (
+        new LagrangianEqn<scalar>
         (
-            word::null,
-            deltaT.mesh(),
-            dimensionedScalar(dimRate, 0)
-        );
-    LagrangianSubScalarField& S = tS.ref();
+            deltaT.mesh()
+        )
+    );
+    LagrangianEqn<scalar>& eqn = tEqn.ref();
 
     const PtrListDictionary<LagrangianModel>& modelList(*this);
 
@@ -290,15 +322,30 @@ Foam::LagrangianModels::source(const LagrangianSubScalarField& deltaT) const
     {
         const LagrangianModel& model = modelList[i];
 
-        if (model.addsSupToField(word::null))
+        if (model.addsSupToField(word::null, word::null))
         {
             addSupFields_[i].insert(word::null);
 
-            model.addSup(deltaT, S);
+            model.addSup(deltaT, eqn);
         }
     }
 
-    return tS;
+    return tEqn;
+}
+
+
+void Foam::LagrangianModels::postSource
+(
+    const LagrangianSubScalarField& deltaT,
+    const bool final
+)
+{
+    PtrListDictionary<LagrangianModel>& modelList(*this);
+
+    forAll(modelList, i)
+    {
+        modelList[i].postAddSup(deltaT, final);
+    }
 }
 
 
@@ -358,7 +405,7 @@ bool Foam::LagrangianModels::read()
             const bool ok =
                 modelList[i].read
                 (
-                    modelDict.optionalSubDict(modelList[i].type() + "Coeffs")
+                    modelDict.optionalTypeDict(modelList[i].type())
                 );
             allOk = allOk && ok;
         }

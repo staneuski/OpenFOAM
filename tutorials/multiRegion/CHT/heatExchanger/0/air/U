@@ -9,7 +9,7 @@ FoamFile
 {
     format      ascii;
     class       volVectorField;
-    location    "0";
+    location    "0/air";
     object      U;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -35,7 +35,6 @@ boundaryField
     {
         type            inletOutlet;
         inletValue      uniform (0 0 0);
-        value           uniform (0 0 0);
     }
 
     blades

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -34,7 +34,7 @@ License
 Foam::fixedFluxPressureFvPatchScalarField::fixedFluxPressureFvPatchScalarField
 (
     const fvPatch& p,
-    const DimensionedField<scalar, volMesh>& iF,
+    const DimensionedField<scalar, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -62,7 +62,7 @@ Foam::fixedFluxPressureFvPatchScalarField::fixedFluxPressureFvPatchScalarField
 (
     const fixedFluxPressureFvPatchScalarField& ptf,
     const fvPatch& p,
-    const DimensionedField<scalar, volMesh>& iF,
+    const DimensionedField<scalar, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -76,7 +76,7 @@ Foam::fixedFluxPressureFvPatchScalarField::fixedFluxPressureFvPatchScalarField
 Foam::fixedFluxPressureFvPatchScalarField::fixedFluxPressureFvPatchScalarField
 (
     const fixedFluxPressureFvPatchScalarField& wbppsf,
-    const DimensionedField<scalar, volMesh>& iF
+    const DimensionedField<scalar, fvMesh>& iF
 )
 :
     fixedGradientFvPatchScalarField(wbppsf, iF),
@@ -117,7 +117,7 @@ void Foam::fixedFluxPressureFvPatchScalarField::updateCoeffs
         return;
     }
 
-    curTimeIndex_ = this->db().time().timeIndex();
+    curTimeIndex_ = this->time().timeIndex();
 
     gradient() = snGradp;
     fixedGradientFvPatchScalarField::updateCoeffs();
@@ -131,7 +131,7 @@ void Foam::fixedFluxPressureFvPatchScalarField::updateCoeffs()
         return;
     }
 
-    if (curTimeIndex_ != this->db().time().timeIndex())
+    if (curTimeIndex_ != this->time().timeIndex())
     {
         FatalErrorInFunction
             << "updateCoeffs(const scalarField& snGradp) MUST be called before"

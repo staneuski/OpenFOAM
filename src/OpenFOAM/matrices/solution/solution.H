@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -59,10 +59,10 @@ class solution
         mutable bool caching_;
 
         //- Dictionary of relaxation factors for all the fields
-        dictionary fieldRelaxDict_;
+        const dictionary* fieldRelaxDict_;
 
         //- Dictionary of relaxation factors for all the equations
-        dictionary eqnRelaxDict_;
+        const dictionary* eqnRelaxDict_;
 
         //- Optional default relaxation factor for all the fields
         scalar fieldRelaxDefault_;
@@ -71,21 +71,16 @@ class solution
         scalar eqnRelaxDefault_;
 
         //- Dictionary of solver parameters for all the fields
-        dictionary solvers_;
+        const dictionary* solvers_;
 
 
     // Private Member Functions
 
-        //- Read settings from the dictionary
-        void read(const dictionary&);
+        //- Read settings from fvSolution
+        void readDict();
 
 
 public:
-
-    //- Update from older solver controls syntax
-    //  Usually verbose, since we want to know about the changes
-    //  Returns the number of settings changed
-    static label upgradeSolverDict(dictionary& dict, const bool verbose=true);
 
     //- Type information
     ClassName("solution");
@@ -134,10 +129,6 @@ public:
 
             //- Return the relaxation factor for the given eqation
             scalar equationRelaxationFactor(const word& name) const;
-
-            //- Return the selected sub-dictionary of solvers if the "select"
-            //  keyword is given, otherwise return the complete dictionary
-            const dictionary& dict() const;
 
             //- Return the solver controls dictionary
             const dictionary& solversDict() const;

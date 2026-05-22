@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2013-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -32,7 +32,7 @@ template<class Type>
 Foam::uniformInletOutletFvPatchField<Type>::uniformInletOutletFvPatchField
 (
     const fvPatch& p,
-    const DimensionedField<Type, volMesh>& iF,
+    const DimensionedField<Type, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -43,13 +43,13 @@ Foam::uniformInletOutletFvPatchField<Type>::uniformInletOutletFvPatchField
         Function1<Type>::New
         (
             "uniformInletValue",
-            this->db().time().userUnits(),
+            this->time().userUnits(),
             iF.dimensions(),
             dict
         )
     )
 {
-    this->refValue() = uniformInletValue_->value(this->db().time().value());
+    this->refValue() = uniformInletValue_->value(this->time().value());
 
     if (dict.found("value"))
     {
@@ -73,7 +73,7 @@ Foam::uniformInletOutletFvPatchField<Type>::uniformInletOutletFvPatchField
 (
     const uniformInletOutletFvPatchField<Type>& ptf,
     const fvPatch& p,
-    const DimensionedField<Type, volMesh>& iF,
+    const DimensionedField<Type, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -82,7 +82,7 @@ Foam::uniformInletOutletFvPatchField<Type>::uniformInletOutletFvPatchField
     uniformInletValue_(ptf.uniformInletValue_, false)
 {
     // Evaluate refValue since not mapped
-    this->refValue() = uniformInletValue_->value(this->db().time().value());
+    this->refValue() = uniformInletValue_->value(this->time().value());
 
     this->refGrad() = Zero;
     this->valueFraction() = 0.0;
@@ -98,7 +98,7 @@ template<class Type>
 Foam::uniformInletOutletFvPatchField<Type>::uniformInletOutletFvPatchField
 (
     const uniformInletOutletFvPatchField<Type>& ptf,
-    const DimensionedField<Type, volMesh>& iF
+    const DimensionedField<Type, fvMesh>& iF
 )
 :
     mixedFvPatchField<Type>(ptf, iF),
@@ -117,7 +117,7 @@ void Foam::uniformInletOutletFvPatchField<Type>::updateCoeffs()
         return;
     }
 
-    this->refValue() = uniformInletValue_->value(this->db().time().value());
+    this->refValue() = uniformInletValue_->value(this->time().value());
 
     const Field<scalar>& phip =
         this->patch().template lookupPatchField<surfaceScalarField, scalar>
@@ -142,7 +142,7 @@ void Foam::uniformInletOutletFvPatchField<Type>::write(Ostream& os) const
     writeEntry
     (
         os,
-        this->db().time().userUnits(),
+        this->time().userUnits(),
         this->internalField().dimensions(),
         uniformInletValue_()
     );
@@ -162,7 +162,7 @@ void Foam::uniformInletOutletFvPatchField<Type>::map
     mixedFvPatchField<Type>::map(ptf, mapper);
 
     // Override
-    this->refValue() = uniformInletValue_->value(this->db().time().value());
+    this->refValue() = uniformInletValue_->value(this->time().value());
 }
 
 
@@ -175,7 +175,7 @@ void Foam::uniformInletOutletFvPatchField<Type>::reset
     mixedFvPatchField<Type>::reset(ptf);
 
     // Override
-    this->refValue() = uniformInletValue_->value(this->db().time().value());
+    this->refValue() = uniformInletValue_->value(this->time().value());
 }
 
 

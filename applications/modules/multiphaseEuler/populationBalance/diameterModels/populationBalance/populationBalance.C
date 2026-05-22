@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -222,19 +222,17 @@ void Foam::diameterModels::populationBalance::correct()
 
     d_ = 6*sumFi/tsumFiAbyV;
 
-    Info<< phase().name() << " Sauter mean diameter, min, max = "
-        << d_.weightedAverage(d_.mesh().V()).value()
-        << ' ' << min(d_).value() << ' ' << max(d_).value() << endl;
+    Info<< indent << phase().name() << " min/Sauter-mean/max diameter = "
+        << min(d_).value() << '/' << d_.weightedAverage(d_.mesh().V()).value()
+        << '/' << max(d_).value() << endl;
 }
 
 
 bool Foam::diameterModels::populationBalance::read
 (
-    const dictionary& phaseProperties
+    const dictionary& diameterProperties
 )
 {
-    diameterModel::read(phaseProperties);
-
     return true;
 }
 

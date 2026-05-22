@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "system";
     object      blockMeshDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -28,8 +29,6 @@ FoamFile
 //             | |
 //             +-+
 //           outlet2
-
-convertToMeters 1;
 
 vertices
 (

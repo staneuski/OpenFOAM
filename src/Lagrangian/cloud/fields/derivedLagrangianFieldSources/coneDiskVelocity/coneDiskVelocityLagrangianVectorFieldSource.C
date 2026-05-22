@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -81,9 +81,7 @@ Foam::coneDiskVelocityLagrangianVectorFieldSource::value
     const LagrangianSubMesh& subMesh
 ) const
 {
-    return
-        value(injection, subMesh, dimVelocity, Umag_())
-       *direction(injection, subMesh);
+    return value(subMesh, dimVelocity, Umag_())*direction(injection, subMesh);
 }
 
 
@@ -93,7 +91,7 @@ void Foam::coneDiskVelocityLagrangianVectorFieldSource::write(Ostream& os) const
 
     coneDiskDirectionLagrangianVectorFieldSource::write(os);
 
-    writeEntry(os, db().time().userUnits(), dimVelocity, Umag_());
+    writeEntry(os, time().userUnits(), dimVelocity, Umag_());
 }
 
 

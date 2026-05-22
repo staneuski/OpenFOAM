@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,9 +35,12 @@ namespace Foam
 
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
-void Foam::multicomponentThermo::implementation::correctMassFractions()
+void Foam::multicomponentThermo::implementation::correctMassFractions
+(
+    const speciesTable& species
+)
 {
-    if (species_.size())
+    if (species.size())
     {
         tmp<volScalarField> tYt
         (
@@ -55,10 +58,26 @@ void Foam::multicomponentThermo::implementation::correctMassFractions()
             Yt += Y_[i];
         }
 
-        if (mag(min(Yt).value()) < rootVSmall)
+        if (min(Yt).value() == 0 && max(Yt).value() == 0)
         {
             FatalErrorInFunction
-                << "Sum of mass fractions is zero for species " << species()
+                << "Sum of specie mass fractions = 0"
+                << exit(FatalError);
+        }
+
+        if (min(Yt).value() < 0.999)
+        {
+            FatalErrorInFunction
+                << "Min sum of specie mass fractions " << min(Yt).value()
+                << " < 0.999"
+                << exit(FatalError);
+        }
+
+        if (max(Yt).value() > 1.001)
+        {
+            FatalErrorInFunction
+                << "Max sum of specie mass fractions " << max(Yt).value()
+                << " > 1.001"
                 << exit(FatalError);
         }
 
@@ -75,15 +94,15 @@ void Foam::multicomponentThermo::implementation::correctMassFractions()
 Foam::multicomponentThermo::implementation::implementation
 (
     const dictionary& dict,
-    const wordList& specieNames,
+    const speciesTable& species,
     const fvMesh& mesh,
-    const word& phaseName
+    const word& phaseName,
+    const bool requiresDefaultSpecie
 )
 :
-    species_(specieNames),
     defaultSpecieName_
     (
-        species_.size()
+        requiresDefaultSpecie && species.size()
       ? dict.lookupBackwardsCompatible<word>
         (
             {"defaultSpecie", "inertSpecie"}
@@ -92,28 +111,33 @@ Foam::multicomponentThermo::implementation::implementation
     ),
     defaultSpeciei_
     (
-        species_.size()
-     && species_.found(defaultSpecieName_)
-      ? species_[defaultSpecieName_]
+        requiresDefaultSpecie && species.size()
+      ? species[defaultSpecieName_]
       : -1
     ),
-    active_(species_.size(), true),
-    Y_(species_.size())
+    Y_(species.size())
 {
-    if (species_.size() && defaultSpeciei_ == -1)
+    if
+    (
+        species.size()
+     && defaultSpecieName_ != "undefined"
+     && defaultSpeciei_ == -1
+    )
     {
         FatalIOErrorInFunction(dict)
             << "default specie " << defaultSpecieName_
-            << " not found in available species " << species_
+            << " not found in available species " << species
             << exit(FatalIOError);
     }
 
+    bool Yset = false;
+
     // Read the species' mass fractions
-    forAll(species_, i)
+    forAll(species, i)
     {
         typeIOobject<volScalarField> header
         (
-            IOobject::groupName(species_[i], phaseName),
+            IOobject::groupName(species[i], phaseName),
             mesh.time().name(),
             mesh,
             IOobject::NO_READ
@@ -129,7 +153,7 @@ Foam::multicomponentThermo::implementation::implementation
                 (
                     IOobject
                     (
-                        IOobject::groupName(species_[i], phaseName),
+                        IOobject::groupName(species[i], phaseName),
                         mesh.time().name(),
                         mesh,
                         IOobject::MUST_READ,
@@ -138,6 +162,8 @@ Foam::multicomponentThermo::implementation::implementation
                     mesh
                 )
             );
+
+            Yset = true;
         }
         else
         {
@@ -165,7 +191,7 @@ Foam::multicomponentThermo::implementation::implementation
                 (
                     IOobject
                     (
-                        IOobject::groupName(species_[i], phaseName),
+                        IOobject::groupName(species[i], phaseName),
                         mesh.time().name(),
                         mesh,
                         IOobject::NO_READ,
@@ -177,7 +203,11 @@ Foam::multicomponentThermo::implementation::implementation
         }
     }
 
-    correctMassFractions();
+    // If the mass fractions have been specified check and normalise
+    if (Yset && defaultSpeciei_ != -1)
+    {
+        correctMassFractions(species);
+    }
 }
 
 
@@ -193,23 +223,9 @@ Foam::multicomponentThermo::implementation::~implementation()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-const Foam::speciesTable&
-Foam::multicomponentThermo::implementation::species() const
-{
-    return species_;
-}
-
-
 Foam::label Foam::multicomponentThermo::implementation::defaultSpecie() const
 {
     return defaultSpeciei_;
-}
-
-
-const Foam::List<bool>&
-Foam::multicomponentThermo::implementation::speciesActive() const
-{
-    return active_;
 }
 
 
@@ -217,8 +233,8 @@ void Foam::multicomponentThermo::implementation::syncSpeciesActive() const
 {
     if (Pstream::parRun())
     {
-        List<bool>& speciesActive =
-            const_cast<List<bool>&>(this->speciesActive());
+        boolList& speciesActive =
+            const_cast<boolList&>(this->speciesActive());
 
         Pstream::listCombineGather(speciesActive, orEqOp<bool>());
         Pstream::listCombineScatter(speciesActive);
@@ -258,35 +274,38 @@ Foam::multicomponentThermo::implementation::Y() const
 
 void Foam::multicomponentThermo::implementation::normaliseY()
 {
-    if (species().size())
+    if (defaultSpeciei_ != -1)
     {
-        tmp<volScalarField> tYt
-        (
-            volScalarField::New
-            (
-                IOobject::groupName("Yt", phaseName()),
-                Y()[0].mesh(),
-                dimensionedScalar(dimless, 0)
-            )
-        );
-        volScalarField& Yt = tYt.ref();
-
-        forAll(Y(), i)
+        if (species().size())
         {
-            if (solveSpecie(i))
+            tmp<volScalarField> tYt
+            (
+                volScalarField::New
+                (
+                    IOobject::groupName("Yt", phaseName()),
+                    Y()[0].mesh(),
+                    dimensionedScalar(dimless, 0)
+                )
+            );
+            volScalarField& Yt = tYt.ref();
+
+            forAll(Y(), i)
             {
-                Y()[i].max(scalar(0));
-                Yt += Y()[i];
+                if (solveSpecie(i))
+                {
+                    Y()[i].max(scalar(0));
+                    Yt += Y()[i];
+                }
             }
+
+            Y()[defaultSpeciei_] = scalar(1) - Yt;
+            Y()[defaultSpeciei_].max(scalar(0));
         }
 
-        Y()[defaultSpecie()] = scalar(1) - Yt;
-        Y()[defaultSpecie()].max(scalar(0));
-    }
-
-    if (Ydefault_.valid() && Ydefault_->writeOpt() == IOobject::NO_WRITE)
-    {
-        Ydefault_.clear();
+        if (Ydefault_.valid() && Ydefault_->writeOpt() == IOobject::NO_WRITE)
+        {
+            Ydefault_.clear();
+        }
     }
 }
 

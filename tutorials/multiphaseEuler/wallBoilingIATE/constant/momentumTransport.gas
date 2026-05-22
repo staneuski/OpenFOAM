@@ -10,7 +10,7 @@ FoamFile
     format      ascii;
     class       dictionary;
     location    "constant";
-    object      momentumTransport.air;
+    object      momentumTransport.gas;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -21,6 +21,8 @@ RAS
     model    kOmegaSST;
 
     turbulence      on;
+
+    #print
 }
 
 

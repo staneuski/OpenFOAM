@@ -10,11 +10,9 @@ FoamFile
     format      ascii;
     class       dictionary;
     location    "system";
-    object      blockMeshDict;
+    object      blockMeshDict.valveClosed;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-convertToMeters 1;
 
 //          6.--------.9 .
 //           |        |  |

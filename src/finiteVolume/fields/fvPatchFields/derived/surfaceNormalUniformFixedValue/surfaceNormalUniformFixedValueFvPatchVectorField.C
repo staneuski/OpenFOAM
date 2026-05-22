@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2019-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2019-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -34,7 +34,7 @@ Foam::surfaceNormalUniformFixedValueFvPatchVectorField::
 surfaceNormalUniformFixedValueFvPatchVectorField
 (
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -44,7 +44,7 @@ surfaceNormalUniformFixedValueFvPatchVectorField
         Function1<scalar>::New
         (
             "uniformValue",
-            db().time().userUnits(),
+            time().userUnits(),
             iF.dimensions(),
             dict
         )
@@ -59,7 +59,7 @@ surfaceNormalUniformFixedValueFvPatchVectorField
 (
     const surfaceNormalUniformFixedValueFvPatchVectorField& pvf,
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -75,7 +75,7 @@ Foam::surfaceNormalUniformFixedValueFvPatchVectorField::
 surfaceNormalUniformFixedValueFvPatchVectorField
 (
     const surfaceNormalUniformFixedValueFvPatchVectorField& pvf,
-    const DimensionedField<vector, volMesh>& iF
+    const DimensionedField<vector, fvMesh>& iF
 )
 :
     fixedValueFvPatchVectorField(pvf, iF),
@@ -100,7 +100,7 @@ void Foam::surfaceNormalUniformFixedValueFvPatchVectorField::updateCoeffs()
 
     fvPatchVectorField::operator=
     (
-        uniformValue_->value(db().time().value())*patch().nf()
+        uniformValue_->value(time().value())*patch().nf()
     );
 
     fvPatchVectorField::updateCoeffs();
@@ -116,7 +116,7 @@ void Foam::surfaceNormalUniformFixedValueFvPatchVectorField::write
     writeEntry
     (
         os,
-        db().time().userUnits(),
+        time().userUnits(),
         internalField().dimensions(),
         uniformValue_()
     );

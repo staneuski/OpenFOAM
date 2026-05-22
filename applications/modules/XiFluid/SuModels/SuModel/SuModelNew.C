@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -30,8 +30,8 @@ License
 Foam::autoPtr<Foam::SuModel> Foam::SuModel::New
 (
     const dictionary& combustionProperties,
-    const psiuMulticomponentThermo& thermo,
-    const fluidThermoThermophysicalTransportModel& turbulence
+    const uRhoMulticomponentThermo& thermo,
+    const compressibleMomentumTransportModel& momentumTransport
 )
 {
     const dictionary& SuDict =
@@ -39,7 +39,8 @@ Foam::autoPtr<Foam::SuModel> Foam::SuModel::New
 
     const word modelType(SuDict.lookup("model"));
 
-    Info<< "Selecting flame-wrinkling Su model " << modelType << endl;
+    Info<< indentOrNl
+        << "Selecting flame-wrinkling Su model " << modelType << endl;
 
     dictionaryConstructorTable::iterator cstrIter =
         dictionaryConstructorTablePtr_->find(modelType);
@@ -54,13 +55,19 @@ Foam::autoPtr<Foam::SuModel> Foam::SuModel::New
             << exit(FatalIOError);
     }
 
+    printDictionary print
+    (
+        SuDict,
+        SuDict.optionalTypeDict(modelType)
+    );
+
     return autoPtr<SuModel>
     (
         cstrIter()
         (
-            SuDict.optionalSubDict(modelType + "Coeffs"),
+            SuDict.optionalTypeDict(modelType),
             thermo,
-            turbulence
+            momentumTransport
         )
     );
 }

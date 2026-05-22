@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,7 +25,7 @@ License
 
 #include "drag.H"
 #include "addToRunTimeSelectionTable.H"
-#include "coupledToIncompressibleFluid.H"
+#include "coupledToConstantDensityFluid.H"
 #include "coupledToFluid.H"
 #include "LagrangianmSp.H"
 
@@ -51,21 +51,17 @@ void Foam::Lagrangian::drag::addUSup
     const LagrangianSubScalarField& D = this->D(U.mesh());
 
     const LagrangianSubVectorField& Uc =
-        cloud<clouds::coupled>().Uc(U.mesh());
+        cloud<clouds::carried>().Uc(U.mesh());
 
     if (eqn.isPsi(U))
     {
         eqn.Su += D*Uc;
         eqn -= Lagrangianm::Sp(D, U);
     }
-    else if (eqn.isPsi(Uc))
+    else
     {
         eqn += Lagrangianm::Sp(D, Uc);
         eqn.Su -= D*U;
-    }
-    else
-    {
-        eqn.Su += D*(Uc - U);
     }
 }
 
@@ -86,6 +82,7 @@ Foam::Lagrangian::drag::drag
     (
         cloud().derivedField<scalar>
         (
+            "D",
             *this,
             &drag::calcD
         )
@@ -97,7 +94,22 @@ Foam::Lagrangian::drag::drag
 
 Foam::wordList Foam::Lagrangian::drag::addSupFields() const
 {
-    return wordList(1, cloud().U.name());
+    return wordList({cloud().U.name()});
+}
+
+
+bool Foam::Lagrangian::drag::addsSupToField
+(
+    const word& fieldName,
+    const word& eqnFieldName
+) const
+{
+    return
+        fieldName == cloud().U.name()
+     && (
+            eqnFieldName == cloud().U.name()
+         || eqnFieldName == cloud<clouds::carried>().Uc.name()
+        );
 }
 
 
@@ -108,7 +120,7 @@ void Foam::Lagrangian::drag::addSup
     LagrangianEqn<vector>& eqn
 ) const
 {
-    assertCloud<clouds::coupledToIncompressibleFluid>();
+    assertCloud<clouds::coupledToConstantDensityFluid>();
 
     addUSup(U, eqn);
 }
@@ -122,7 +134,11 @@ void Foam::Lagrangian::drag::addSup
     LagrangianEqn<vector>& eqn
 ) const
 {
-    assertCloud<clouds::coupledToIncompressibleFluid, clouds::coupledToFluid>();
+    assertCloud
+    <
+        clouds::coupledToConstantDensityFluid,
+        clouds::coupledToFluid
+    >();
 
     addUSup(U, eqn);
 }

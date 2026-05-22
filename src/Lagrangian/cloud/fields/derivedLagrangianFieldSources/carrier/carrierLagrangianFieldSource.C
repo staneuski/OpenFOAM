@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,11 +24,23 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "carrierLagrangianFieldSource.H"
-#include "coupled.H"
+#include "carried.H"
 #include "volFields.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+template<class Type>
+Foam::carrierLagrangianFieldSource<Type>::carrierLagrangianFieldSource
+(
+    const regIOobject& iIo
+)
+:
+    LagrangianFieldSource<Type>(iIo),
+    cloudLagrangianFieldSource(*this),
+    fieldcName_(iIo.name())
+{}
+
 
 template<class Type>
 Foam::carrierLagrangianFieldSource<Type>::carrierLagrangianFieldSource
@@ -73,10 +85,21 @@ Foam::carrierLagrangianFieldSource<Type>::value
     const LagrangianSubMesh& subMesh
 ) const
 {
+    return value(subMesh);
+}
+
+
+template<class Type>
+Foam::tmp<Foam::LagrangianSubField<Type>>
+Foam::carrierLagrangianFieldSource<Type>::value
+(
+    const LagrangianSubMesh& subMesh
+) const
+{
     return
-        this->template cloud<clouds::coupled>(injection, subMesh).carrierField
+        this->template cloud<clouds::carried>().carrierField
         (
-            subMesh.mesh().mesh().lookupObject<VolField<Type>>(fieldcName_)
+            subMesh.mesh().poly().lookupObject<VolField<Type>>(fieldcName_)
         )(subMesh);
 }
 
@@ -93,7 +116,7 @@ void Foam::carrierLagrangianFieldSource<Type>::write
     (
         os,
         "fieldc",
-        this->internalField().name(),
+        this->internalName(),
         fieldcName_
     );
 }

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -246,6 +246,9 @@ public:
             //- Return local objectRegistry
             const objectRegistry& db() const;
 
+            //- Return time
+            const Time& time() const;
+
             //- Return patch
             const LagrangianPatch& patch() const;
 
@@ -275,14 +278,14 @@ public:
             virtual void initEvaluate
             (
                 PstreamBuffers&,
-                const LagrangianScalarInternalDynamicField& fraction
+                const LagrangianInternalScalarDynamicField& fraction
             );
 
             //- Evaluate the patch field
             virtual void evaluate
             (
                 PstreamBuffers&,
-                const LagrangianScalarInternalDynamicField& fraction
+                const LagrangianInternalScalarDynamicField& fraction
             );
 
 

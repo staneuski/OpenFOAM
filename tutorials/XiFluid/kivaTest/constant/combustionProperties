@@ -59,9 +59,9 @@ laminarFlameSpeed
 
 flameWrinkling
 {
-    model           equilibrium;
+    model           transport;
 
-    equilibrium
+    eq
     {
         model           Gulder;
     }

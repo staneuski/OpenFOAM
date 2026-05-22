@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -32,7 +32,7 @@ Foam::swirlInletVelocityFvPatchVectorField::
 swirlInletVelocityFvPatchVectorField
 (
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -64,7 +64,7 @@ swirlInletVelocityFvPatchVectorField
         Function2<scalar>::New
         (
             "axialVelocity",
-            db().time().userUnits(),
+            time().userUnits(),
             dimLength,
             dimVelocity,
             dict
@@ -75,7 +75,7 @@ swirlInletVelocityFvPatchVectorField
         Function2<scalar>::New
         (
             "radialVelocity",
-            db().time().userUnits(),
+            time().userUnits(),
             dimLength,
             dimVelocity,
             dict
@@ -86,7 +86,7 @@ swirlInletVelocityFvPatchVectorField
 {
     if (dict.found("omega") || dict.found("rpm"))
     {
-        omega_ = new Function1s::omega(db().time(), dict);
+        omega_ = new Function1s::omega(time(), dict);
     }
     else if (dict.found("tangentialVelocity"))
     {
@@ -94,7 +94,7 @@ swirlInletVelocityFvPatchVectorField
             Function2<scalar>::New
             (
                 "tangentialVelocity",
-                db().time().userUnits(),
+                time().userUnits(),
                 dimLength,
                 dimVelocity,
                 dict
@@ -126,7 +126,7 @@ swirlInletVelocityFvPatchVectorField
 (
     const swirlInletVelocityFvPatchVectorField& ptf,
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -144,7 +144,7 @@ Foam::swirlInletVelocityFvPatchVectorField::
 swirlInletVelocityFvPatchVectorField
 (
     const swirlInletVelocityFvPatchVectorField& ptf,
-    const DimensionedField<vector, volMesh>& iF
+    const DimensionedField<vector, fvMesh>& iF
 )
 :
     fixedValueFvPatchField<vector>(ptf, iF),
@@ -166,7 +166,7 @@ void Foam::swirlInletVelocityFvPatchVectorField::updateCoeffs()
         return;
     }
 
-    const scalar t = this->db().time().value();
+    const scalar t = this->time().value();
     const scalarField ts(size(), t);
 
     // Compute geometry
@@ -209,7 +209,7 @@ void Foam::swirlInletVelocityFvPatchVectorField::write(Ostream& os) const
     writeEntry
     (
         os,
-        db().time().userUnits(),
+        time().userUnits(),
         dimLength,
         dimVelocity,
         axialVelocity_()
@@ -217,7 +217,7 @@ void Foam::swirlInletVelocityFvPatchVectorField::write(Ostream& os) const
     writeEntry
     (
         os,
-        db().time().userUnits(),
+        time().userUnits(),
         dimLength,
         dimVelocity,
         radialVelocity_()
@@ -231,7 +231,7 @@ void Foam::swirlInletVelocityFvPatchVectorField::write(Ostream& os) const
         writeEntry
         (
             os,
-            db().time().userUnits(),
+            time().userUnits(),
             dimLength,
             dimVelocity,
             tangentialVelocity_()

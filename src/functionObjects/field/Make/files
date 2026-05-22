@@ -57,6 +57,7 @@ yPlus/yPlus.C
 turbulenceIntensity/turbulenceIntensity.C
 wallShearStress/wallShearStress.C
 wallHeatFlux/wallHeatFlux.C
+energyFlux/energyFlux.C
 specieFlux/specieFlux.C
 
 wallHeatTransferCoeff/wallHeatTransferCoeff.C
@@ -67,8 +68,6 @@ wallHeatTransferCoeff/wallHeatTransferCoeffModels/ReynoldsAnalogy/ReynoldsAnalog
 writeCellCentres/writeCellCentres.C
 writeCellVolumes/writeCellVolumes.C
 
-bXiProgress/bXiProgress.C
-XiReactionRate/XiReactionRate.C
 streamFunction/streamFunction.C
 
 fieldsExpression/fieldsExpression.C
@@ -78,8 +77,6 @@ multiply/multiply.C
 divide/divide.C
 
 interfaceHeight/interfaceHeight.C
-
-age/age.C
 
 comfort/comfort.C
 

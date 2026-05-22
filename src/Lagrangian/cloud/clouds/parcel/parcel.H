@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,18 +25,8 @@ Class
     Foam::clouds::parcel
 
 Description
-    Basic cloud with spherical, variable density, particles, grouped into
-    parcels.
-
-    This cloud's modelling is the same as for particle, except that an
-    additional number field is used to represent multiple physical particles
-    per Lagrangian parcel. This adds flexibility with regards to managing the
-    expense of simulating large numbers of physical particles, and also
-    provides the ability to specify the number, size (distribution) and volume
-    or mass flow rate of particles at an injection.
-
-See also
-    Foam::clouds::particle
+    Cloud with spherical particles with thermodynamic modelling, grouped into
+    parcels
 
 SourceFiles
     parcel.C
@@ -46,10 +36,10 @@ SourceFiles
 #ifndef parcel_H
 #define parcel_H
 
-#include "grouped.H"
-#include "massive.H"
-#include "coupledToFluid.H"
+#include "thermal.H"
+#include "coupledToThermalFluid.H"
 #include "sphericalCoupled.H"
+#include "massiveCoupledToFluid.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -59,27 +49,23 @@ namespace clouds
 {
 
 /*---------------------------------------------------------------------------*\
-                           Class parcel Declaration
+                        Class parcel Declaration
 \*---------------------------------------------------------------------------*/
 
 class parcel
 :
     public cloud,
+    public carried,
     public grouped,
     public spherical,
-    public massive,
-    public coupledToFluid,
-    public sphericalCoupled
+    public thermal,
+    public coupledToThermalFluid,
+    public sphericalCoupled,
+    public massiveCoupledToFluid
 {
 protected:
 
     // Protected Member Functions
-
-        //- Initialisation hook
-        virtual void initialise(const bool predict);
-
-        //- Partition hook
-        virtual void partition();
 
         //- Return the acceleration with which to do second-order tracking
         virtual tmp<LagrangianSubVectorField> dUdt
@@ -97,6 +83,9 @@ protected:
             const bool final
         );
 
+        //- Partition hook
+        virtual void partition();
+
 
 public:
 
@@ -108,14 +97,12 @@ public:
 
     // Constructors
 
-        //- Construct from a mesh and a name
+        //- Construct from a mesh and context
         parcel
         (
-            const polyMesh& mesh,
-            const word& name,
+            LagrangianMesh& mesh,
             const contextType context,
-            const IOobject::readOption readOption=IOobject::READ_IF_PRESENT,
-            const IOobject::writeOption writeOption=IOobject::AUTO_WRITE
+            const dictionary& dict
         );
 
 
@@ -126,7 +113,7 @@ public:
     // Member Functions
 
         //- Solve the cloud's evolution over the current time-step
-        virtual void solve();
+        virtual void solve(const bool initial, const bool final);
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

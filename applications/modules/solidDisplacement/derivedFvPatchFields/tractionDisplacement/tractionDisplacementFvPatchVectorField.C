@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -32,7 +32,7 @@ Foam::tractionDisplacementFvPatchVectorField::
 tractionDisplacementFvPatchVectorField
 (
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF
+    const DimensionedField<vector, fvMesh>& iF
 )
 :
     fixedGradientFvPatchVectorField(p, iF),
@@ -48,7 +48,7 @@ Foam::tractionDisplacementFvPatchVectorField::
 tractionDisplacementFvPatchVectorField
 (
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -59,7 +59,7 @@ tractionDisplacementFvPatchVectorField
         Function1<scalar>::New
         (
             "pressure",
-            db().time().userUnits(),
+            time().userUnits(),
             dimPressure,
             dict
         )
@@ -75,7 +75,7 @@ tractionDisplacementFvPatchVectorField
 (
     const tractionDisplacementFvPatchVectorField& tdpvf,
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -89,7 +89,7 @@ Foam::tractionDisplacementFvPatchVectorField::
 tractionDisplacementFvPatchVectorField
 (
     const tractionDisplacementFvPatchVectorField& tdpvf,
-    const DimensionedField<vector, volMesh>& iF
+    const DimensionedField<vector, fvMesh>& iF
 )
 :
     fixedGradientFvPatchVectorField(tdpvf, iF),
@@ -136,7 +136,7 @@ void Foam::tractionDisplacementFvPatchVectorField::updateCoeffs()
         return;
     }
 
-    this->updateCoeffs(pressure_->value(db().time().value()));
+    this->updateCoeffs(pressure_->value(time().value()));
 }
 
 
@@ -144,7 +144,7 @@ void Foam::tractionDisplacementFvPatchVectorField::write(Ostream& os) const
 {
     fvPatchVectorField::write(os);
     writeEntry(os, "traction", traction_);
-    writeEntry(os, db().time().userUnits(), dimPressure, pressure_());
+    writeEntry(os, time().userUnits(), dimPressure, pressure_());
     writeEntry(os, "value", *this);
 }
 

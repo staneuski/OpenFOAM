@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -296,7 +296,7 @@ void evaluateNonConformalProcessorCyclics(const fvMesh& mesh)
             typename VolField<Type>::Patch& pf =
                 fields[i].boundaryFieldRef()[patchi];
 
-            if (isA<nonConformalProcessorCyclicPolyPatch>(pf.patch().patch()))
+            if (isA<nonConformalProcessorCyclicPolyPatch>(pf.patch().poly()))
             {
                 pf.initEvaluate(Pstream::defaultCommsType);
             }
@@ -316,7 +316,7 @@ void evaluateNonConformalProcessorCyclics(const fvMesh& mesh)
             typename VolField<Type>::Patch& pf =
                 fields[i].boundaryFieldRef()[patchi];
 
-            if (isA<nonConformalProcessorCyclicPolyPatch>(pf.patch().patch()))
+            if (isA<nonConformalProcessorCyclicPolyPatch>(pf.patch().poly()))
             {
                 pf.evaluate(Pstream::defaultCommsType);
             }
@@ -334,7 +334,7 @@ int main(int argc, char *argv[])
     #include "addRegionOption.H"
     #include "addDictOption.H"
 
-    const bool haveArgs = argList::hasArgs(argc, argv);
+    const bool haveArgs = argList::nArgs(argc, argv);
     if (haveArgs)
     {
         argList::validArgs.append("patch1");
@@ -346,7 +346,7 @@ int main(int argc, char *argv[])
         );
     }
 
-    #include "setRootCase.H"
+    #include "setRootCaseNoFunctionObjects.H"
     #include "setMeshPath.H"
     #include "createTimeNoFunctionObjects.H"
 
@@ -514,7 +514,7 @@ int main(int argc, char *argv[])
     forAll(regionMeshes, regioni)
     {
         const fvMesh& mesh = regionMeshes[regioni];
-        const polyBoundaryMesh& patches = mesh.boundaryMesh();
+        const polyBoundaryMesh& patches = mesh.poly().boundary();
         label& firstProcPatchi = regionFirstProcPatchis[regioni];
         label& firstProcFacei = regionFirstProcFaceis[regioni];
 
@@ -552,7 +552,7 @@ int main(int argc, char *argv[])
     forAll(regionMeshes, regioni)
     {
         const fvMesh& mesh = regionMeshes[regioni];
-        const polyBoundaryMesh& patches = mesh.boundaryMesh();
+        const polyBoundaryMesh& patches = mesh.poly().boundary();
         const label firstProcPatchi = regionFirstProcPatchis[regioni];
 
         for (label patchi = 0; patchi < firstProcPatchi; ++ patchi)
@@ -623,7 +623,7 @@ int main(int argc, char *argv[])
                     couple.ncPatchNames[!owner],
                     patchDict,
                     newPatches[regioni].size(),
-                    regionMeshes[regioni].boundaryMesh()
+                    regionMeshes[regioni].poly().boundary()
                 ).ptr()
             );
             newPatchIsCouple[regioni].append(true);
@@ -685,8 +685,7 @@ int main(int argc, char *argv[])
                     0,
                     regionFirstProcFaceis[regioni],
                     newPatches[regioni].size(),
-                    regionMeshes[regioni].boundaryMesh(),
-                    nonConformalErrorPolyPatch::typeName,
+                    regionMeshes[regioni].poly().boundary(),
                     origPatchName
                 )
             );
@@ -699,7 +698,7 @@ int main(int argc, char *argv[])
     forAll(regionMeshes, regioni)
     {
         const fvMesh& mesh = regionMeshes[regioni];
-        const polyBoundaryMesh& patches = mesh.boundaryMesh();
+        const polyBoundaryMesh& patches = mesh.poly().boundary();
         const label firstProcPatchi = regionFirstProcPatchis[regioni];
 
         for (label patchi = firstProcPatchi; patchi < patches.size(); ++ patchi)
@@ -736,7 +735,7 @@ int main(int argc, char *argv[])
 
             const label regioni = regionNames[couples[couplei].regionNames[0]];
             const fvMesh& mesh = regionMeshes[regioni];
-            const polyBoundaryMesh& patches = mesh.boundaryMesh();
+            const polyBoundaryMesh& patches = mesh.poly().boundary();
 
             const polyPatch& patch1 = patches[couple.origPatchNames[0]];
             const polyPatch& patch2 = patches[couple.origPatchNames[1]];
@@ -879,8 +878,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Set the precision of the points data to 10
-    IOstream::defaultPrecision(max(10u, IOstream::defaultPrecision()));
+    // Ensure the points are written to a sufficient precision
+    IOstream::defaultPrecision(IOstream::highPrecision());
 
     // Set the instance so that the mesh writes
     const word newInstance = overwrite ? oldInstance : runTime.name();

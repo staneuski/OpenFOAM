@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -42,28 +42,44 @@ namespace populationBalance
 Foam::autoPtr<Foam::populationBalance::breakupModel>
 Foam::populationBalance::breakupModel::New
 (
-    const word& type,
     const populationBalanceModel& popBal,
     const dictionary& dict
 )
 {
-    Info<< "Selecting breakup model for "
-        << popBal.name() << ": " << type << endl;
+    const bool haveModelDict = dict.isDict(typeName);
+
+    word modelType;
+    const dictionary* modelDictPtr = nullptr;
+    if (haveModelDict)
+    {
+        modelDictPtr = &dict.subDict(typeName);
+        modelType = modelDictPtr->lookup<word>("type");
+    }
+    else
+    {
+        modelType = dict.lookup<word>(typeName);
+        modelDictPtr = &dict.optionalTypeDict(modelType);
+    }
+    const dictionary& modelDict = *modelDictPtr;
+
+    Info<< indentOrNl << "Selecting " << typeName << ' ' << modelType << endl;
 
     dictionaryConstructorTable::iterator cstrIter =
-        dictionaryConstructorTablePtr_->find(type);
+        dictionaryConstructorTablePtr_->find(modelType);
 
     if (cstrIter == dictionaryConstructorTablePtr_->end())
     {
         FatalErrorInFunction
-            << "Unknown breakup model type "
-            << type << nl << nl
-            << "Valid breakup model types : " << endl
+            << "Unknown " << typeName << " type "
+            << modelType << endl << endl
+            << "Valid " << typeName << " types are : " << endl
             << dictionaryConstructorTablePtr_->sortedToc()
             << exit(FatalError);
     }
 
-    return autoPtr<breakupModel>(cstrIter()(popBal, dict));
+    printDictionary print(modelDict);
+
+    return cstrIter()(popBal, modelDict);
 }
 
 
@@ -76,9 +92,7 @@ Foam::populationBalance::breakupModel::breakupModel
 )
 :
     popBal_(popBal)
-{
-    dsd_ = daughterSizeDistributionModel::New(*this, dict);
-}
+{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //

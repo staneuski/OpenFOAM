@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -38,7 +38,7 @@ template<class Type>
 Foam::advectiveFvPatchField<Type>::advectiveFvPatchField
 (
     const fvPatch& p,
-    const DimensionedField<Type, volMesh>& iF,
+    const DimensionedField<Type, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -86,7 +86,7 @@ Foam::advectiveFvPatchField<Type>::advectiveFvPatchField
 (
     const advectiveFvPatchField& ptf,
     const fvPatch& p,
-    const DimensionedField<Type, volMesh>& iF,
+    const DimensionedField<Type, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -102,7 +102,7 @@ template<class Type>
 Foam::advectiveFvPatchField<Type>::advectiveFvPatchField
 (
     const advectiveFvPatchField& ptpsf,
-    const DimensionedField<Type, volMesh>& iF
+    const DimensionedField<Type, fvMesh>& iF
 )
 :
     mixedFvPatchField<Type>(ptpsf, iF),
@@ -160,7 +160,7 @@ void Foam::advectiveFvPatchField<Type>::updateCoeffs()
     (
         mesh.schemes().ddt(this->internalField().name())
     );
-    scalar deltaT = this->db().time().deltaTValue();
+    scalar deltaT = this->time().deltaTValue();
 
     const VolField<Type>& field =
         this->db().objectRegistry::template

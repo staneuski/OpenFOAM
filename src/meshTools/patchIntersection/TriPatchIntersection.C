@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -923,9 +923,12 @@ Foam::TriPatchIntersection<SrcPatchType, TgtPatchType>::circumDistSqr
 
     const triPointRef t = triPoints(trii).tri(points);
 
-    const Tuple2<point, scalar> circle = t.circumCircle();
+    const Tuple2<point, scalar> crSqr = t.circumCircleSqr();
 
-    return magSqr(points[pointi] - circle.first()) - sqr(circle.second());
+    return
+        crSqr.second() < 0
+      ? - vGreat
+      : magSqr(points[pointi] - crSqr.first()) - crSqr.second();
 }
 
 
@@ -1020,6 +1023,7 @@ void Foam::TriPatchIntersection<SrcPatchType, TgtPatchType>::insertPoints
             forAll(candidateTriTris_, candidateTrii)
             {
                 const label trii = candidateTriTris_[candidateTrii];
+
                 if (trii == -1) continue;
                 const scalar distSqr = circumDistSqr(trii, pointi);
                 if (distSqr < minDistSqr)
@@ -3797,31 +3801,31 @@ Foam::TriPatchIntersection<SrcPatchType, TgtPatchType>::TriPatchIntersection
     }
 
     // Create bound spheres for patch faces for proximity testing
-    List<Tuple2<point, scalar>> srcFaceSpheres(this->srcPatch_.size());
-    List<Tuple2<point, scalar>> tgtFaceSpheres(this->tgtPatch_.size());
+    List<boundSphere> srcFaceSpheres(this->srcPatch_.size());
+    List<boundSphere> tgtFaceSpheres(this->tgtPatch_.size());
     forAll(this->srcPatch_, srcFacei)
     {
         const triFace& srcFace = this->srcPatch_.localFaces()[srcFacei];
         srcFaceSpheres[srcFacei] =
-            trivialBoundSphere
+            boundSphere::trivial
             (
                 this->srcPatch_.localPoints(),
                 {srcFace[0], srcFace[1], srcFace[2], -1},
                 3
             );
-        srcFaceSpheres[srcFacei].second() *= 1 + snapTol;
+        srcFaceSpheres[srcFacei].inflate(snapTol);
     }
     forAll(this->tgtPatch_, tgtFacei)
     {
         const triFace& tgtFace = this->tgtPatch_.localFaces()[tgtFacei];
         tgtFaceSpheres[tgtFacei] =
-            trivialBoundSphere
+            boundSphere::trivial
             (
                 this->tgtPatch_.localPoints(),
                 {tgtFace[0], tgtFace[1], tgtFace[2], -1},
                 3
             );
-        tgtFaceSpheres[tgtFacei].second() *= 1 + snapTol;
+        tgtFaceSpheres[tgtFacei].inflate(snapTol);
     }
 
     // Construct table to store what faces have been snapped
@@ -3866,14 +3870,13 @@ Foam::TriPatchIntersection<SrcPatchType, TgtPatchType>::TriPatchIntersection
                         const label tgtFacej =
                             tgtPointFaces[tgtPointi][tgtPointFacei];
 
-                        const point& srcC = srcFaceSpheres[srcFacej].first();
-                        const scalar srcR = srcFaceSpheres[srcFacej].second();
-                        const point& tgtC = tgtFaceSpheres[tgtFacej].first();
-                        const scalar tgtR = tgtFaceSpheres[tgtFacej].second();
-
                         if
                         (
-                            magSqr(srcC - tgtC) < sqr(srcR + tgtR)
+                            boundSphere::overlap
+                            (
+                                srcFaceSpheres[srcFacej],
+                                tgtFaceSpheres[tgtFacej]
+                            )
                          && !srcFaceTgtFaceSnaps.found({srcFacej, tgtFacej})
                         )
                         {
@@ -3916,63 +3919,6 @@ Foam::TriPatchIntersection<SrcPatchType, TgtPatchType>::TriPatchIntersection
         3
     );
 
-    // Find intersection operation, excluding a hash set of previously obtained
-    // intersections. Used to get multiple target triangles intersected by a
-    // single source point and point normal (i.e., two target triangles if the
-    // source point intersects a target edge).
-    class findIntersectExcludingOp
-    {
-    public:
-
-        const indexedOctree<treeDataPrimitivePatch<TgtPatchType>>& tree_;
-
-        const labelHashSet& excludingIndices_;
-
-    public:
-
-        //- Construct from components
-        findIntersectExcludingOp
-        (
-            const indexedOctree<treeDataPrimitivePatch<TgtPatchType>>& tree,
-            const labelHashSet& hitIndices
-        )
-        :
-            tree_(tree),
-            excludingIndices_(hitIndices)
-        {}
-
-        //- Calculate intersection of triangle with ray. Sets result
-        //  accordingly
-        bool operator()
-        (
-            const label index,
-            const point& start,
-            const point& end,
-            point& intersectionPoint
-        ) const
-        {
-            if (excludingIndices_.found(index))
-            {
-                return false;
-            }
-            else
-            {
-                typename
-                    treeDataPrimitivePatch<TgtPatchType>::findIntersectOp
-                    iop(tree_);
-
-                return
-                    iop
-                    (
-                        index,
-                        start,
-                        end,
-                        intersectionPoint
-                    );
-            }
-        }
-    };
-
     // Populate local data from the source and target patches
     initialise(srcPointNormals);
     write();
@@ -3992,9 +3938,9 @@ Foam::TriPatchIntersection<SrcPatchType, TgtPatchType>::TriPatchIntersection
          || this->pointTgtFaces_[pointi] != -1
         ) continue;
 
-        // Get the projection geometry for this source point
+        // Get a length scale for this point by averaging the lengths of the
+        // connected edges
         const point& srcP = srcPoints_[pointi];
-        const vector& srcN = srcPointNormals_[pointi];
         scalar srcL = 0;
         forAll(this->srcPatch_.pointEdges()[srcPointi], srcPointEdgei)
         {
@@ -4008,24 +3954,11 @@ Foam::TriPatchIntersection<SrcPatchType, TgtPatchType>::TriPatchIntersection
         }
         srcL /= this->srcPatch_.pointEdges()[srcPointi].size();
 
-        // Find all the target faces that this source point projects to
-        labelHashSet tgtFaceis;
-        while (true)
-        {
-            pointIndexHit hit =
-                tgtTree.findLine
-                (
-                    srcP - srcL*srcN,
-                    srcP + srcL*srcN,
-                    findIntersectExcludingOp(tgtTree, tgtFaceis)
-                );
+        // Find all the target triangles that are within the length scale of
+        // the source point
+        const labelList tgtFaceis = tgtTree.findSphere(srcP, sqr(srcL));
 
-            if (!hit.hit()) break;
-
-            tgtFaceis.insert(hit.index());
-        }
-
-        // Continue if this point does not project to the opposite patch
+        // Continue if nothing was found
         if (tgtFaceis.empty()) continue;
 
         // Loop all the potential source/target face intersections until an
@@ -4035,9 +3968,9 @@ Foam::TriPatchIntersection<SrcPatchType, TgtPatchType>::TriPatchIntersection
             const label srcFacei =
                 this->srcPatch_.pointFaces()[srcPointi][srcPointFacei];
 
-            forAllConstIter(labelHashSet, tgtFaceis, tgtFaceiIter)
+            forAll(tgtFaceis, i)
             {
-                intersect(srcFacei, tgtFaceiIter.key());
+                intersect(srcFacei, tgtFaceis[i]);
 
                 if (frontEdgeEdges_.size()) break;
             }

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -46,14 +46,13 @@ bool Foam::XiGModel::readCoeffs(const dictionary&)
 
 Foam::XiGModel::XiGModel
 (
-    const psiuMulticomponentThermo& thermo,
-    const fluidThermoThermophysicalTransportModel& thermoTransport,
+    const ubRhoThermo& thermo,
+    const compressibleMomentumTransportModel& momentumTransport,
     const volScalarField& Su
 )
 :
     thermo_(thermo),
-    thermoTransport_(thermoTransport),
-    turbulence_(thermoTransport.momentumTransport()),
+    momentumTransport_(momentumTransport),
     Su_(Su)
 {}
 
@@ -70,7 +69,7 @@ bool Foam::XiGModel::read(const dictionary& XiProperties)
 {
     return readCoeffs
     (
-        XiProperties.subDict("XiG").optionalSubDict(type() + "Coeffs")
+        XiProperties.subDict("XiG").optionalTypeDict(type())
     );
 }
 

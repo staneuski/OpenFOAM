@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -40,7 +40,11 @@ Usage
         type            reactionDrivenPhaseChange;
         libs            ("libmultiphaseEulerFvModels.so");
 
-        phases          (particles vapour);
+        // Note: Order is important. The reactions in the first phase define
+        // the rate of phase change. If phase change also occurs as a result of
+        // reactions in the second phase then a second model should be added
+        // with the phases reversed.
+        phases          (vapour particles);
 
         species         (TiO2);
 
@@ -117,7 +121,7 @@ public:
         // Sources
 
             //- Return the mass transfer rate of a specie
-            virtual tmp<DimensionedField<scalar, volMesh>> mDot
+            virtual tmp<DimensionedField<scalar, fvMesh>> mDot
             (
                 const label mDoti
             ) const;

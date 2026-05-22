@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -80,10 +80,6 @@ public:
         singleComponentMixture(const dictionary&);
 
 
-    //- Destructor
-    virtual ~singleComponentMixture();
-
-
     // Member Functions
 
         //- Return the instantiated type name
@@ -94,10 +90,24 @@ public:
             return "pureMixture<" + ThermoType::typeName() + '>';
         }
 
-        //- Return the specie names
-        wordList specieNames() const
+        //- Return the table of species
+        const speciesTable& species() const
         {
-            return wordList();
+            return speciesTable::null;
+        }
+
+        //- Access the specie active flags
+        const boolList& speciesActive() const
+        {
+            NotImplemented;
+            return boolList::null();
+        }
+
+        //- Access the specie active flags
+        boolList& speciesActive()
+        {
+            NotImplemented;
+            return const_cast<boolList&>(boolList::null());
         }
 
         //- Return the mixture for thermodynamic properties

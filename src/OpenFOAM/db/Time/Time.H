@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -266,11 +266,22 @@ public:
             //  the corresponding method in objectRegistry
             using TimePaths::path;
 
+            //- Return true if this is a complete serial or parallel case
+            bool completeCase() const
+            {
+                return Pstream::parRun() || !processorCase();
+            }
+
             //- Return the control dict
             const IOdictionary& controlDict() const
             {
                 return controlDict_;
             }
+
+            //- Return the list of region names
+            //  specified in the regionSolvers list in controlDict
+            //  or a null list if not specified
+            wordList regionNames() const;
 
             //- Return current time path
             fileName timePath() const
@@ -412,10 +423,10 @@ public:
             word userTimeName() const;
 
             //- Return the user-time unit conversion
-            const unitConversion& userUnits() const;
+            const unitSet& userUnits() const;
 
             //- Return the write interval units
-            const unitConversion& writeIntervalUnits() const;
+            const unitSet& writeIntervalUnits() const;
 
             //- Return the list of function objects
             const functionObjectList& functionObjects() const

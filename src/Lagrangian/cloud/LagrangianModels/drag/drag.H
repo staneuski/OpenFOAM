@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::drag
+    Foam::Lagrangian::drag
 
 Description
     Base class for Lagrangian drag models
@@ -101,6 +101,13 @@ public:
 
         //- Return the name of the velocity field
         virtual wordList addSupFields() const;
+
+        //- Return true for the velocity or carrier velocity field
+        virtual bool addsSupToField
+        (
+            const word& fieldName,
+            const word& eqnFieldName
+        ) const;
 
         //- Add a source term to the velocity equation
         virtual void addSup

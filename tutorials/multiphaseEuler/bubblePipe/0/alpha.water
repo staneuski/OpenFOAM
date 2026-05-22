@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       volScalarField;
+    location    "0";
     object      alpha.water;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -32,7 +33,6 @@ boundaryField
         type            inletOutlet;
         phi             phi.water;
         inletValue      uniform 1;
-        value           uniform 1;
     }
 
     walls

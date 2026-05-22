@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -855,6 +855,8 @@ void Foam::domainDecomposition::postReadUpdateDecompose
     {
         procFaceAddressingBf_.clear();
 
+        completeMesh_->stitcher().disconnect(false, false);
+
         completeMesh_->stitcher().connect(false, false, true);
     }
 }
@@ -965,6 +967,8 @@ void Foam::domainDecomposition::postReadUpdateReconstruct
 
         forAll(procMeshes_, proci)
         {
+            procMeshes_[proci].stitcher().disconnect(false, false);
+
             procMeshes_[proci].stitcher().connect(false, false, true);
         }
     }
@@ -989,6 +993,9 @@ const Foam::PtrList<Foam::surfaceLabelField::Boundary>&
 Foam::domainDecomposition::procFaceAddressingBf() const
 {
     validateComplete();
+    validateProcs();
+
+    if (procFaceAddressingBf_.empty())
     {
         // Get any non-conformal proc-face addressing
         List<List<DynamicList<label>>> nonConformalProcFaceAddressingBf =
@@ -1028,7 +1035,8 @@ Foam::domainDecomposition::procFaceAddressingBf() const
 
                     procFaceAddressingBf_[proci][procPatchi] =
                         mag(fvp.patchSlice(procFaceAddressing_[proci]))
-                      - completeMesh().boundaryMesh()[completePatchi].start();
+                      - completeMesh().poly().boundary()[completePatchi]
+                       .start();
                 }
                 else if (isA<processorFvPatch>(fvp))
                 {
@@ -1039,7 +1047,7 @@ Foam::domainDecomposition::procFaceAddressingBf() const
                 {
                     procFaceAddressingBf_[proci][procPatchi] =
                         mag(fvp.patchSlice(procFaceAddressing_[proci]))
-                      - completeMesh().boundaryMesh()[procPatchi].start();
+                      - completeMesh().poly().boundary()[procPatchi].start();
                 }
             }
         }
@@ -1055,8 +1063,8 @@ void Foam::domainDecomposition::writeComplete(const bool doSets) const
         static_cast<const faceCompactIOList&>(completeMesh().faces())
        .writeOpt() == IOobject::AUTO_WRITE;
 
-    // Set the precision of the points data to be min 10
-    IOstream::defaultPrecision(max(10u, IOstream::defaultPrecision()));
+    // Ensure the points are written to a sufficient precision
+    IOstream::defaultPrecision(IOstream::highPrecision());
 
     // Write the complete mesh
     completeMesh().write();
@@ -1163,8 +1171,8 @@ void Foam::domainDecomposition::writeProcs(const bool doSets) const
     {
         const fvMesh& procMesh = procMeshes_[proci];
 
-        // Set the precision of the points data to be min 10
-        IOstream::defaultPrecision(max(10u, IOstream::defaultPrecision()));
+        // Ensure the points are written to a sufficient precision
+        IOstream::defaultPrecision(IOstream::highPrecision());
 
         // Write the processor mesh
         procMesh.write();

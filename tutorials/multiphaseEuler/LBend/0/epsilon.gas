@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       volScalarField;
+    location    "0";
     object      epsilon.gas;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -30,7 +31,6 @@ boundaryField
         type            inletOutlet;
         phi             phi.gas;
         inletValue      $internalField;
-        value           $internalField;
     }
 
     "wall.*"

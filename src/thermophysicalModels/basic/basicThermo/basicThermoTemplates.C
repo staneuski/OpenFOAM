@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2012-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2012-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -27,16 +27,7 @@ License
 #include "wordIOList.H"
 #include "compileTemplate.H"
 
-// * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
-
-// Convert multiComponent -> multicomponent for backward-compatibility
-inline Foam::word mixtureName(const Foam::dictionary& thermoTypeDict)
-{
-    return
-        thermoTypeDict.lookup<Foam::word>("mixture")
-       .replace("multiComponent", "multicomponent");
-}
-
+// * * * * * * * * * * * Private Static Member Functions * * * * * * * * * * //
 
 template<class Thermo, class Table>
 typename Table::iterator Foam::basicThermo::lookupCstrIter
@@ -123,7 +114,7 @@ typename Table::iterator Foam::basicThermo::lookupCstrIter
             {
                 const wordList names
                 (
-                    Thermo::splitThermoName(validThermoTypeNames[i], nCmpt)
+                    splitThermoName(validThermoTypeNames[i], nCmpt)
                 );
 
                 if (names.size())
@@ -143,6 +134,8 @@ typename Table::iterator Foam::basicThermo::lookupCstrIter
 }
 
 
+// * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
+
 template<class Thermo, class Table>
 typename Table::iterator Foam::basicThermo::lookupCstrIter
 (
@@ -154,7 +147,8 @@ typename Table::iterator Foam::basicThermo::lookupCstrIter
     {
         const dictionary& thermoTypeDict(thermoDict.subDict("thermoType"));
 
-        Info<< "Selecting thermodynamics package " << thermoTypeDict << endl;
+        Info<< indentOrNl
+            << "Selecting thermodynamics package " << thermoTypeDict;
 
         if (thermoTypeDict.found("properties"))
         {
@@ -225,7 +219,8 @@ typename Table::iterator Foam::basicThermo::lookupCstrIter
     {
         const word thermoTypeName(thermoDict.lookup("thermoType"));
 
-        Info<< "Selecting thermodynamics package " << thermoTypeName << endl;
+        Info<< indentOrNl
+            << "Selecting thermodynamics package " << thermoTypeName << endl;
 
         typename Table::iterator cstrIter = tablePtr->find(thermoTypeName);
 
@@ -279,7 +274,6 @@ const Foam::basicThermo& Foam::basicThermo::lookupThermo
 }
 
 
-
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
 
 template<class Thermo>
@@ -300,6 +294,8 @@ Foam::autoPtr<Thermo> Foam::basicThermo::New
             thermoDict,
             Thermo::fvMeshConstructorTablePtr_
         );
+
+    printDictionary print(thermoDict.dictionary::name());
 
     return autoPtr<Thermo>(cstrIter()(mesh, phaseName));
 }

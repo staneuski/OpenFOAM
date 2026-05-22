@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -34,6 +34,7 @@ Description
 
 #include "pointField.H"
 #include "faceList.H"
+#include "scaleable.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -73,14 +74,17 @@ public:
 
     // Static Data Members
 
-        //- The great value used for greatBox and invertedBox
-        static const scalar great;
-
         //- A very large boundBox: min/max == -/+ vGreat
         static const boundBox greatBox;
 
         //- A very large inverted boundBox: min/max == +/- vGreat
         static const boundBox invertedBox;
+
+
+    // Static Member Functions
+
+        //- Does the dictionary have a bound box specified in it?
+        inline static bool found(const dictionary& dict);
 
 
     // Constructors
@@ -120,11 +124,11 @@ public:
             const bool doReduce = true
         );
 
-        //- Construct from dictionary
-        inline boundBox(const dictionary&);
-
         //- Construct from Istream
         inline boundBox(Istream&);
+
+        //- Construct from dictionary
+        inline boundBox(const dictionary&);
 
 
     // Member Functions
@@ -255,9 +259,24 @@ template<>
 inline bool contiguous<boundBox>() {return contiguous<point>();}
 
 
+//- A boundBox is scaleable
+template<>
+struct scaleable<boundBox> : public std::true_type {};
+
+//- Apply a conversion to a boundBox by applying separately to min and max
+template<class ... Args>
+void convert(boundBox& bb, const Args& ... args)
+{
+    convert(bb.min(), args ...);
+    convert(bb.max(), args ...);
+}
+
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #include "boundBoxI.H"
 

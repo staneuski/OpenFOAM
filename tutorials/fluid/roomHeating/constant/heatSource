@@ -9,13 +9,13 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "constant";
     object      heatSource;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 type            heatSource;
 
-selectionMode   cellZone;
 cellZone        heater;
 
 Q               1000;

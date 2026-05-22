@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -49,7 +49,7 @@ class ReynoldsStress
 :
     public BasicMomentumTransportModel
 {
-    // Private member functions
+    // Private Member Functions
 
         //- Return the source term for the momentum equation
         template<class RhoFieldType>
@@ -100,7 +100,7 @@ public:
         //- Construct from components
         ReynoldsStress
         (
-            const word& modelName,
+            const word& type,
             const alphaField& alpha,
             const rhoField& rho,
             const volVectorField& U,

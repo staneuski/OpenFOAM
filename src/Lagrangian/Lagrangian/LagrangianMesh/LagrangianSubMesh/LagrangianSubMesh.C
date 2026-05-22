@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -47,7 +47,6 @@ Foam::LagrangianSubMesh::LagrangianSubMesh
     const label index
 )
 :
-    GeoMesh<polyMesh>(mesh.mesh()),
     mesh_(mesh),
     group_(group),
     size_(size),
@@ -66,7 +65,6 @@ Foam::LagrangianSubMesh::LagrangianSubMesh
     const label start
 )
 :
-    GeoMesh<polyMesh>(mesh.mesh()),
     mesh_(mesh),
     group_(group),
     size_(size),
@@ -82,7 +80,6 @@ Foam::LagrangianSubMesh::LagrangianSubMesh
     const LagrangianGroup group
 )
 :
-    GeoMesh<polyMesh>(mesh.mesh()),
     mesh_(mesh),
     group_(group),
     size_
@@ -103,6 +100,47 @@ Foam::LagrangianSubMesh::~LagrangianSubMesh()
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
+const Foam::objectRegistry& Foam::LagrangianSubMesh::db() const
+{
+    return mesh_;
+}
+
+
+const Foam::Time& Foam::LagrangianSubMesh::time() const
+{
+    return mesh_.time();
+}
+
+
+Foam::word Foam::LagrangianSubMesh::complete(const word& subFieldName) const
+{
+    const word groupName = Foam::name(group());
+
+    word fieldName = subFieldName;
+
+    word::size_type subi = 0, i = 0;
+
+    while (subi < subFieldName.size())
+    {
+        if
+        (
+            subFieldName[subi] != ':'
+         || subFieldName.size() < groupName.size() + subi + 1
+         || subFieldName(subi + 1, groupName.size()) != groupName
+        )
+        {
+            fieldName[i ++] = subFieldName[subi ++];
+        }
+        else
+        {
+            subi += groupName.size() + 1;
+        }
+    }
+
+    return fieldName(i);
+}
+
+
 template<>
 Foam::tmp<Foam::vectorField> Foam::LagrangianSubMesh::nf
 (
@@ -119,7 +157,7 @@ Foam::tmp<Foam::vectorField> Foam::LagrangianSubMesh::nf
         nf[subi] =
             tracking::faceNormalAndDisplacement
             (
-                subMesh.mesh().mesh(),
+                subMesh.mesh().poly(),
                 subMesh.mesh().coordinates()[subi + subMesh.start()],
                 subMesh.mesh().celli()[subi + subMesh.start()],
                 subMesh.mesh().facei()[subi + subMesh.start()],
@@ -143,7 +181,7 @@ Foam::tmp<Foam::LagrangianSubVectorField> Foam::LagrangianSubMesh::nf
     return
         LagrangianSubVectorField::New
         (
-            "nf:" + Foam::name(subMesh.group()),
+            subMesh.sub("nf"),
             subMesh,
             dimless,
             nf<vectorField>(fraction)
@@ -154,7 +192,7 @@ Foam::tmp<Foam::LagrangianSubVectorField> Foam::LagrangianSubMesh::nf
 template<>
 Foam::tmp<Foam::vectorField> Foam::LagrangianSubMesh::nf
 (
-    const LagrangianScalarInternalDynamicField& fraction
+    const LagrangianInternalScalarDynamicField& fraction
 ) const
 {
     tmp<vectorField> tnf(new vectorField(size()));
@@ -165,7 +203,7 @@ Foam::tmp<Foam::vectorField> Foam::LagrangianSubMesh::nf
         nf[subi] =
             tracking::faceNormalAndDisplacement
             (
-                mesh().mesh(),
+                mesh().poly(),
                 mesh().coordinates()[subi + start()],
                 mesh().celli()[subi + start()],
                 mesh().facei()[subi + start()],
@@ -181,13 +219,13 @@ Foam::tmp<Foam::vectorField> Foam::LagrangianSubMesh::nf
 template<>
 Foam::tmp<Foam::LagrangianSubVectorField> Foam::LagrangianSubMesh::nf
 (
-    const LagrangianScalarInternalDynamicField& fraction
+    const LagrangianInternalScalarDynamicField& fraction
 ) const
 {
     return
         LagrangianSubVectorField::New
         (
-            "nf:" + Foam::name(group()),
+            sub("nf"),
             *this,
             dimless,
             nf<vectorField>(fraction)
@@ -211,7 +249,7 @@ Foam::tmp<Foam::vectorField> Foam::LagrangianSubMesh::Uf
         Uf[subi] =
             tracking::faceNormalAndDisplacement
             (
-                subMesh.mesh().mesh(),
+                subMesh.mesh().poly(),
                 subMesh.mesh().coordinates()[subi + subMesh.start()],
                 subMesh.mesh().celli()[subi + subMesh.start()],
                 subMesh.mesh().facei()[subi + subMesh.start()],
@@ -235,7 +273,7 @@ Foam::tmp<Foam::LagrangianSubVectorField> Foam::LagrangianSubMesh::Uf
     return
         LagrangianSubVectorField::New
         (
-            "Uf:" + Foam::name(subMesh.group()),
+            subMesh.sub("Uf"),
             subMesh,
             dimVelocity,
             Uf<vectorField>(fraction)
@@ -246,7 +284,7 @@ Foam::tmp<Foam::LagrangianSubVectorField> Foam::LagrangianSubMesh::Uf
 template<>
 Foam::tmp<Foam::vectorField> Foam::LagrangianSubMesh::Uf
 (
-    const LagrangianScalarInternalDynamicField& fraction
+    const LagrangianInternalScalarDynamicField& fraction
 ) const
 {
     tmp<vectorField> tUf(new vectorField(size()));
@@ -257,7 +295,7 @@ Foam::tmp<Foam::vectorField> Foam::LagrangianSubMesh::Uf
         Uf[subi] =
             tracking::faceNormalAndDisplacement
             (
-                mesh().mesh(),
+                mesh().poly(),
                 mesh().coordinates()[subi + start()],
                 mesh().celli()[subi + start()],
                 mesh().facei()[subi + start()],
@@ -273,13 +311,13 @@ Foam::tmp<Foam::vectorField> Foam::LagrangianSubMesh::Uf
 template<>
 Foam::tmp<Foam::LagrangianSubVectorField> Foam::LagrangianSubMesh::Uf
 (
-    const LagrangianScalarInternalDynamicField& fraction
+    const LagrangianInternalScalarDynamicField& fraction
 ) const
 {
     return
         LagrangianSubVectorField::New
         (
-            "Uf:" + Foam::name(group()),
+            sub("Uf"),
             *this,
             dimVelocity,
             Uf<vectorField>(fraction)

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -39,7 +39,6 @@ SourceFiles
 #ifndef LagrangianSubMesh_H
 #define LagrangianSubMesh_H
 
-#include "GeoMesh.H"
 #include "LagrangianState.H"
 #include "LagrangianFieldsFwd.H"
 #include "LagrangianSubFieldsFwd.H"
@@ -57,8 +56,6 @@ class LagrangianMesh;
 \*---------------------------------------------------------------------------*/
 
 class LagrangianSubMesh
-:
-    public GeoMesh<polyMesh>
 {
     // Private Data
 
@@ -141,6 +138,12 @@ public:
             //- Return the mesh
             inline const LagrangianMesh& mesh() const;
 
+            //- Return the object registry
+            const objectRegistry& db() const;
+
+            //- Return time
+            const Time& time() const;
+
             //- Return the group
             inline LagrangianGroup group() const;
 
@@ -167,6 +170,12 @@ public:
 
 
         // Sub-setting
+
+            //- Return the name of a field corresponding to this sub-mesh
+            inline word sub(const word& fieldName) const;
+
+            //- Return the name of a field corresponding to the complete mesh
+            word complete(const word& subFieldName) const;
 
             //- Return a sub-list corresponding to this sub-mesh
             template<class Type>
@@ -197,7 +206,7 @@ public:
             template<class FieldType>
             tmp<FieldType> nf
             (
-                const LagrangianScalarInternalDynamicField& fraction
+                const LagrangianInternalScalarDynamicField& fraction
             ) const;
 
             //- Return the face velocities at the Lagrangian locations
@@ -211,7 +220,7 @@ public:
             template<class FieldType>
             tmp<FieldType> Uf
             (
-                const LagrangianScalarInternalDynamicField& fraction
+                const LagrangianInternalScalarDynamicField& fraction
             ) const;
 
 
@@ -239,13 +248,13 @@ tmp<LagrangianSubVectorField> LagrangianSubMesh::nf
 template<>
 tmp<vectorField> LagrangianSubMesh::nf
 (
-    const LagrangianScalarInternalDynamicField& fraction
+    const LagrangianInternalScalarDynamicField& fraction
 ) const;
 
 template<>
 tmp<LagrangianSubVectorField> LagrangianSubMesh::nf
 (
-    const LagrangianScalarInternalDynamicField& fraction
+    const LagrangianInternalScalarDynamicField& fraction
 ) const;
 
 template<>
@@ -263,13 +272,13 @@ tmp<LagrangianSubVectorField> LagrangianSubMesh::Uf
 template<>
 tmp<vectorField> LagrangianSubMesh::Uf
 (
-    const LagrangianScalarInternalDynamicField& fraction
+    const LagrangianInternalScalarDynamicField& fraction
 ) const;
 
 template<>
 tmp<LagrangianSubVectorField> LagrangianSubMesh::Uf
 (
-    const LagrangianScalarInternalDynamicField& fraction
+    const LagrangianInternalScalarDynamicField& fraction
 ) const;
 
 

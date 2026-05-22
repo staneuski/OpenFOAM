@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::SaffmanMeiLift
+    Foam::Lagrangian::SaffmanMeiLift
 
 Description
     Lift model of Saffman (1965) as extended by Mei (1992). Applicable to
@@ -123,6 +123,13 @@ public:
 
         //- Return the name of the velocity field
         virtual wordList addSupFields() const;
+
+        //- Return true for the velocity or carrier velocity field
+        virtual bool addsSupToField
+        (
+            const word& fieldName,
+            const word& eqnFieldName
+        ) const;
 
         //- Add a source term to the velocity equation
         virtual void addSup

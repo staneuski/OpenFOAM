@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -47,11 +47,11 @@ void Foam::objectRegistry::readCacheTemporaryObjects() const
 {
     if
     (
-        !cacheTemporaryObjectsSet_
+        cacheTemporaryObjectsState_ == 0
      && time_.controlDict().found("cacheTemporaryObjects")
     )
     {
-        cacheTemporaryObjectsSet_ = true;
+        cacheTemporaryObjectsState_ = 1;
 
         const dictionary& controlDict = time_.controlDict();
 
@@ -118,7 +118,7 @@ Foam::objectRegistry::objectRegistry
     parent_(t),
     dbDir_(fileName::null),
     event_(1),
-    cacheTemporaryObjectsSet_(false)
+    cacheTemporaryObjectsState_(0)
 {}
 
 
@@ -135,7 +135,7 @@ Foam::objectRegistry::objectRegistry
     parent_(io.db()),
     dbDir_(dbDir),
     event_(1),
-    cacheTemporaryObjectsSet_(false)
+    cacheTemporaryObjectsState_(0)
 {
     writeOpt() = IOobject::AUTO_WRITE;
 }
@@ -156,6 +156,8 @@ Foam::objectRegistry::objectRegistry
 Foam::objectRegistry::~objectRegistry()
 {
     cacheTemporaryObjects_.clear();
+    cacheTemporaryObjectsState_ = -1;
+
     clear();
 }
 
@@ -201,6 +203,22 @@ Foam::wordList Foam::objectRegistry::sortedToc(const word& ClassName) const
 }
 
 
+Foam::List<Foam::Pair<Foam::word>> Foam::objectRegistry::tocTypes() const
+{
+    List<Pair<word>> objectNames(size());
+
+    label count=0;
+    for (const_iterator iter = cbegin(); iter != cend(); ++iter)
+    {
+            objectNames[count].first() = iter.key();
+            objectNames[count].second() = iter()->type();
+            count++;
+    }
+
+    return objectNames;
+}
+
+
 const Foam::objectRegistry& Foam::objectRegistry::subRegistry
 (
     const word& name,
@@ -226,39 +244,15 @@ const Foam::objectRegistry& Foam::objectRegistry::subRegistry
 }
 
 
-Foam::label Foam::objectRegistry::getEvent() const
+uint64_t Foam::objectRegistry::getEvent() const
 {
-    label curEvent = event_++;
+    uint64_t curEvent = event_++;
 
-    if (event_ == labelMax)
+    if (event_ == pTraits<uint64_t>::max)
     {
-        if (objectRegistry::debug)
-        {
-            WarningInFunction
-                << "Event counter has overflowed. "
-                << "Resetting counter on all dependent objects." << nl
-                << "This might cause extra evaluations." << endl;
-        }
-
-        // Reset event counter
-        curEvent = 1;
-        event_ = 2;
-
-        for (const_iterator iter = begin(); iter != end(); ++iter)
-        {
-            const regIOobject& io = *iter();
-
-            if (objectRegistry::debug)
-            {
-                Pout<< "objectRegistry::getEvent() : "
-                    << "resetting count on " << iter.key() << endl;
-            }
-
-            if (io.eventNo() != 0)
-            {
-                const_cast<regIOobject&>(io).eventNo() = curEvent;
-            }
-        }
+        FatalErrorInFunction
+            << "Event counter has overflowed!"
+            << abort(FatalError);
     }
 
     return curEvent;
@@ -275,31 +269,29 @@ bool Foam::objectRegistry::checkIn(regIOobject& io) const
             << endl;
     }
 
+    const objectRegistry& root = time_;
+
     // Delete cached object with the same name as io and if it is in the
     // cacheTemporaryObjects list
-    if (cacheTemporaryObjects_.size())
+    HashTable<Pair<bool>>::iterator cacheIter
+    (
+        root.cacheTemporaryObjects_.find(io.name())
+    );
+    if (cacheIter != root.cacheTemporaryObjects_.end())
     {
-        HashTable<Pair<bool>>::iterator cacheIter
-        (
-            cacheTemporaryObjects_.find(io.name())
-        );
+        iterator iter = const_cast<objectRegistry&>(*this).find(io.name());
 
-        if (cacheIter != cacheTemporaryObjects_.end())
+        if (iter != end() && iter() != &io && iter()->ownedByRegistry())
         {
-            iterator iter = const_cast<objectRegistry&>(*this).find(io.name());
-
-            if (iter != end() && iter() != &io && iter()->ownedByRegistry())
+            if (objectRegistry::debug)
             {
-                if (objectRegistry::debug)
-                {
-                    Pout<< "objectRegistry::checkIn(regIOobject&) : "
-                        << name() << " : deleting cached object " << iter.key()
-                        << endl;
-                }
-
-                cacheIter().first() = false;
-                deleteCachedObject(*iter());
+                Pout<< "objectRegistry::checkIn(regIOobject&) : "
+                    << name() << " : deleting cached object " << iter.key()
+                    << endl;
             }
+
+            cacheIter().first() = false;
+            deleteCachedObject(*iter());
         }
     }
 
@@ -381,7 +373,15 @@ void Foam::objectRegistry::clear()
 }
 
 
-bool Foam::objectRegistry::cacheTemporaryObject
+void Foam::objectRegistry::cacheTemporary(const word& name) const
+{
+    const objectRegistry& root = time_;
+
+    root.cacheTemporaryObjects_.insert(name, {false, false});
+}
+
+
+bool Foam::objectRegistry::temporaryObjectCached
 (
     const word& name
 ) const
@@ -397,19 +397,15 @@ void Foam::objectRegistry::resetCacheTemporaryObject
     const regIOobject& ob
 ) const
 {
-    if (cacheTemporaryObjects_.size())
+    // If object ob if is in the cacheTemporaryObjects list
+    // and has been cached reset the cached flag
+    HashTable<Pair<bool>>::iterator iter
+    (
+        cacheTemporaryObjects_.find(ob.name())
+    );
+    if (iter != cacheTemporaryObjects_.end())
     {
-        HashTable<Pair<bool>>::iterator iter
-        (
-            cacheTemporaryObjects_.find(ob.name())
-        );
-
-        // If object ob if is in the cacheTemporaryObjects list
-        // and has been cached reset the cached flag
-        if (iter != cacheTemporaryObjects_.end())
-        {
-            iter().first() = false;
-        }
+        iter().first() = false;
     }
 
     // Reset the object in the time registry also

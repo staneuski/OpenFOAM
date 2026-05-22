@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2014-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2014-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -36,8 +36,8 @@ Foam::autoPtr<Foam::blendingMethod> Foam::blendingMethod::New
 {
     const word blendingMethodType(dict.lookup("type"));
 
-    Info<< "Selecting " << modelTypeName << " blending method for "
-        << interface.name() << ": " << blendingMethodType << endl;
+    Info<< indentOrNl << "Selecting " << typeName << ' ' << blendingMethodType
+        << " for " << modelTypeName << " for " << interface.name() << endl;
 
     dictionaryConstructorTable::iterator cstrIter =
         dictionaryConstructorTablePtr_->find(blendingMethodType);
@@ -51,6 +51,8 @@ Foam::autoPtr<Foam::blendingMethod> Foam::blendingMethod::New
             << dictionaryConstructorTablePtr_->sortedToc()
             << exit(FatalIOError);
     }
+
+    printDictionary print(dict);
 
     return cstrIter()(dict, interface);
 }

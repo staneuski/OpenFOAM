@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2018-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2018-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -31,15 +31,21 @@ License
 Foam::freestreamVelocityFvPatchVectorField::freestreamVelocityFvPatchVectorField
 (
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const dictionary& dict
 )
 :
-    mixedFvPatchVectorField(p, iF, dict, false)
+    mixedFvPatchVectorField(p, iF, dict, false),
+    dimensionedFreestreamValue_
+    (
+        iF.name(),
+        "freestreamValue",
+        p,
+        iF.dimensions(),
+        freestreamValue(),
+        dict
+    )
 {
-    freestreamValue() =
-        vectorField("freestreamValue", dimVelocity, dict, p.size());
-
     if (dict.found("value"))
     {
         fvPatchVectorField::operator=
@@ -47,9 +53,16 @@ Foam::freestreamVelocityFvPatchVectorField::freestreamVelocityFvPatchVectorField
             vectorField("value", iF.dimensions(), dict, p.size())
         );
     }
-    else
+    else if (p.time().completeCase())
     {
         fvPatchVectorField::operator=(freestreamValue());
+    }
+    else
+    {
+        FatalIOErrorInFunction(dict)
+            << "Unable to evaluate function for incomplete case "
+                "and 'value' entry not provided."
+            << exit(FatalIOError);
     }
 
     refGrad() = Zero;
@@ -61,25 +74,57 @@ Foam::freestreamVelocityFvPatchVectorField::freestreamVelocityFvPatchVectorField
 (
     const freestreamVelocityFvPatchVectorField& ptf,
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
-    mixedFvPatchVectorField(ptf, p, iF, mapper)
+    mixedFvPatchVectorField(ptf, p, iF, mapper),
+    dimensionedFreestreamValue_
+    (
+        ptf.dimensionedFreestreamValue_,
+        p,
+        freestreamValue()
+    )
 {}
 
 
 Foam::freestreamVelocityFvPatchVectorField::freestreamVelocityFvPatchVectorField
 (
-    const freestreamVelocityFvPatchVectorField& wbppsf,
-    const DimensionedField<vector, volMesh>& iF
+    const freestreamVelocityFvPatchVectorField& ptf,
+    const DimensionedField<vector, fvMesh>& iF
 )
 :
-    mixedFvPatchVectorField(wbppsf, iF)
+    mixedFvPatchVectorField(ptf, iF),
+    dimensionedFreestreamValue_
+    (
+        ptf.dimensionedFreestreamValue_,
+        freestreamValue()
+    )
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+void Foam::freestreamVelocityFvPatchVectorField::map
+(
+    const fvPatchVectorField& ptf,
+    const fieldMapper& mapper
+)
+{
+    mixedFvPatchField<vector>::map(ptf, mapper);
+    dimensionedFreestreamValue_.map(!mapper.direct());
+}
+
+
+void Foam::freestreamVelocityFvPatchVectorField::reset
+(
+    const fvPatchVectorField& ptf
+)
+{
+    mixedFvPatchField<vector>::reset(ptf);
+    dimensionedFreestreamValue_.reset();
+}
+
 
 void Foam::freestreamVelocityFvPatchVectorField::updateCoeffs()
 {
@@ -87,6 +132,8 @@ void Foam::freestreamVelocityFvPatchVectorField::updateCoeffs()
     {
         return;
     }
+
+    dimensionedFreestreamValue_.update();
 
     const Field<vector> Up(0.5*(patchInternalField() + *this));
     const Field<scalar> magUp(mag(Up));
@@ -114,7 +161,7 @@ void Foam::freestreamVelocityFvPatchVectorField::updateCoeffs()
 void Foam::freestreamVelocityFvPatchVectorField::write(Ostream& os) const
 {
     fvPatchVectorField::write(os);
-    writeEntry(os, "freestreamValue", freestreamValue());
+    writeEntry(os, dimensionedFreestreamValue_);
     writeEntry(os, "value", *this);
 }
 

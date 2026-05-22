@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,14 +35,14 @@ Foam::rotatingTotalPressureFvPatchScalarField::
 rotatingTotalPressureFvPatchScalarField
 (
     const fvPatch& p,
-    const DimensionedField<scalar, volMesh>& iF,
+    const DimensionedField<scalar, fvMesh>& iF,
     const dictionary& dict
 )
 :
     totalPressureFvPatchScalarField(p, iF, dict),
     origin_(dict.lookup<vector>("origin")),
     axis_(dict.lookup<vector>("axis")),
-    omega_(db().time(), dict)
+    omega_(time(), dict)
 {}
 
 
@@ -51,7 +51,7 @@ rotatingTotalPressureFvPatchScalarField
 (
     const rotatingTotalPressureFvPatchScalarField& psf,
     const fvPatch& p,
-    const DimensionedField<scalar, volMesh>& iF,
+    const DimensionedField<scalar, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -66,7 +66,7 @@ Foam::rotatingTotalPressureFvPatchScalarField::
 rotatingTotalPressureFvPatchScalarField
 (
     const rotatingTotalPressureFvPatchScalarField& psf,
-    const DimensionedField<scalar, volMesh>& iF
+    const DimensionedField<scalar, fvMesh>& iF
 )
 :
     totalPressureFvPatchScalarField(psf, iF),
@@ -85,7 +85,7 @@ void Foam::rotatingTotalPressureFvPatchScalarField::updateCoeffs()
         return;
     }
 
-    const scalar omega = omega_.value(db().time().value());
+    const scalar omega = omega_.value(time().value());
 
     const fvsPatchField<scalar>& phip =
         patch().lookupPatchField<surfaceScalarField, scalar>(phiName_);

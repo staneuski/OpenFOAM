@@ -9,11 +9,12 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "system/air";
     object      blockMeshDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-convertToMeters 0.05;
+scale 0.05;
 
 vertices
 (

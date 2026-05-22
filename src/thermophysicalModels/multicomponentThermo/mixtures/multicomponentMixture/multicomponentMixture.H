@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -62,11 +62,17 @@ private:
 
     // Private Data
 
+        //- Table of specie names
+        speciesTable species_;
+
         //- List of specie thermo
         PtrList<ThermoType> specieThermos_;
 
         //- Table of species composition
         List<List<specieElement>> specieCompositions_;
+
+        //- List of specie active flags
+        boolList active_;
 
         //- Cached IO error locations for delayed error messages
         List<IOerrorLocation> specieDictLocations_;
@@ -86,15 +92,13 @@ public:
         ) = delete;
 
 
-    //- Destructor
-    virtual ~multicomponentMixture()
-    {}
-
-
     // Member Functions
 
-        //- Return the specie names
-        wordList specieNames() const;
+        //- Return the table of species
+        const speciesTable& species() const
+        {
+            return species_;
+        }
 
         //- Read dictionary
         void read(const dictionary&);
@@ -113,6 +117,12 @@ public:
 
         //- Return composition based on index
         const List<specieElement>& specieComposition(const label speciei) const;
+
+        //- Access the specie active flags
+        const boolList& speciesActive() const;
+
+        //- Access the specie active flags
+        boolList& speciesActive();
 };
 
 

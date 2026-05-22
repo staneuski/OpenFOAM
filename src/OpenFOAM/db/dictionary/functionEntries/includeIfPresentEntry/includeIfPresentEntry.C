@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,32 +24,23 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "includeIfPresentEntry.H"
-#include "dictionary.H"
-#include "IFstream.H"
-#include "addToMemberFunctionSelectionTable.H"
 #include "fileOperation.H"
+#include "addToRunTimeSelectionTable.H"
+#include "addToMemberFunctionSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
-
-const Foam::word Foam::functionEntries::includeIfPresentEntry::typeName
-(
-    Foam::functionEntries::includeIfPresentEntry::typeName_()
-);
-
-// Don't lookup the debug switch here as the debug switch dictionary
-// might include includeIfPresentEntry
-int Foam::functionEntries::includeIfPresentEntry::debug(0);
 
 namespace Foam
 {
 namespace functionEntries
 {
-    addToMemberFunctionSelectionTable
+    defineFunctionTypeNameAndDebug(includeIfPresentEntry, 0);
+
+    addToRunTimeSelectionTable
     (
         functionEntry,
         includeIfPresentEntry,
-        execute,
-        dictionaryIstream
+        dictionary
     );
 
     addToMemberFunctionSelectionTable
@@ -62,54 +53,43 @@ namespace functionEntries
 }
 }
 
+
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+Foam::functionEntries::includeIfPresentEntry::includeIfPresentEntry
+(
+    const label lineNumber,
+    const dictionary& parentDict,
+    Istream& is
+)
+:
+    includeEntry(typeName, lineNumber, parentDict, is)
+{}
+
+
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 bool Foam::functionEntries::includeIfPresentEntry::execute
 (
-    dictionary& parentDict,
+    dictionary& contextDict,
     Istream& is
 )
 {
-    const fileName fName(includeFileName(is, parentDict));
-
-    autoPtr<ISstream> ifsPtr(fileHandler().NewIFstream(fName));
-    ISstream& ifs = ifsPtr();
-
-    if (ifs)
-    {
-        if (Foam::functionEntries::includeEntry::log)
-        {
-            Info<< fName << endl;
-        }
-        parentDict.read(ifs);
-    }
-
-    return true;
+    return includeEntry::execute(contextDict, is);
 }
 
 
 bool Foam::functionEntries::includeIfPresentEntry::execute
 (
-    const dictionary& parentDict,
-    primitiveEntry& entry,
+    const dictionary& contextDict,
+    primitiveEntry& contextEntry,
     Istream& is
 )
 {
-    const fileName fName(includeFileName(is, parentDict));
-
-    autoPtr<ISstream> ifsPtr(fileHandler().NewIFstream(fName));
-    ISstream& ifs = ifsPtr();
-
-    if (ifs)
-    {
-        if (Foam::functionEntries::includeEntry::log)
-        {
-            Info<< fName << endl;
-        }
-        entry.read(parentDict, ifs);
-    }
-
-    return true;
+    return
+        includeIfPresentEntry(is.lineNumber(), contextDict, is)
+       .virtualExecute(contextDict, contextEntry, is);
 }
+
 
 // ************************************************************************* //

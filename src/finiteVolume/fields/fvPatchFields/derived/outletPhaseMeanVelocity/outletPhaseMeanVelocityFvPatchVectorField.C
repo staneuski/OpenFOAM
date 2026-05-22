@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2013-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,7 +35,7 @@ Foam::outletPhaseMeanVelocityFvPatchVectorField::
 outletPhaseMeanVelocityFvPatchVectorField
 (
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -45,7 +45,7 @@ outletPhaseMeanVelocityFvPatchVectorField
         Function1<scalar>::New
         (
             "UnMean",
-            db().time().userUnits(),
+            time().userUnits(),
             dimVelocity,
             dict
         )
@@ -75,7 +75,7 @@ outletPhaseMeanVelocityFvPatchVectorField
 (
     const outletPhaseMeanVelocityFvPatchVectorField& ptf,
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -89,7 +89,7 @@ Foam::outletPhaseMeanVelocityFvPatchVectorField::
 outletPhaseMeanVelocityFvPatchVectorField
 (
     const outletPhaseMeanVelocityFvPatchVectorField& ptf,
-    const DimensionedField<vector, volMesh>& iF
+    const DimensionedField<vector, fvMesh>& iF
 )
 :
     mixedFvPatchField<vector>(ptf, iF),
@@ -123,7 +123,7 @@ void Foam::outletPhaseMeanVelocityFvPatchVectorField::updateCoeffs()
 
     // Set the refValue and valueFraction to adjust the boundary field
     // such that the phase mean is UnMean_
-    const scalar UnMean = UnMean_->value(db().time().value());
+    const scalar UnMean = UnMean_->value(time().value());
     if (UnzgMean >= UnMean)
     {
         refValue() = Zero;
@@ -146,7 +146,7 @@ void Foam::outletPhaseMeanVelocityFvPatchVectorField::write
 {
     fvPatchField<vector>::write(os);
 
-    writeEntry(os, db().time().userUnits(), dimVelocity, UnMean_());
+    writeEntry(os, time().userUnits(), dimVelocity, UnMean_());
     writeEntry(os, "alpha", alphaName_);
     writeEntry(os, "value", *this);
 }

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -23,12 +23,9 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "autoPtr.H"
 #include "coupled.H"
-#include "fvcCurl.H"
-#include "fvcDdt.H"
-#include "LagrangianmDdt.H"
-#include "volFieldsFwd.H"
+#include "physicalProperties.H"
+#include "viscosity.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -43,53 +40,43 @@ namespace clouds
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-#define ACCESS_CARRIER_FIELDS(Type, nullArg)                                   \
-namespace Foam                                                                 \
-{                                                                              \
-    namespace clouds                                                           \
-    {                                                                          \
-        template<>                                                             \
-        PtrDictionary<CarrierField<Type>>& coupled::carrierFields() const      \
-        {                                                                      \
-            return CAT3(carrier, CAPITALIZE(Type), Fields_);                   \
-        }                                                                      \
-    }                                                                          \
-}
-FOR_ALL_FIELD_TYPES(ACCESS_CARRIER_FIELDS)
-#undef ACCESS_CARRIER_FIELDS
-
-
-void Foam::clouds::coupled::clearCarrierFields()
+Foam::tmp<Foam::volScalarField> Foam::clouds::coupled::getNucVf() const
 {
-    #define CLEAR_TYPE_CARRIER_FIELDS(Type, nullArg)                           \
-        forAllIter                                                             \
-        (                                                                      \
-            PtrDictionary<CarrierField<Type>>,                                 \
-            carrierFields<Type>(),                                             \
-            iter                                                               \
-        )                                                                      \
-        {                                                                      \
-            iter().clear(true);                                                \
-       }
-    FOR_ALL_FIELD_TYPES(CLEAR_TYPE_CARRIER_FIELDS);
-    #undef CLEAR_TYPE_CARRIER_FIELDS
+    const word nucName =
+        IOobject::groupName("nu", carriedCloud_.carrierPhaseName());
+
+    if (cloud_.mesh().poly().foundObject<volScalarField>(nucName))
+    {
+        return cloud_.mesh().poly().lookupObject<volScalarField>(nucName);
+    }
+
+    const word viscosityName =
+        IOobject::groupName
+        (
+            physicalProperties::typeName,
+            carriedCloud_.carrierPhaseName()
+        );
+
+    if (cloud_.mesh().poly().foundObject<viscosity>(viscosityName))
+    {
+        return cloud_.mesh().poly().lookupObject<viscosity>(viscosityName).nu();
+    }
+
+    return tmp<volScalarField>(nullptr);
 }
 
 
-void Foam::clouds::coupled::resetCarrierFields(const bool predict)
+Foam::tmp<Foam::LagrangianSubScalarField> Foam::clouds::coupled::calcNuc
+(
+    const LagrangianModelRef& model,
+    const LagrangianSubMesh& subMesh
+) const
 {
-    #define RESET_TYPE_CARRIER_FIELDS(Type, nullArg)                           \
-        forAllIter                                                             \
-        (                                                                      \
-            PtrDictionary<CarrierField<Type>>,                                 \
-            carrierFields<Type>(),                                             \
-            iter                                                               \
-        )                                                                      \
-        {                                                                      \
-            iter().reset(predict);                                             \
-       }
-    FOR_ALL_FIELD_TYPES(RESET_TYPE_CARRIER_FIELDS);
-    #undef RESET_TYPE_CARRIER_FIELDS
+    FatalErrorInFunction
+        << "Could not determine the carrier viscosity"
+        << exit(FatalError);
+
+    return tmp<LagrangianSubScalarField>(nullptr);
 }
 
 
@@ -99,7 +86,7 @@ namespace Foam                                                                 \
     namespace clouds                                                           \
     {                                                                          \
         template<>                                                             \
-        PtrDictionary<CarrierEqn<Type>>& coupled::carrierEqns() const          \
+        HashPtrTable<CarrierEqn<Type>>& coupled::carrierEqns() const           \
         {                                                                      \
             return CAT3(carrier, CAPITALIZE(Type), Eqns_);                     \
         }                                                                      \
@@ -109,129 +96,64 @@ FOR_ALL_FIELD_TYPES(ACCESS_CARRIER_EQNS)
 #undef ACCESS_CARRIER_EQNS
 
 
-Foam::autoPtr<Foam::volVectorField> Foam::clouds::coupled::readDUdtc
-(
-    const cloud& c
-) const
-{
-    const volVectorField& U =
-        c.mesh().mesh().lookupObject<volVectorField>("U");
-
-    typeIOobject<volVectorField> io
-    (
-        "ddt(" + U.name() + ")",
-        U.mesh().time().name(),
-        U.mesh(),
-        IOobject::READ_IF_PRESENT,
-        IOobject::AUTO_WRITE
-    );
-
-    return
-        autoPtr<volVectorField>
-        (
-            io.headerOk()
-          ? new volVectorField(io, U.mesh())
-          : nullptr
-        );
-}
-
-
-const Foam::volVectorField& Foam::clouds::coupled::dUdtc() const
-{
-    if (Uc.psi().hasStoredOldTimes())
-    {
-        dUdtcPtr_.reset(fvc::ddt(Uc.psi()).ptr());
-    }
-    else if (!dUdtcPtr_.valid())
-    {
-        dUdtcPtr_.set
-        (
-            new volVectorField
-            (
-                IOobject
-                (
-                    "ddt(" + Uc.psi().name() + ")",
-                    Uc.psi().mesh().time().name(),
-                    Uc.psi().mesh(),
-                    IOobject::NO_READ,
-                    IOobject::AUTO_WRITE
-                ),
-                Uc.psi().mesh(),
-                dimensionedVector(dimVelocity/dimTime, Zero)
-            )
-        );
-    }
-
-    return dUdtcPtr_();
-}
-
-
 // * * * * * * * * * * * *  Protected Member Functions * * * * * * * * * * * //
+
+void Foam::clouds::coupled::updateCarrier()
+{
+    if (tnucVf_.isTmp())
+    {
+        tnucVf_.ref() = getNucVf();
+    }
+}
+
 
 void Foam::clouds::coupled::clearCarrierEqns()
 {
     #define CLEAR_TYPE_CARRIER_EQNS(Type, nullArg)                             \
         forAllIter                                                             \
         (                                                                      \
-            PtrDictionary<CarrierEqn<Type>>,                                   \
+            HashPtrTable<CarrierEqn<Type>>,                                    \
             carrierEqns<Type>(),                                               \
             iter                                                               \
         )                                                                      \
         {                                                                      \
-            iter().clear();                                                    \
+            iter()->clear();                                                   \
         }
     FOR_ALL_FIELD_TYPES(CLEAR_TYPE_CARRIER_EQNS);
     #undef CLEAR_TYPE_CARRIER_EQNS
 }
 
 
-void Foam::clouds::coupled::initialise(const bool predict)
+Foam::tmp<Foam::LagrangianEqn<Foam::scalar>> Foam::clouds::coupled::psicEqn
+(
+    const LagrangianSubScalarField& deltaT,
+    const LagrangianSubScalarSubField& vOrM,
+    const CloudDerivedField<scalar>& oneOrRhoc
+) const
 {
-    resetCarrierFields(predict);
-}
+    const LagrangianModels& models = cloud_.LagrangianModels();
+    const LagrangianSubMesh& subMesh = deltaT.mesh();
 
-
-void Foam::clouds::coupled::partition()
-{
-    clearCarrierFields();
+    return
+        Lagrangianm::noDdt(deltaT, vOrM.dimensions(), oneOrRhoc(subMesh))
+     ==
+        models.sourceProxy(deltaT, vOrM, oneOrRhoc(subMesh));
 }
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::clouds::coupled::coupled(const cloud& c)
+Foam::clouds::coupled::coupled(const cloud& c, const carried& carriedCloud)
 :
-    dUdtcPtr_(readDUdtc(c)),
-    Uc
+    cloud_(c),
+    carriedCloud_(carriedCloud),
+    tnucVf_(getNucVf()),
+    nuc
     (
-        carrierField<vector>
-        (
-            c.mesh().mesh().lookupObject<volVectorField>("U")
-        )
-    ),
-    curlUc
-    (
-        carrierField<vector>
-        (
-            "curlUc",
-            [&]()
-            {
-                return fvc::curl(Uc.psi());
-            }
-        )
-    ),
-    DUDtc
-    (
-        carrierField<vector>
-        (
-            "DUDtc",
-            [&]()
-            {
-                return dUdtc() + (Uc.psi() & fvc::grad(Uc.psi()));
-            }
-        )
-    ),
-    nuc(c.derivedField<scalar>(*this, &coupled::calcNuc))
+        tnucVf_.valid()
+      ? carriedCloud_.carrierField<scalar>(tnucVf_())
+      : c.derivedField<scalar>(*this, &coupled::calcNuc)
+    )
 {}
 
 
@@ -239,19 +161,6 @@ Foam::clouds::coupled::coupled(const cloud& c)
 
 Foam::clouds::coupled::~coupled()
 {}
-
-
-// * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
-
-Foam::word Foam::clouds::coupled::carrierName(const word& name)
-{
-    return
-        IOobject::groupName
-        (
-            IOobject::member(name) + 'c',
-            IOobject::group(name)
-        );
-}
 
 
 // ************************************************************************* //

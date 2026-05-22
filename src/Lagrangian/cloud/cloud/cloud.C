@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -33,7 +33,6 @@ License
 #include "dimensionedTypes.H"
 #include "calculatedLagrangianPatchFields.H"
 #include "noneStateLagrangianLabelFieldSource.H"
-#include "pimpleNoLoopControl.H"
 #include "Time.H"
 #include "fvMesh.H"
 
@@ -42,7 +41,7 @@ License
 namespace Foam
 {
     defineTypeNameAndDebug(cloud, 0);
-    defineRunTimeSelectionTable(cloud, polyMesh);
+    defineRunTimeSelectionTable(cloud, LagrangianMesh);
 }
 
 
@@ -58,15 +57,15 @@ Foam::LagrangianMesh& Foam::cloud::mesh
 {
     if (!pMesh.foundObject<LagrangianMesh>(name))
     {
-        wordList wantedPatchTypes(pMesh.boundaryMesh().size());
+        wordList wantedPatchTypes(pMesh.boundary().size());
 
-        forAll(pMesh.boundaryMesh(), patchi)
+        forAll(pMesh.boundary(), patchi)
         {
-            const polyPatch& patch = pMesh.boundaryMesh()[patchi];
+            const polyPatch& pPatch = pMesh.boundary()[patchi];
 
             wantedPatchTypes[patchi] =
-                polyPatch::constraintType(patch.type())
-              ? patch.type()
+                pPatch.constraint()
+              ? pPatch.type()
               : cloudVelocityLagrangianPatch::typeName;
         }
 
@@ -84,31 +83,6 @@ Foam::LagrangianMesh& Foam::cloud::mesh
     }
 
     return pMesh.lookupObjectRef<LagrangianMesh>(name);
-}
-
-
-#define ACCESS_STATE_FIELDS(Type, nullArg)                                     \
-namespace Foam                                                                 \
-{                                                                              \
-    template<>                                                                 \
-    PtrList<Foam::CloudStateField<Type>>& cloud::stateFields() const           \
-    {                                                                          \
-        return CAT3(state, CAPITALIZE(Type), Fields_);                         \
-    }                                                                          \
-}
-FOR_ALL_FIELD_TYPES(ACCESS_STATE_FIELDS)
-#undef ACCESS_STATE_FIELDS
-
-
-void Foam::cloud::clearStateFields()
-{
-    #define CLEAR_TYPE_STATE_FIELDS(Type, nullArg)                             \
-        forAll(stateFields<Type>(), i)                                         \
-        {                                                                      \
-            stateFields<Type>()[i].clear();                                    \
-        }
-    FOR_ALL_FIELD_TYPES(CLEAR_TYPE_STATE_FIELDS);
-    #undef CLEAR_TYPE_STATE_FIELDS
 }
 
 
@@ -473,28 +447,11 @@ bool Foam::cloud::writeData(Ostream&) const
 
 // * * * * * * * * * * * *  Protected Member Functions * * * * * * * * * * * //
 
-void Foam::cloud::initialise(const bool predict)
-{
-    clearStateFields();
-    clearDerivedFields(true);
-    clearAverageFields();
-}
-
-
 void Foam::cloud::partition()
 {
-    clearStateFields();
     clearDerivedFields(true);
     clearAverageFields();
 }
-
-
-void Foam::cloud::calculate
-(
-    const LagrangianSubScalarField& deltaT,
-    const bool final
-)
-{}
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -508,50 +465,56 @@ namespace Foam
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::cloud::cloud
-(
-    const polyMesh& pMesh,
-    const word& name,
-    const contextType context,
-    const IOobject::readOption readOption,
-    const IOobject::writeOption writeOption
-)
+Foam::cloud::cloud(LagrangianMesh& mesh, const contextType context)
 :
-    regIOobject
+    regIOobject(IOobject(typeName, mesh.time().name(), mesh)),
+    mesh_(mesh),
+    LagrangianModelsPtr_(nullptr),
+    statePtr_(readStates()),
+    cellLengthScaleVf_(mag(cbrt(mesh_.poly().cellVolumes()))),
+    context(context),
+    tracking(cloudTrackingNames[mesh.schemes().lookup<word>("tracking")]),
+    U
     (
         IOobject
         (
-            typeName,
-            pMesh.time().name(),
-            mesh(pMesh, name, readOption, writeOption)
-        )
-    ),
-    mesh_(mesh(pMesh, name, readOption, writeOption)),
+            "U",
+            time().name(),
+            mesh_,
+            IOobject::MUST_READ,
+            IOobject::AUTO_WRITE
+        ),
+        mesh_
+    )
+{}
+
+
+Foam::cloud::cloud
+(
+    LagrangianMesh& mesh,
+    const contextType context,
+    const tmp<LagrangianVectorDynamicField>& tU
+)
+:
+    regIOobject(IOobject(typeName, mesh.time().name(), mesh)),
+    mesh_(mesh),
     LagrangianModelsPtr_(nullptr),
     statePtr_(readStates()),
-    cellLengthScaleVf_(mag(cbrt(mesh_.mesh().cellVolumes()))),
+    cellLengthScaleVf_(mag(cbrt(mesh_.poly().cellVolumes()))),
     context(context),
-    tracking
-    (
-        cloudTrackingNames
-        [
-            mesh().schemes().schemesDict().lookup<word>("tracking")
-        ]
+    tracking(cloudTrackingNames[mesh.schemes().lookup<word>("tracking")]
     ),
     U
     (
-        stateField<vector>
+        IOobject
         (
-            IOobject
-            (
-                "U",
-                time().name(),
-                mesh_,
-                IOobject::MUST_READ,
-                IOobject::AUTO_WRITE
-            ),
-            mesh_
-        )
+            "U",
+            time().name(),
+            mesh_,
+            IOobject::READ_IF_PRESENT,
+            IOobject::AUTO_WRITE
+        ),
+        tU
     )
 {}
 
@@ -562,42 +525,54 @@ Foam::autoPtr<Foam::cloud> Foam::cloud::New
 (
     const polyMesh& pMesh,
     const word& name,
-    const word& type
+    const contextType context,
+    const dictionary& dict,
+    const word& type,
+    const IOobject::readOption readOption,
+    const IOobject::writeOption writeOption
 )
 {
-    Info<< "Selecting " << typeName
+    Info<< indentOrNl << "Selecting " << typeName
         << " with name " << name
         << " of type " << type << endl;
 
-    if (!polyMeshConstructorTablePtr_)
+    if (!LagrangianMeshConstructorTablePtr_)
     {
         FatalErrorInFunction
             << typeName << "s table is empty"
             << exit(FatalError);
     }
 
-    polyMeshConstructorTable::iterator cstrIter;
+    LagrangianMeshConstructorTable::iterator cstrIter;
 
-    cstrIter = polyMeshConstructorTablePtr_->find(type);
+    cstrIter = LagrangianMeshConstructorTablePtr_->find(type);
 
-    if (cstrIter == polyMeshConstructorTablePtr_->end())
+    if (cstrIter == LagrangianMeshConstructorTablePtr_->end())
     {
         libs.open("lib" + type + typeName.capitalise() + ".so");
     }
 
-    cstrIter = polyMeshConstructorTablePtr_->find(type);
+    cstrIter = LagrangianMeshConstructorTablePtr_->find(type);
 
-    if (cstrIter == polyMeshConstructorTablePtr_->end())
+    if (cstrIter == LagrangianMeshConstructorTablePtr_->end())
     {
         FatalErrorInFunction
             << "Unknown " << typeName << " type "
             << type << nl << nl
             << "Valid " << typeName << "s are :" << endl
-            << polyMeshConstructorTablePtr_->sortedToc()
+            << LagrangianMeshConstructorTablePtr_->sortedToc()
             << exit(FatalError);
     }
 
-    autoPtr<cloud> cloudPtr(cstrIter()(pMesh, name, contextType::unknown));
+    autoPtr<cloud> cloudPtr
+    (
+        cstrIter()
+        (
+            mesh(pMesh, name, readOption, writeOption),
+            context,
+            dict
+        )
+    );
 
     // Ensure LagrangianModels are constructed before time is incremented
     cloudPtr->LagrangianModels();
@@ -631,52 +606,24 @@ Foam::LagrangianModels& Foam::cloud::LagrangianModels() const
 }
 
 
-void Foam::cloud::solve()
+void Foam::cloud::solve(const bool initial, const bool final)
 {
     // Create the functions list
     cloudFunctionObjectUList functions(*this);
 
-    // Handle outer correctors
-    bool predict = false;
-    if (context == contextType::fvModel)
+    // Initial reset of cached objects
+    clearDerivedFields(true);
+    if (!initial || !final)
     {
-        if
-        (
-            mesh_.mesh().foundObject<pimpleNoLoopControl>
-            (
-                solutionControl::typeName
-            )
-        )
-        {
-            const pimpleNoLoopControl& pimple =
-                mesh_.mesh().lookupObject<pimpleNoLoopControl>
-                (
-                    solutionControl::typeName
-                );
-
-            if (pimple.nCorr() > 1)
-            {
-                if (mesh_.solution().lookup<bool>("outerCorrectors"))
-                {
-                    mesh_.reset(pimple.firstIter(), pimple.finalIter());
-                    resetAverageFields();
-                }
-                else if (!pimple.firstIter())
-                {
-                    return;
-                }
-            }
-
-            predict = pimple.firstIter();
-        }
-        else
-        {
-            predict = true;
-        }
+        resetAverageFields();
+    }
+    else
+    {
+        clearAverageFields();
     }
 
-    // Initial reset of cached objects
-    initialise(predict);
+    // Reset the fields
+    mesh_.reset(initial, final);
 
     Info<< "Solving cloud " << mesh_.name() << ':' << endl << incrIndent;
 
@@ -692,7 +639,7 @@ void Foam::cloud::solve()
 
     // Initialise the tracked fraction to zero, representing all particles
     // being at the start of the time-step
-    LagrangianScalarInternalDynamicField fraction
+    LagrangianInternalScalarDynamicField fraction
     (
         IOobject
         (
@@ -706,10 +653,10 @@ void Foam::cloud::solve()
 
     // Let the models do any instantaneous modifications, removals and
     // injections/creations of existing particles
-    LagrangianSubMesh preModifiedMesh =
+    const LagrangianSubMesh preModifiedMesh =
         LagrangianModels().preModify(mesh_);
     removeFromAverageFields(preModifiedMesh);
-    LagrangianSubMesh modifiedMesh =
+    const LagrangianSubMesh modifiedMesh =
         LagrangianModels().modify(mesh_, preModifiedMesh);
     addToAverageFields(modifiedMesh, true);
 
@@ -728,8 +675,10 @@ void Foam::cloud::solve()
         addToAverageFields(modifiedMesh, false);
 
         LagrangianModels().calculate(zeroDeltaT, true);
+        LagrangianModels().preSource(zeroDeltaT, true);
         calculate(zeroDeltaT, true);
         functions.calculate(zeroDeltaT, true);
+        LagrangianModels().postSource(zeroDeltaT, true);
 
         correctAverageFields(modifiedMesh, true);
     }
@@ -767,7 +716,7 @@ void Foam::cloud::solve()
                 if                                                             \
                 (                                                              \
                     patch.mesh().size()                                        \
-                 && !polyPatch::constraintType(patch.type())                   \
+                && !patch.poly().constraint()                                  \
                 )                                                              \
                 {                                                              \
                     iter()->boundaryFieldRef()[patchi].evaluate                \
@@ -795,7 +744,7 @@ void Foam::cloud::solve()
     {
         // Internal tracking and calculation
         {
-            LagrangianSubMesh internalMesh
+            const LagrangianSubMesh internalMesh
             (
                 mesh_.sub(LagrangianGroup::inInternalMesh)
             );
@@ -827,14 +776,14 @@ void Foam::cloud::solve()
                 const bool final = i == nCorrectors;
 
                 LagrangianModels().calculate(deltaT, final);
+                LagrangianModels().preSource(deltaT, final);
                 calculate(deltaT, final);
                 functions.calculate(deltaT, final);
+                LagrangianModels().postSource(deltaT, final);
 
                 clearDerivedFields(final);
                 correctAverageFields(internalMesh, final);
             }
-
-            clearStateFields();
         }
 
         // Boundary tracking and calculation (if necessary)
@@ -849,7 +798,7 @@ void Foam::cloud::solve()
 
                 if (subMeshGlobalSizes[onPatchZeroi + patchi] <= 0) continue;
 
-                LagrangianSubMesh patchMesh
+                const LagrangianSubMesh patchMesh
                 (
                     mesh_.boundary()[patchi].mesh()
                 );
@@ -883,14 +832,14 @@ void Foam::cloud::solve()
                     const bool final = i == nCorrectors;
 
                     LagrangianModels().calculate(deltaT, final);
+                    LagrangianModels().preSource(deltaT, final);
                     calculate(deltaT, final);
                     functions.calculate(deltaT, final);
+                    LagrangianModels().postSource(deltaT, final);
 
                     clearDerivedFields(final);
                     correctAverageFields(patchMesh, final);
                 }
-
-                clearStateFields();
             }
         }
 
@@ -924,7 +873,7 @@ void Foam::cloud::storePosition()
 
 void Foam::cloud::movePoints(const polyMesh&)
 {
-    cellLengthScaleVf_ = mag(cbrt(mesh_.mesh().cellVolumes()));
+    cellLengthScaleVf_ = mag(cbrt(mesh_.poly().cellVolumes()));
 }
 
 
@@ -932,7 +881,7 @@ void Foam::cloud::topoChange(const polyTopoChangeMap& map)
 {
     mesh_.topoChange(map);
 
-    cellLengthScaleVf_ = mag(cbrt(mesh_.mesh().cellVolumes()));
+    cellLengthScaleVf_ = mag(cbrt(mesh_.poly().cellVolumes()));
 }
 
 
@@ -940,7 +889,7 @@ void Foam::cloud::mapMesh(const polyMeshMap& map)
 {
     mesh_.mapMesh(map);
 
-    cellLengthScaleVf_ = mag(cbrt(mesh_.mesh().cellVolumes()));
+    cellLengthScaleVf_ = mag(cbrt(mesh_.poly().cellVolumes()));
 }
 
 
@@ -948,7 +897,7 @@ void Foam::cloud::distribute(const polyDistributionMap& map)
 {
     mesh_.distribute(map);
 
-    cellLengthScaleVf_ = mag(cbrt(mesh_.mesh().cellVolumes()));
+    cellLengthScaleVf_ = mag(cbrt(mesh_.poly().cellVolumes()));
 }
 
 

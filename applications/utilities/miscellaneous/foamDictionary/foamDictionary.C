@@ -94,6 +94,9 @@ Usage
       - \par -includes
         List the \c \#include and \c \#includeIfPresent files to standard output
 
+      - \par -create
+        Create a new dictionary if the input dictionary does not exist.
+
       - \par -output
         Path name of the output dictionary, defaults to the input dictionary
 
@@ -179,18 +182,31 @@ using namespace Foam;
 
 //- Read dictionary from file and return
 //  Sets stream to binary mode if specified in the optional header
-IOstream::streamFormat readDict(dictionary& dict, const fileName& dictFileName)
+IOstream::streamFormat readDict
+(
+    dictionary& dict,
+    const fileName& dictFileName,
+    const bool create = false
+)
 {
     IOstream::streamFormat dictFormat = IOstream::ASCII;
 
     // Read the first entry and if it is FoamFile set the file format
     {
         IFstream dictFile(dictFileName);
-        if (!dictFile().good())
+
+        if (!dictFile.good())
         {
-            FatalErrorInFunction
-                << "Cannot open file " << dictFileName
-                << exit(FatalError, 1);
+            if (create)
+            {
+                return dictFormat;
+            }
+            else
+            {
+                FatalErrorInFunction
+                    << "Cannot open file " << dictFileName
+                    << exit(FatalError, 1);
+            }
         }
 
         // Check if the first token in the file is "FoamFile"
@@ -384,6 +400,11 @@ int main(int argc, char *argv[])
         "label",
         "Write with the specified precision"
     );
+    argList::addBoolOption
+    (
+        "create",
+        "Create a new dictionary if the input dictionary does not exist."
+    );
     argList::addOption
     (
         "output",
@@ -488,7 +509,8 @@ int main(int argc, char *argv[])
                 *dictPtr,
                 dictPath.isAbsolute()
               ? dictPath
-              : args.path()/dictPath
+              : args.path()/dictPath,
+                args.optionFound("create")
             );
     }
 
@@ -748,7 +770,7 @@ int main(int argc, char *argv[])
         dict.dictionary::write(Info, false);
     }
 
-    if (changed)
+    if (changed || args.optionFound("output"))
     {
         if (localDictPtr)
         {
@@ -769,15 +791,19 @@ int main(int argc, char *argv[])
               : args.path()/outputDictPath,
                 dictFormat
             );
-            IOobject::writeBanner(os);
+
             if (dictPtr->found(IOobject::foamFile))
             {
-                os << IOobject::foamFile;
-                dictPtr->subDict(IOobject::foamFile).write(os);
+                IOobject::writeHeader(os, dictPtr->subDict(IOobject::foamFile));
                 dictPtr->remove(IOobject::foamFile);
-                IOobject::writeDivider(os) << nl;
             }
+            else
+            {
+                IOobject::writeBanner(os) << nl;
+            }
+
             dictPtr->write(os, false);
+
             IOobject::writeEndDivider(os);
         }
     }

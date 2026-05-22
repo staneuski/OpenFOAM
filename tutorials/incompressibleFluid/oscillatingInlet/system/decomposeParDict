@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "system";
     object      decomposeParDict;
 }
 
@@ -18,7 +19,7 @@ numberOfSubdomains 4;
 
 method          scotch;
 
-hierarchicalCoeffs
+hierarchical
 {
     n               (1 4 1);
     order           xyz;

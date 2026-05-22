@@ -9,17 +9,16 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "constant";
     object      dynamicMeshDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 mover
 {
-    type            motionSolver;
+    type            rigidBodyMotion;
 
     libs            ("librigidBodyMeshMotion.so");
-
-    motionSolver    rigidBodyMotion;
 
     report          on;
 

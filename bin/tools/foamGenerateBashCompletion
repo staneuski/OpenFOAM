@@ -3,7 +3,7 @@
 # =========                 |
 # \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
 #  \\    /   O peration     | Website:  https://openfoam.org
-#   \\  /    A nd           | Copyright (C) 2020-2024 OpenFOAM Foundation
+#   \\  /    A nd           | Copyright (C) 2020-2026 OpenFOAM Foundation
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 # License
@@ -189,17 +189,11 @@ _unitArgs ()
 {
     _opts="-help"
 
-    # If '-dimension' is not selected, it is always an option
-    echo "\$@" | grep -q -- "-d" || _opts="\$_opts -dimension"
-
-    # If '-all' or '-list' is selected, the only other possible option is '-dimension'
-    echo "\$@" | grep -q -- "-[al]" && echo "\$_opts" | xargs -n 1 | sort && return 0
-
-    # If '-all' or '-list' are not selected, they are options
-    _opts="\$_opts -all -list"
+    # If '-all' is not selected, it is an option
+    _opts="\$_opts -all"
 
     echo "\$@" | grep -q -- "-d" && _args="-d"
-    _opts="\$_opts \$(foamUnits -list \$_args | xargs -n 1 | grep '\\[' | tr -d '\\[\\]')"
+    _opts="\$_opts \$(foamUnits \$_args | xargs -n 1 | grep '\\[' | tr -d '\\[\\]')"
     echo "\$_opts" | xargs -n 1 | sort
 }
 
@@ -242,13 +236,15 @@ $(declareLocals)
 
     opts="\\
         -applications \\
+        -coded \\
         -dir \\
         -edit \\
         -files \\
         -help \\
         -isearch \\
-        -numbers \\
+        -lnInclude \\
         -modules \\
+        -numbers \\
         -options \\
         -print \\
         -search \\
@@ -275,6 +271,8 @@ $(declareLocals)
     extra=""
 
 $(caseStart)
+        -coded)
+            opts="" ; extra="-d -f" ;;
         -dir)
             opts="" ; extra="-d" ;;
        *) ;;
@@ -414,7 +412,7 @@ _foamUnits_ ()
 {
 $(declareLocals)
 
-    opts="\$(_unitArgs "\$used")"
+    opts="-all -value \$(_unitArgs "\$used")"
     extra=""
 
 $(caseStart)

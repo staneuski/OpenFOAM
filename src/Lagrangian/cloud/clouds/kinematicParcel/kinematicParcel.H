@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -47,7 +47,7 @@ SourceFiles
 #define kinematicParcel_H
 
 #include "grouped.H"
-#include "coupledToIncompressibleFluid.H"
+#include "coupledToConstantDensityFluid.H"
 #include "sphericalCoupled.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -64,20 +64,15 @@ namespace clouds
 class kinematicParcel
 :
     public cloud,
+    public carried,
     public grouped,
     public spherical,
-    public coupledToIncompressibleFluid,
+    public coupledToConstantDensityFluid,
     public sphericalCoupled
 {
 protected:
 
     // Protected Member Functions
-
-        //- Initialisation hook
-        virtual void initialise(const bool predict);
-
-        //- Partition hook
-        virtual void partition();
 
         //- Return the acceleration with which to do second-order tracking
         virtual tmp<LagrangianSubVectorField> dUdt
@@ -95,6 +90,9 @@ protected:
             const bool final
         );
 
+        //- Partition hook
+        virtual void partition();
+
 
 public:
 
@@ -106,14 +104,12 @@ public:
 
     // Constructors
 
-        //- Construct from a mesh and a name
+        //- Construct from a mesh and context
         kinematicParcel
         (
-            const polyMesh& mesh,
-            const word& name,
+            LagrangianMesh& mesh,
             const contextType context,
-            const IOobject::readOption readOption=IOobject::READ_IF_PRESENT,
-            const IOobject::writeOption writeOption=IOobject::AUTO_WRITE
+            const dictionary& dict
         );
 
 
@@ -124,7 +120,7 @@ public:
     // Member Functions
 
         //- Solve the cloud's evolution over the current time-step
-        virtual void solve();
+        virtual void solve(const bool initial, const bool final);
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

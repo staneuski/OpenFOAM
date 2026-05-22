@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -38,8 +38,8 @@ Foam::autoPtr<Foam::phaseModel> Foam::phaseModel::New
 {
     const word phaseModelType(fluid.subDict(phaseName).lookup("type"));
 
-    Info<< "Selecting phaseModel for "
-        << phaseName << ": " << phaseModelType << endl;
+    Info<< indentOrNl << "Selecting " << phaseModelType
+        << " for phase " << phaseName << endl;
 
     phaseSystemConstructorTable::iterator cstrIter =
         phaseSystemConstructorTablePtr_->find(phaseModelType);
@@ -53,6 +53,8 @@ Foam::autoPtr<Foam::phaseModel> Foam::phaseModel::New
             << phaseSystemConstructorTablePtr_->sortedToc()
             << exit(FatalIOError);
     }
+
+    printDictionary print(fluid.subDict(phaseName));
 
     return cstrIter()(fluid, phaseName, referencePhase, index);
 }

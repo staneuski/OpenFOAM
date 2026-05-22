@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -179,9 +179,9 @@ Foam::labelList Foam::meshRefinement::getChangedFaces
 
         boolList refinedBoundaryFace(mesh.nFaces()-nInternalFaces, false);
 
-        forAll(mesh.boundaryMesh(), patchi)
+        forAll(mesh.boundary(), patchi)
         {
-            const polyPatch& pp = mesh.boundaryMesh()[patchi];
+            const polyPatch& pp = mesh.boundary()[patchi];
 
             label facei = pp.start();
 
@@ -535,6 +535,7 @@ void Foam::meshRefinement::markFeatureCellLevel
                 trackedParticle* tp(new trackedParticle(startTp));
                 tp->start() = tp->position(mesh_);
                 tp->end() = featureMesh.points()[otherPointi];
+                tp->fraction() = 1;
                 tp->j() = otherPointi;
                 tp->k() = edgei;
 
@@ -596,6 +597,7 @@ void Foam::meshRefinement::markFeatureCellLevel
 
                     tp.start() = tp.position(mesh_);
                     tp.end() = featureMesh.points()[otherPointi];
+                    tp.fraction() = 1;
                     tp.j() = otherPointi;
                     tp.k() = edgei;
                     keepParticle = true;

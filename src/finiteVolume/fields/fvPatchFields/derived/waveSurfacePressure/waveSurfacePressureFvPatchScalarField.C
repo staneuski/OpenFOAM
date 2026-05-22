@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -54,7 +54,7 @@ Foam::waveSurfacePressureFvPatchScalarField::
 waveSurfacePressureFvPatchScalarField
 (
     const fvPatch& p,
-    const DimensionedField<scalar, volMesh>& iF,
+    const DimensionedField<scalar, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -65,7 +65,7 @@ waveSurfacePressureFvPatchScalarField
 {
     if (!db().foundObject<volVectorField>(zetaName_))
     {
-        Info << "Creating field " << zetaName_ << endl;
+        Info<< indent << "Constructing field " << zetaName_ << endl;
 
         tmp<volVectorField> tzeta
         (
@@ -74,12 +74,12 @@ waveSurfacePressureFvPatchScalarField
                 IOobject
                 (
                     "zeta",
-                    db().time().name(),
+                    time().name(),
                     db(),
                     IOobject::READ_IF_PRESENT,
                     IOobject::AUTO_WRITE
                 ),
-                patch().boundaryMesh().mesh(),
+                patch().mesh(),
                 dimensionedVector(dimLength, Zero)
             )
         );
@@ -94,7 +94,7 @@ waveSurfacePressureFvPatchScalarField
 (
     const waveSurfacePressureFvPatchScalarField& ptf,
     const fvPatch& p,
-    const DimensionedField<scalar, volMesh>& iF,
+    const DimensionedField<scalar, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -109,7 +109,7 @@ Foam::waveSurfacePressureFvPatchScalarField::
 waveSurfacePressureFvPatchScalarField
 (
     const waveSurfacePressureFvPatchScalarField& wspsf,
-    const DimensionedField<scalar, volMesh>& iF
+    const DimensionedField<scalar, fvMesh>& iF
 )
 :
     fixedValueFvPatchScalarField(wspsf, iF),
@@ -133,7 +133,7 @@ void Foam::waveSurfacePressureFvPatchScalarField::updateCoeffs()
 
     const label patchi = patch().index();
 
-    const scalar dt = db().time().deltaTValue();
+    const scalar dt = time().deltaTValue();
 
     vectorField& zetap = zeta.boundaryFieldRef()[patchi];
 
@@ -172,7 +172,7 @@ void Foam::waveSurfacePressureFvPatchScalarField::updateCoeffs()
         }
         case tsBackward:
         {
-            scalar dt0 = db().time().deltaT0Value();
+            scalar dt0 = time().deltaT0Value();
 
             scalar c = 1.0 + dt/(dt + dt0);
             scalar c00 = dt*dt/(dt0*(dt + dt0));

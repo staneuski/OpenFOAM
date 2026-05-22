@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::manualInjection
+    Foam::Lagrangian::manualInjection
 
 Description
     Manual injection model. This injects particles instantaneously at a list of
@@ -30,13 +30,24 @@ Description
 
 Usage
     \table
-        Property    | Description                     | Required? | Default
-        file        | Name of the file containing the positions | yes |
-        units       | Units of the positions in the file | no     | [m]
-        time        | The time at which to inject     | no        | 0
+        Property  | Description                  | Required? | Default
+        positions | Positions at which to inject | if file not specified |
+        file      | File containing the positions | if positions not specified |
+        units     | Units of the positions in the file | if file specified | [m]
+        time      | The time at which to inject  | no        | 0
     \endtable
 
     Example specification:
+    \verbatim
+    <LagrangianModelName>
+    {
+        type        manualInjection;
+        positions   ((0 0 0) (1 1 1) (2 2 2)) [m];
+        time        1.23 [s];
+    }
+    \endverbatim
+
+    Example specification with positions in a file:
     \verbatim
     <LagrangianModelName>
     {
@@ -75,11 +86,14 @@ private:
 
     // Private Data
 
-        //- File containing positions
+        //- Positions at which to inject
+        pointField positions_;
+
+        //- File containing the positions
         fileName fileName_;
 
-        //- Optional unit conversion for the positions
-        unitConversion units_;
+        //- Units of the positions in the file
+        unitSet units_;
 
         //- The time at which to inject
         scalar time_;

@@ -9,7 +9,8 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
-    object      blockMeshDict;
+    location    "system";
+    object      blockMeshDict-box;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -25,8 +26,6 @@ backgroundMesh
     yCells  20;
     zCells  20;
 }
-
-convertToMeters 1;
 
 vertices
 (
@@ -52,10 +51,6 @@ blocks
     simpleGrading (1 1 1)
 );
 
-edges
-(
-);
-
 defaultPatch
 {
     name background;
@@ -63,10 +58,6 @@ defaultPatch
 }
 
 boundary
-(
-);
-
-mergePatchPairs
 (
 );
 

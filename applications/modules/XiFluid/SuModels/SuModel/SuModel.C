@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2024-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -46,13 +46,12 @@ bool Foam::SuModel::readCoeffs(const dictionary&)
 
 Foam::SuModel::SuModel
 (
-    const psiuMulticomponentThermo& thermo,
-    const fluidThermoThermophysicalTransportModel& thermoTransport
+    const uRhoMulticomponentThermo& thermo,
+    const compressibleMomentumTransportModel& momentumTransport
 )
 :
     thermo_(thermo),
-    thermoTransport_(thermoTransport),
-    turbulence_(thermoTransport.momentumTransport()),
+    momentumTransport_(momentumTransport),
     Su_
     (
         IOobject
@@ -81,7 +80,7 @@ bool Foam::SuModel::read(const dictionary& combustionProperties)
 {
     return readCoeffs
     (
-        combustionProperties.subDict("Su").optionalSubDict(type() + "Coeffs")
+        combustionProperties.subDict("Su").optionalTypeDict(type())
     );
 }
 

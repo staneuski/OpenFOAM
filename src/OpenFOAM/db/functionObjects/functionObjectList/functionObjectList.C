@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -86,6 +86,11 @@ bool Foam::functionObjectList::readDict()
         label nFunc = 0;
 
         const dictionary& functionsDict = *this;
+
+        Info<< indentOrNl << "Constructing functionObjects from "
+            << relativeObjectPath().c_str() << endl;
+
+        printDictionary print(functionsDict);
 
         libs.open
         (
@@ -307,11 +312,12 @@ Foam::autoPtr<Foam::functionObjectList> Foam::functionObjectList::New
             readConfigFile
             (
                 "function",
-                {args["func"], 0},
+                {args["func"], labelMin},
                 functionsDict,
                 functionEntries::includeFuncEntry::functionObjectDictPath,
                 "system",
-                region
+                region,
+                args.commandLine()
             );
         }
 
@@ -324,11 +330,12 @@ Foam::autoPtr<Foam::functionObjectList> Foam::functionObjectList::New
                 readConfigFile
                 (
                     "function",
-                    {funcs[i], 0},
+                    {funcs[i], labelMin},
                     functionsDict,
                     functionEntries::includeFuncEntry::functionObjectDictPath,
                     "system",
-                    region
+                    region,
+                    args.commandLine()
                 );
             }
         }

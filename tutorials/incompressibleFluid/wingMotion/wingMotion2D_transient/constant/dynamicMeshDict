@@ -9,17 +9,16 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "constant";
     object      dynamicMeshDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 mover
 {
-    type            motionSolver;
+    type            sixDoFRigidBodyMotion;
 
-    libs            ("libsixDoFRigidBodyMotion.so");
-
-    motionSolver    sixDoFRigidBodyMotion;
+    libs            ("libsixDoFRigidBodyMotion_pointMeshMovers.so");
 
     patches         (wing);
     innerDistance   0.3;

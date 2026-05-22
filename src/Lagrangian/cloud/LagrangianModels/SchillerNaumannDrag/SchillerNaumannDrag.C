@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,7 +25,7 @@ License
 
 #include "SchillerNaumannDrag.H"
 #include "addToRunTimeSelectionTable.H"
-#include "coupledToIncompressibleFluid.H"
+#include "coupledToConstantDensityFluid.H"
 #include "coupledToFluid.H"
 #include "sphericalCoupled.H"
 
@@ -58,47 +58,29 @@ Foam::Lagrangian::SchillerNaumannDrag::calcD
     const clouds::spherical& sCloud = cloud<clouds::spherical>();
     const clouds::sphericalCoupled& scCloud = cloud<clouds::sphericalCoupled>();
 
+    tmp<LagrangianSubScalarSubField> td = sCloud.d(model, subMesh);
+    const LagrangianSubScalarSubField& d = td();
     const LagrangianSubScalarField& Re = scCloud.Re(model, subMesh);
-    const LagrangianSubScalarSubField d(sCloud.d(model, subMesh));
 
     assertCloud
     <
-        clouds::coupledToIncompressibleFluid,
+        clouds::coupledToConstantDensityFluid,
         clouds::coupledToFluid
     >();
 
     tmp<LagrangianSubScalarField> tmucByRhoOrMuc =
-        isCloud<clouds::coupledToIncompressibleFluid>()
+        isCloud<clouds::coupledToConstantDensityFluid>()
       ? (
-            cloud<clouds::coupledToIncompressibleFluid>().nuc(model, subMesh)
-           /cloud<clouds::coupledToIncompressibleFluid>().rhoByRhoc
+            cloud<clouds::coupledToConstantDensityFluid>().nuc(model, subMesh)
+           /cloud<clouds::coupledToConstantDensityFluid>().rhoByRhoc
         )
       : tmp<LagrangianSubScalarField>
         (
             cloud<clouds::coupledToFluid>().muc(model, subMesh)
         );
 
-    return
-        LagrangianSubScalarField::New
-        (
-            "D:" + Foam::name(subMesh.group()),
-            CdRe(Re)*(constant::mathematical::pi/8)*d*tmucByRhoOrMuc
-        );
+    return CdRe(Re)*(constant::mathematical::pi/8)*d*tmucByRhoOrMuc;
 }
-
-
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
-
-Foam::Lagrangian::SchillerNaumannDrag::SchillerNaumannDrag
-(
-    const word& name,
-    const LagrangianMesh& mesh,
-    const dictionary& modelDict,
-    const dictionary& stateDict
-)
-:
-    drag(name, mesh, modelDict, stateDict)
-{}
 
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //

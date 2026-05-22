@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -63,9 +63,9 @@ Foam::CompositionModel<CloudType>::CompositionModel
     thermo_(owner.thermo()),
     phaseProps_
     (
-        this->coeffDict().lookup("phases"),
+        this->typeDict().lookup("phases"),
         carrierMcThermoPtr_ == nullptr
-      ? hashedWordList::null()
+      ? hashedWordList::null
       : carrierMcThermoPtr_->species(),
         thermo_.liquids().components(),
         thermo_.solids().components()

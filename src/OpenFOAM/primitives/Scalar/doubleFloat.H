@@ -54,7 +54,7 @@ inline long double y0l(long double x)
     return static_cast<long double>(y0(static_cast<double>(x)));
 }
 
-inline long double y1l(float x)
+inline long double y1l(long double x)
 {
     return static_cast<long double>(y1(static_cast<double>(x)));
 }

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2016-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2016-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -54,13 +54,16 @@ class laminarModel
 
 protected:
 
-    // Protected member functions
+    // Protected Member Functions
 
         //- Const access to the laminar dictionary
         const dictionary& laminarDict() const;
 
         //- Const access to the coefficients dictionary
-        const dictionary& coeffDict() const;
+        const dictionary& typeDict() const;
+
+        //- Const access to the coefficients dictionary
+        const dictionary& typeDict(const word&) const;
 
 
 public:

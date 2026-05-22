@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -96,7 +96,7 @@ public:
 
 private:
 
-    // Private Member Data
+    // Private Data
 
         // Primitive mesh data
 
@@ -195,6 +195,9 @@ private:
         //- Set the write option of the topology
         void setTopologyWrite(const IOobject::writeOption wo);
 
+        //- Clear addressing
+        void clearAddressing();
+
 
         // Helper functions for constructor from cell shapes
 
@@ -223,7 +226,7 @@ private:
 
 protected:
 
-    // Protected Member Data
+    // Protected Data
 
         //- Member data pending transfer to fvMesh
 
@@ -232,6 +235,12 @@ protected:
 
             //- Has the mesh topology changed
             bool topoChanged_;
+
+
+    // Protected Member Functions
+
+        //- Does a read update move the mesh forward in time?
+        bool readUpdateIsForward() const;
 
 
 public:
@@ -380,7 +389,7 @@ public:
 
 
             //- Return boundary mesh
-            const polyBoundaryMesh& boundaryMesh() const
+            const polyBoundaryMesh& boundary() const
             {
                 return boundary_;
             }
@@ -440,7 +449,7 @@ public:
             label& comm();
 
             //- Return the object registry
-            const objectRegistry& thisDb() const
+            const objectRegistry& db() const
             {
                 return *this;
             }
@@ -577,14 +586,8 @@ public:
             //- Clear geometry
             void clearGeom();
 
-            //- Clear addressing
-            void clearAddressing(const bool isMeshUpdate = false);
-
             //- Clear all geometry and addressing unnecessary for CFD
             void clearOut();
-
-            //- Clear primitive data (points, faces and cells)
-            void clearPrimitives();
 
             //- Clear tet base points
             void clearTetBasePtIs();
@@ -598,7 +601,7 @@ public:
 
         // Write
 
-            //- Write the underlying polyMesh
+            //- Write the mesh data and all objects in the registry
             virtual bool writeObject
             (
                 IOstream::streamFormat fmt,
@@ -606,6 +609,9 @@ public:
                 IOstream::compressionType cmp,
                 const bool write = true
             ) const;
+
+            //- Write the mesh data only
+            virtual bool writeMesh() const;
 
 
     // Member Operators

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -74,7 +74,7 @@ bool Foam::functionObjects::cloudVolumeFraction::execute()
 {
     const Foam::cloud& c = cloud();
 
-    const LagrangianScalarInternalField v
+    const LagrangianInternalScalarField v
     (
         "v",
         isCloud<clouds::grouped>()
@@ -86,7 +86,7 @@ bool Foam::functionObjects::cloudVolumeFraction::execute()
     objectRegistryFunctionObject::store
     (
         alphaName_,
-        Lagrangianc::accumulate<volMesh>(v)/fvMeshFunctionObject::mesh_.V()
+        Lagrangianc::accumulate<fvMesh>(v)/fvMeshFunctionObject::mesh_.V()
     );
 
     return true;

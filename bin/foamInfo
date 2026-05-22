@@ -3,7 +3,7 @@
 # =========                 |
 # \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
 #  \\    /   O peration     | Website:  https://openfoam.org
-#   \\  /    A nd           | Copyright (C) 2018-2025 OpenFOAM Foundation
+#   \\  /    A nd           | Copyright (C) 2018-2026 OpenFOAM Foundation
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 # License
@@ -62,7 +62,7 @@ Examples
   foamInfo interFoam
   foamInfo fixedValue
   foamInfo -k fixedValue
-  foamInfo -a turbulentIntensityKineticEnergyInlet
+  foamInfo -a turbulentKineticEnergy
   foamInfo symmetry
   foamInfo -k wallFunction
   foamInfo kEpsilon
@@ -143,7 +143,7 @@ findFiles() {
 
     for _t in scalar vector tensor
     do
-        echo "$_pre" | grep -oq "$_t" && \
+        echo "$_pre" | grep -q "$_t" && \
             _mod="$(echo "$_pre" | sed "s/${_t}//g")" && \
             _out="$(find "$FOAM_SRC" -name "${_mod}*.H" -type f) $_out"
     done
@@ -253,11 +253,6 @@ modelsInFamily () {
             for _f in $_files ; do TypeName "$_f" ; done
 
         [ "$_hasTypeName" ] && continue
-
-        # Model family without TypeName defined
-        # Exclusions
-        echo "Make lnInclude" | \
-            grep -w "$_mName" && continue
 
         echo "$_mName"
 

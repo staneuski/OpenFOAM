@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -30,8 +30,8 @@ License
 Foam::autoPtr<Foam::XiModel> Foam::XiModel::New
 (
     const dictionary& combustionProperties,
-    const psiuMulticomponentThermo& thermo,
-    const fluidThermoThermophysicalTransportModel& turbulence,
+    const ubRhoThermo& thermo,
+    const compressibleMomentumTransportModel& momentumTransport,
     const volScalarField& Su
 )
 {
@@ -39,7 +39,8 @@ Foam::autoPtr<Foam::XiModel> Foam::XiModel::New
 
     const word modelType(XiDict.lookup("model"));
 
-    Info<< "Selecting flame-wrinkling Xi model " << modelType << endl;
+    Info<< indentOrNl
+        << "Selecting flame-wrinkling Xi model " << modelType << endl;
 
     dictionaryConstructorTable::iterator cstrIter =
         dictionaryConstructorTablePtr_->find(modelType);
@@ -54,13 +55,19 @@ Foam::autoPtr<Foam::XiModel> Foam::XiModel::New
             << exit(FatalIOError);
     }
 
+    printDictionary print
+    (
+        XiDict,
+        XiDict.optionalTypeDict(modelType)
+    );
+
     return autoPtr<XiModel>
     (
         cstrIter()
         (
-            XiDict.optionalSubDict(modelType + "Coeffs"),
+            XiDict.optionalTypeDict(modelType),
             thermo,
-            turbulence,
+            momentumTransport,
             Su
         )
     );

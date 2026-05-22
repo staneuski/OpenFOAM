@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2014-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2014-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -38,14 +38,14 @@ Foam::COxidationIntrinsicRate<CloudType>::COxidationIntrinsicRate
 )
 :
     SurfaceReactionModel<CloudType>(dict, owner, typeName),
-    Sb_(this->coeffDict().template lookup<scalar>("Sb")),
-    C1_(this->coeffDict().template lookup<scalar>("C1")),
-    rMean_(this->coeffDict().template lookup<scalar>("rMean")),
-    theta_(this->coeffDict().template lookup<scalar>("theta")),
-    Ai_(this->coeffDict().template lookup<scalar>("Ai")),
-    Ei_(this->coeffDict().template lookup<scalar>("Ei")),
-    Ag_(this->coeffDict().template lookup<scalar>("Ag")),
-    tau_(this->coeffDict().lookupOrDefault("tau", sqrt(2.0))),
+    Sb_(this->typeDict().template lookup<scalar>("Sb")),
+    C1_(this->typeDict().template lookup<scalar>("C1")),
+    rMean_(this->typeDict().template lookup<scalar>("rMean")),
+    theta_(this->typeDict().template lookup<scalar>("theta")),
+    Ai_(this->typeDict().template lookup<scalar>("Ai")),
+    Ei_(this->typeDict().template lookup<scalar>("Ei")),
+    Ag_(this->typeDict().template lookup<scalar>("Ag")),
+    tau_(this->typeDict().lookupOrDefault("tau", sqrt(2.0))),
     CsLocalId_(-1),
     O2GlobalId_(owner.composition().carrierId("O2")),
     CO2GlobalId_(owner.composition().carrierId("CO2")),
@@ -137,7 +137,7 @@ Foam::scalar Foam::COxidationIntrinsicRate<CloudType>::calculate
     const label idSolid = this->owner().composition().idSolid();
     const scalar Ychar = YMixture[idSolid]*YSolid[CsLocalId_];
 
-    // Surface combustion until combustible fraction is consumed
+    // Surface reaction until combustible fraction is consumed
     if (Ychar < small)
     {
         return 0.0;

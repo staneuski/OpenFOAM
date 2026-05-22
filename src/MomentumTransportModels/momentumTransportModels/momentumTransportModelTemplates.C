@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -23,9 +23,10 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+#include "momentumTransportModel.H"
+#include "printDictionary.H"
 
-#include "surfaceMesh.H"
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 template<class MomentumTransportModel>
 inline Foam::autoPtr<MomentumTransportModel> Foam::momentumTransportModel::New
@@ -38,20 +39,18 @@ inline Foam::autoPtr<MomentumTransportModel> Foam::momentumTransportModel::New
     const viscosity& viscosity
 )
 {
-    const word modelType
-    (
-        IOdictionary
+    IOobject modelDictIO =
+        momentumTransportModel::readModelDict
         (
-            momentumTransportModel::readModelDict
-            (
-                U.db(),
-                alphaRhoPhi.group()
-            )
-        ).lookup("simulationType")
-    );
+            U.db(),
+            alphaRhoPhi.group()
+        );
 
-    Info<< indent
-        << "Selecting turbulence model type " << modelType << endl;
+    const word modelType =
+        IOdictionary(modelDictIO).lookup<word>("simulationType");
+
+    Info<< indentOrNl << "Selecting momentum transport model type "
+        << modelType << endl;
 
     typename MomentumTransportModel::dictionaryConstructorTable::iterator
         cstrIter =
@@ -72,16 +71,9 @@ inline Foam::autoPtr<MomentumTransportModel> Foam::momentumTransportModel::New
             << exit(FatalError);
     }
 
-    Info<< incrIndent;
+    printDictionary print(modelDictIO.objectPath(true));
 
-    autoPtr<MomentumTransportModel> modelPtr
-    (
-        cstrIter()(alpha, rho, U, alphaRhoPhi, phi, viscosity)
-    );
-
-    Info<< decrIndent;
-
-    return modelPtr;
+    return cstrIter()(alpha, rho, U, alphaRhoPhi, phi, viscosity);
 }
 
 

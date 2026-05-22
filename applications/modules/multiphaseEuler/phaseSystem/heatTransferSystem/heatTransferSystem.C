@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -107,6 +107,42 @@ const Foam::dictionary& Foam::heatTransferSystem::modelsDict() const
 }
 
 
+void Foam::heatTransferSystem::readModels()
+{
+    models_ =
+        generateBlendedInterfacialModels<blendedHeatTransferModel>
+        (
+            fluid_,
+            modelsDict(),
+            wordHashSet(),
+            true
+        );
+
+    sidedModels_ =
+        generateBlendedInterfacialModels<blendedSidedHeatTransferModel>
+        (
+            fluid_,
+            modelsDict(),
+            wordHashSet(),
+            true
+        );
+
+    forAllConstIter(modelsTable, models_, modelIter)
+    {
+        if (sidedModels_.found(modelIter.key()))
+        {
+            const phaseInterface interface(fluid_, modelIter.key());
+
+            FatalIOErrorInFunction(modelsDict())
+                << "One-resistance and two-resistance heat transfer models "
+                << "both specified between phases "
+                << interface.phase1().name() << " and "
+                << interface.phase2().name() << exit(FatalIOError);
+        }
+    }
+}
+
+
 template<class ... Args>
 Foam::Pair<Foam::tmp<Foam::volScalarField>> Foam::heatTransferSystem::Hs
 (
@@ -188,45 +224,12 @@ Foam::heatTransferSystem::heatTransferSystem
      && fluid.thermalPhases().empty()
     ) return;
 
-    modelsTable models
-    (
-        generateBlendedInterfacialModels<blendedHeatTransferModel>
-        (
-            fluid,
-            modelsDict(),
-            wordHashSet(),
-            true
-        )
-    );
+    Info<< indentOrNl << "Constructing " << typeName << " from "
+        << relativeObjectPath().c_str() << endl;
 
-    models_.transfer(models);
+    printDictionary print(*this);
 
-    sidedModelsTable sidedModels
-    (
-        generateBlendedInterfacialModels<blendedSidedHeatTransferModel>
-        (
-            fluid,
-            modelsDict(),
-            wordHashSet(),
-            true
-        )
-    );
-
-    sidedModels_.transfer(sidedModels);
-
-    forAllConstIter(modelsTable, models_, modelIter)
-    {
-        if (sidedModels_.found(modelIter.key()))
-        {
-            const phaseInterface interface(fluid_, modelIter.key());
-
-            FatalIOErrorInFunction(modelsDict())
-                << "One-resistance and two-resistance heat transfer models "
-                << "both specified between phases "
-                << interface.phase1().name() << " and "
-                << interface.phase2().name() << exit(FatalIOError);
-        }
-    }
+    readModels();
 }
 
 
@@ -283,7 +286,7 @@ Foam::heatTransferSystem::heatTransfer() const
     {
         const phaseInterface interface(fluid_, modelIter.key());
 
-        const volScalarField H(modelIter()->K());
+        const volScalarField::Internal H(modelIter()->K());
 
         forAllConstIter(phaseInterface, interface, iter)
         {
@@ -291,17 +294,17 @@ Foam::heatTransferSystem::heatTransfer() const
             const phaseModel& otherPhase = iter.otherPhase();
 
             const volScalarField& he = phase.thermo().he();
-            const volScalarField Cpv(phase.thermo().Cpv());
+            const volScalarField::Internal& Cpv(phase.thermo().Cpv());
 
-            const volScalarField Hstabilised
+            const volScalarField::Internal Hstabilised
             (
-                iter.otherPhase()
-               /max(iter.otherPhase(), iter.otherPhase().residualAlpha())
+                iter.otherPhase()()
+               /max(iter.otherPhase()(), iter.otherPhase().residualAlpha())
                *H
             );
 
-            *eqns[phase.name()] +=
-                Hstabilised*(otherPhase.thermo().T() - phase.thermo().T())
+            eqns[phase.name()] +=
+                Hstabilised*(otherPhase.thermo().T()() - phase.thermo().T()())
               + Hstabilised/Cpv*he - fvm::Sp(Hstabilised/Cpv, he);
         }
     }
@@ -316,9 +319,9 @@ Foam::heatTransferSystem::heatTransfer() const
             sidedModelIter()->KinThe(interface.phase2())
         );
 
-        const volScalarField HEff
+        const volScalarField::Internal HEff
         (
-            Hs.first()*Hs.second()/(Hs.first() + Hs.second())
+            Hs.first()()*Hs.second()()/(Hs.first()() + Hs.second()())
         );
 
         forAllConstIter(phaseInterface, interface, iter)
@@ -327,12 +330,12 @@ Foam::heatTransferSystem::heatTransfer() const
             const phaseModel& otherPhase = iter.otherPhase();
 
             const volScalarField& he = phase.thermo().he();
-            const volScalarField Cpv(phase.thermo().Cpv());
+            const volScalarField::Internal& Cpv(phase.thermo().Cpv());
 
-            const volScalarField& H = Hs[iter.index()];
+            const volScalarField::Internal& H = Hs[iter.index()];
 
-            *eqns[phase.name()] +=
-                HEff*(otherPhase.thermo().T() - phase.thermo().T())
+            eqns[phase.name()] +=
+                HEff*(otherPhase.thermo().T()() - phase.thermo().T()())
               + H/Cpv*he - fvm::Sp(H/Cpv, he);
         }
     }
@@ -345,11 +348,9 @@ bool Foam::heatTransferSystem::read()
 {
     if (regIOobject::read())
     {
-        bool readOK = true;
+        readModels();
 
-        // models ...
-
-        return readOK;
+        return true;
     }
     else
     {

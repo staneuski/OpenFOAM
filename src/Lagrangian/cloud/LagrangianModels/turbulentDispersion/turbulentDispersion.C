@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,7 +25,7 @@ License
 
 #include "turbulentDispersion.H"
 #include "addToRunTimeSelectionTable.H"
-#include "coupledToIncompressibleFluid.H"
+#include "coupledToConstantDensityFluid.H"
 #include "coupledToFluid.H"
 #include "standardNormal.H"
 #include "wallPolyPatch.H"
@@ -52,7 +52,7 @@ namespace Lagrangian
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 template<class Type>
-Foam::Tuple2<bool, Foam::CloudStateField<Type>&>
+Foam::tmp<Foam::LagrangianDynamicField<Type>>
 Foam::Lagrangian::turbulentDispersion::initialiseTurbField
 (
     const word& name,
@@ -60,49 +60,49 @@ Foam::Lagrangian::turbulentDispersion::initialiseTurbField
     const Type& value
 )
 {
-    CloudStateField<Type>& ref =
-        cloud().stateField<Type>
+    return
+        tmp<LagrangianDynamicField<Type>>
         (
-            IOobject
+            new LagrangianDynamicField<Type>
             (
-                name,
-                mesh().time().name(),
+                IOobject
+                (
+                    name,
+                    mesh().time().name(),
+                    mesh(),
+                    IOobject::READ_IF_PRESENT,
+                    IOobject::AUTO_WRITE
+                ),
                 mesh(),
-                IOobject::READ_IF_PRESENT,
-                IOobject::AUTO_WRITE
-            ),
-            mesh(),
-            dimensioned<Type>(name, dims, value)
+                dimensioned<Type>(name, dims, value)
+            )
         );
-
-    return Tuple2<bool, CloudStateField<Type>&>(ref.headerOk(), ref);
 }
 
 
 template<class InjectionFieldSourceType, class Type>
 void Foam::Lagrangian::turbulentDispersion::completeTurbField
 (
-    Tuple2<bool, CloudStateField<Type>&>& turbField
+    LagrangianDynamicField<Type>& turbField
 )
 {
-    if (turbField.first()) return;
-
-    turbField.first() = true;
+    if (turbField.headerOk()) return;
 
     LagrangianModels& modelList = cloud().LagrangianModels();
 
-    turbField.second().sourcesRef().table().transfer
+    turbField.sourcesRef().table().transfer
     (
         typename LagrangianDynamicField<Type>::Sources
         (
-            turbField.second(),
+            turbField,
             modelList.modelTypeFieldSourceTypes
             <
                 LagrangianInjection,
                 InjectionFieldSourceType,
                 LagrangianSource,
                 internalLagrangianFieldSource<Type>
-            >()
+            >(),
+            IOerrorLocation()
         ).table()
     );
 }
@@ -121,7 +121,7 @@ Foam::Lagrangian::turbulentDispersion::turbulentDispersion
     LagrangianModel(name, mesh),
     cloudLagrangianModel(static_cast<const LagrangianModel&>(*this)),
     dragPtr_(nullptr),
-    momentumTransportModel_(mesh.mesh().lookupType<momentumTransportModel>()),
+    momentumTransportModel_(mesh.poly().lookupType<momentumTransportModel>()),
     Cmu75_(pow(dimensionedScalar("Cmu", dimless, modelDict, 0.09), 0.75)),
     maxDiscreteEddies_
     (
@@ -129,9 +129,9 @@ Foam::Lagrangian::turbulentDispersion::turbulentDispersion
     ),
     kc_
     (
-        cloud<clouds::coupled>().carrierField<scalar>
+        cloud<clouds::carried>().carrierField<scalar>
         (
-            clouds::coupled::carrierName
+            clouds::carried::nameToCarrierName
             (
                 momentumTransportModel_.k()().name()
             ),
@@ -143,9 +143,9 @@ Foam::Lagrangian::turbulentDispersion::turbulentDispersion
     ),
     epsilonc_
     (
-        cloud<clouds::coupled>().carrierField<scalar>
+        cloud<clouds::carried>().carrierField<scalar>
         (
-            clouds::coupled::carrierName
+            clouds::carried::nameToCarrierName
             (
                 momentumTransportModel_.epsilon()().name()
             ),
@@ -167,7 +167,22 @@ Foam::Lagrangian::turbulentDispersion::turbulentDispersion
 
 Foam::wordList Foam::Lagrangian::turbulentDispersion::addSupFields() const
 {
-    return wordList(1, cloud().U.name());
+    return wordList({cloud().U.name()});
+}
+
+
+bool Foam::Lagrangian::turbulentDispersion::addsSupToField
+(
+    const word& fieldName,
+    const word& eqnFieldName
+) const
+{
+    return
+        fieldName == cloud().U.name()
+     && (
+            eqnFieldName == cloud().U.name()
+         || eqnFieldName == cloud<clouds::carried>().Uc.name()
+        );
 }
 
 
@@ -206,7 +221,7 @@ void Foam::Lagrangian::turbulentDispersion::postConstruct()
 }
 
 
-void Foam::Lagrangian::turbulentDispersion::calculate
+void Foam::Lagrangian::turbulentDispersion::preAddSup
 (
     const LagrangianSubScalarField& deltaT,
     const bool final
@@ -215,17 +230,16 @@ void Foam::Lagrangian::turbulentDispersion::calculate
     const LagrangianSubMesh& subMesh = deltaT.mesh();
 
     // References to the evolving fields
-    LagrangianSubScalarSubField& fractionTurb =
-        fractionTurb_.second().ref(subMesh);
-    LagrangianSubScalarSubField& tTurb = tTurb_.second().ref(subMesh);
-    LagrangianSubVectorSubField& Uturb = Uturb_.second().ref(subMesh);
+    LagrangianSubScalarSubField& fractionTurb = fractionTurb_.ref(subMesh);
+    LagrangianSubScalarSubField& tTurb = tTurb_.ref(subMesh);
+    LagrangianSubVectorSubField& Uturb = Uturb_.ref(subMesh);
     const LagrangianSubScalarField& fractionTurb0 = fractionTurb.oldTime();
     const LagrangianSubVectorField& Uturb0 = Uturb.oldTime();
 
     // Update the eddy time-scale
     const LagrangianSubScalarField magUrel
     (
-        mag(cloud().U(subMesh) - cloud<clouds::coupled>().Uc(subMesh))
+        mag(cloud().U(subMesh) - cloud<clouds::carried>().Uc(subMesh))
     );
     static const dimensionedScalar rootVSmallEpsilon
     (
@@ -254,7 +268,7 @@ void Foam::Lagrangian::turbulentDispersion::calculate
     // vibrate as the drag model and the rebound model fight each other.
     const PackedBoolList patchIsWall
     (
-        mesh().mesh().boundaryMesh().findIndices<wallPolyPatch>().toc()
+        mesh().poly().boundary().findIndices<wallPolyPatch>().toc()
     );
     forAll(subMesh, subi)
     {
@@ -274,7 +288,7 @@ void Foam::Lagrangian::turbulentDispersion::calculate
     }
 
     // Initialise the average turbulent velocities
-    avgUturbPtr_.reset
+    avgUturbPtr_.set
     (
         LagrangianSubVectorField::New
         (
@@ -373,7 +387,7 @@ void Foam::Lagrangian::turbulentDispersion::addSup
     LagrangianEqn<vector>& eqn
 ) const
 {
-    assertCloud<clouds::coupledToIncompressibleFluid>();
+    assertCloud<clouds::coupledToConstantDensityFluid>();
 
     eqn.Su += dragPtr_->D(deltaT.mesh())*avgUturbPtr_();
 }
@@ -387,9 +401,23 @@ void Foam::Lagrangian::turbulentDispersion::addSup
     LagrangianEqn<vector>& eqn
 ) const
 {
-    assertCloud<clouds::coupledToIncompressibleFluid, clouds::coupledToFluid>();
+    assertCloud
+    <
+        clouds::coupledToConstantDensityFluid,
+        clouds::coupledToFluid
+    >();
 
     eqn.Su += dragPtr_->D(deltaT.mesh())*avgUturbPtr_();
+}
+
+
+void Foam::Lagrangian::turbulentDispersion::postAddSup
+(
+    const LagrangianSubScalarField& deltaT,
+    const bool final
+)
+{
+    avgUturbPtr_.clear();
 }
 
 

@@ -168,7 +168,7 @@ private:
         readOption rOpt_;
 
         //- Write option
-        writeOption wOpt_;
+        mutable writeOption wOpt_;
 
         //- Register object created from this IOobject with registry if true
         bool registerObject_;
@@ -366,7 +366,7 @@ public:
                 return rOpt_;
             }
 
-            writeOption writeOpt() const
+            writeOption& writeOpt() const
             {
                 return wOpt_;
             }
@@ -459,6 +459,21 @@ public:
             //- Write the standard end file divider
             template<class Stream>
             static inline Stream& writeEndDivider(Stream& os);
+
+            //- Write header
+            static bool writeHeader
+            (
+                Ostream& os,
+                const IOstream::versionNumber version,
+                const IOstream::streamFormat format,
+                const word& type,
+                const string& note,
+                const fileName& location,
+                const word& name
+            );
+
+            //- Write header
+            static bool writeHeader(Ostream&, const dictionary& foamFileDict);
 
             //- Write header
             bool writeHeader(Ostream&) const;

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2013-2022 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -52,7 +52,7 @@ void Foam::SuppressionCollision<CloudType>::collide
 
         if (xx < P[celli])
         {
-            p.canCombust() = -1;
+            p.canReact() = -1;
             p.typeId() = max(p.typeId(), suppressedParcelType_);
         }
     }
@@ -69,10 +69,10 @@ Foam::SuppressionCollision<CloudType>::SuppressionCollision
 )
 :
     StochasticCollisionModel<CloudType>(dict, owner, typeName),
-    suppressionCloud_(this->coeffDict().lookup("suppressionCloud")),
+    suppressionCloud_(this->typeDict().lookup("suppressionCloud")),
     suppressedParcelType_
     (
-        this->coeffDict().lookupOrDefault("suppressedParcelType", -1)
+        this->typeDict().lookupOrDefault("suppressedParcelType", -1)
     )
 {}
 

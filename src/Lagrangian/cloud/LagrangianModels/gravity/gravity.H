@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::gravity
+    Foam::Lagrangian::gravity
 
 Description
     Gravity force model
@@ -65,7 +65,7 @@ class gravity
 {
 private:
 
-    // Private Member Data
+    // Private Data
 
         //- Gravitational acceleration
         const dimensionedVector& g;
@@ -93,6 +93,13 @@ public:
 
         //- Return the name of the velocity field
         virtual wordList addSupFields() const;
+
+        //- Return true for the velocity field
+        virtual bool addsSupToField
+        (
+            const word& fieldName,
+            const word& eqnFieldName
+        ) const;
 
         //- Add a source term to the velocity equation
         virtual void addSup

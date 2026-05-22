@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2024-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2024-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "propellerDiskForce.H"
-#include "rigidBodyMeshMotion.H"
+#include "rigidBodyMotion_pointMeshMover.H"
 #include "fvModels.H"
 #include "rigidBodyPropellerDisk.H"
 #include "addToRunTimeSelectionTable.H"
@@ -80,10 +80,10 @@ void Foam::RBD::restraints::propellerDiskForce::restrain
     const rigidBodyModelState& state
 ) const
 {
-    const rigidBodyMeshMotion& mover =
-        refCast<const rigidBodyMeshMotion>(model_);
+    const pointMeshMovers::rigidBodyMotion& mover =
+        refCast<const pointMeshMovers::rigidBodyMotion>(model_);
 
-    const fvMesh& mesh = refCast<const fvMesh>(mover.mesh());
+    const fvMesh& mesh = refCast<const fvMesh>(mover.poly());
 
     // Lookup the fvModels for this mesh
     const fvModels& fvModels(fvModels::New(mesh));
@@ -126,7 +126,8 @@ void Foam::RBD::restraints::propellerDiskForce::restrain
 
     if (model_.debug)
     {
-        Info<< " location " << propPtr->centre()
+        Info<< indent
+            << "location " << propPtr->centre()
             << " force " << force
             << " moment " << moment
             << endl;

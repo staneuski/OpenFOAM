@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2013-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2013-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -31,7 +31,7 @@ template<class Type>
 Foam::uniformFixedGradientFvPatchField<Type>::uniformFixedGradientFvPatchField
 (
     const fvPatch& p,
-    const DimensionedField<Type, volMesh>& iF,
+    const DimensionedField<Type, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -41,7 +41,7 @@ Foam::uniformFixedGradientFvPatchField<Type>::uniformFixedGradientFvPatchField
         Function1<Type>::New
         (
             "uniformGradient",
-            this->db().time().userUnits(),
+            this->time().userUnits(),
             iF.dimensions()/dimLength,
             dict
         )
@@ -56,7 +56,7 @@ Foam::uniformFixedGradientFvPatchField<Type>::uniformFixedGradientFvPatchField
 (
     const uniformFixedGradientFvPatchField<Type>& ptf,
     const fvPatch& p,
-    const DimensionedField<Type, volMesh>& iF,
+    const DimensionedField<Type, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -69,7 +69,7 @@ template<class Type>
 Foam::uniformFixedGradientFvPatchField<Type>::uniformFixedGradientFvPatchField
 (
     const uniformFixedGradientFvPatchField<Type>& ptf,
-    const DimensionedField<Type, volMesh>& iF
+    const DimensionedField<Type, fvMesh>& iF
 )
 :
     fixedGradientFvPatchField<Type>(ptf, iF),
@@ -93,7 +93,7 @@ void Foam::uniformFixedGradientFvPatchField<Type>::updateCoeffs()
         return;
     }
 
-    this->gradient() = uniformGradient_->value(this->db().time().value());
+    this->gradient() = uniformGradient_->value(this->time().value());
 
     fixedGradientFvPatchField<Type>::updateCoeffs();
 }
@@ -106,7 +106,7 @@ void Foam::uniformFixedGradientFvPatchField<Type>::write(Ostream& os) const
     writeEntry
     (
         os,
-        this->db().time().userUnits(),
+        this->time().userUnits(),
         this->internalField().dimensions()/dimLength,
         uniformGradient_()
     );

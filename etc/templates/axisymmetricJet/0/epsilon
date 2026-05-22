@@ -9,7 +9,8 @@ FoamFile
 {
     format      ascii;
     class       volScalarField;
-    object      omega;
+    location    "0";
+    object      epsilon;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -23,7 +24,7 @@ boundaryField
 {
     "(inlet|atmosphere)"
     {
-        type            turbulentMixingLengthDissipationRateInlet;
+        type            turbulentEpsilon;
         mixingLength    0.1;
         value           uniform $epsilonInlet;
     }

@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "constant";
     object      momentumTransport;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -20,7 +21,7 @@ RAS
     model               buoyantKEpsilon;
 
     turbulence          on;
-    printCoeffs         on;
+    #print
 }
 
 // ************************************************************************* //

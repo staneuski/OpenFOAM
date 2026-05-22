@@ -23,14 +23,13 @@ boundaryField
     inlet
     {
         type            fixedValue;
-        value           uniform 0.9;
+        value           uniform 1;
     }
     outlet
     {
         type            inletOutlet;
         phi             phi.gas;
         inletValue      $internalField;
-        value           $internalField;
     }
     walls
     {

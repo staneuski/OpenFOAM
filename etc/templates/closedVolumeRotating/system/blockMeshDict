@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "system";
     object      blockMeshDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -57,8 +58,6 @@ geometry
         radius $!backgroundMesh/radOut;
     }
 }
-
-convertToMeters 1;
 
 vertices
 (
@@ -192,10 +191,6 @@ defaultPatch
 }
 
 boundary
-(
-);
-
-mergePatchPairs
 (
 );
 

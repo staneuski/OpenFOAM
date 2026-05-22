@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -37,9 +37,19 @@ Foam::fv::cloud::cloud
     const cloud::Cloud<Type>&
 )
 :
-    fvModel(name, modelType, mesh, dict),
-    cloudPtr_(new Type(mesh, name, Foam::cloud::contextType::fvModel)),
+    fvSource(name, modelType, mesh, dict),
+    cloudPtr_
+    (
+        Foam::cloud::New<Type>
+        (
+            mesh,
+            name,
+            Foam::cloud::contextType::fvModel,
+            dict
+        ).ptr()
+    ),
     cloud_(cloudPtr_()),
+    carriedCloud_(refCast<const clouds::carried>(cloud_)),
     coupledCloud_(refCast<const clouds::coupled>(cloud_))
 {
     // Ensure LagrangianModels are constructed before time is incremented

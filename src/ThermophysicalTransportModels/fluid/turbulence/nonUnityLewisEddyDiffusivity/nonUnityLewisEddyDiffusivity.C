@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2020-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2020-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -44,18 +44,19 @@ nonUnityLewisEddyDiffusivity<TurbulenceThermophysicalTransportModel>::
 nonUnityLewisEddyDiffusivity
 (
     const momentumTransportModel& momentumTransport,
-    const thermoModel& thermo
+    const thermoModel& thermo,
+    const word& type
 )
 :
     unityLewisEddyDiffusivity<TurbulenceThermophysicalTransportModel>
     (
-        typeName,
+        type,
         momentumTransport,
         thermo,
         false
     ),
 
-    Sct_("Sct", dimless, this->coeffDict())
+    Sct_("Sct", dimless, this->typeDict(type))
 {}
 
 
@@ -71,7 +72,7 @@ nonUnityLewisEddyDiffusivity<TurbulenceThermophysicalTransportModel>::read()
         ::read()
     )
     {
-        Sct_.read(this->coeffDict());
+        Sct_.read(this->typeDict());
 
         return true;
     }
@@ -93,7 +94,7 @@ nonUnityLewisEddyDiffusivity<TurbulenceThermophysicalTransportModel>::q() const
             IOobject::groupName
             (
                 "q",
-                this->momentumTransport().alphaRhoPhi().group()
+                this->thermo().phaseName()
             ),
            -fvc::interpolate(this->alpha()*this->kappaEff())
            *fvc::snGrad(this->thermo().T())

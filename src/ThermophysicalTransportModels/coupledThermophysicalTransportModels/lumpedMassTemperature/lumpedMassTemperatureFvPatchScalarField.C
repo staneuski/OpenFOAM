@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2024-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2024-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -41,7 +41,7 @@ Foam::scalar Foam::lumpedMassTemperatureFvPatchScalarField::V() const
 {
     return
        -gSum(patch().Sf() & patch().Cf())
-       /patch().boundaryMesh().mesh().nSolutionD();
+       /patch().mesh().nSolutionD();
 }
 
 
@@ -51,7 +51,7 @@ Foam::lumpedMassTemperatureFvPatchScalarField::
 lumpedMassTemperatureFvPatchScalarField
 (
     const fvPatch& p,
-    const DimensionedField<scalar, volMesh>& iF,
+    const DimensionedField<scalar, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -63,7 +63,7 @@ lumpedMassTemperatureFvPatchScalarField
         IOobject
         (
             "T_" + patch().name(),
-            db().time().name(),
+            time().name(),
             db()
         ),
         dimensionedScalar(dimTemperature, dict.lookup<scalar>("T"))
@@ -74,7 +74,7 @@ lumpedMassTemperatureFvPatchScalarField
       ? Function1<scalar>::New
         (
             "Q",
-            db().time().userUnits(),
+            time().userUnits(),
             dimPower,
             dict
         )
@@ -109,7 +109,7 @@ lumpedMassTemperatureFvPatchScalarField
 (
     const lumpedMassTemperatureFvPatchScalarField& ptf,
     const fvPatch& p,
-    const DimensionedField<scalar, volMesh>& iF,
+    const DimensionedField<scalar, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -126,7 +126,7 @@ Foam::lumpedMassTemperatureFvPatchScalarField::
 lumpedMassTemperatureFvPatchScalarField
 (
     const lumpedMassTemperatureFvPatchScalarField& ptf,
-    const DimensionedField<scalar, volMesh>& iF
+    const DimensionedField<scalar, fvMesh>& iF
 )
 :
     fixedValueFvPatchScalarField(ptf, iF),
@@ -180,11 +180,11 @@ void Foam::lumpedMassTemperatureFvPatchScalarField::updateCoeffs()
         ttm.kappaEff(patch().index())*patch().magSf()*patch().deltaCoeffs()
     );
 
-    const scalar Hs = rho_*Cv_*V_/db().time().deltaTValue();
+    const scalar Hs = rho_*Cv_*V_/time().deltaTValue();
 
     T_.value() =
     (
-        Q_->value(db().time().value())
+        Q_->value(time().value())
       + gSum(Hf*patchInternalField())
       + Hs*T_.oldTime().value()
     )/(Hs + gSum(Hf));

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -43,8 +43,8 @@ coneDirectionLagrangianVectorFieldSource
         Function1<scalar>::New
         (
             "thetaInner",
-            field.db().time().userUnits(),
-            unitDegrees,
+            field.time().userUnits(),
+            units::degrees,
             dict
         )
     ),
@@ -53,8 +53,8 @@ coneDirectionLagrangianVectorFieldSource
         Function1<scalar>::New
         (
             "thetaOuter",
-            field.db().time().userUnits(),
-            unitDegrees,
+            field.time().userUnits(),
+            units::degrees,
             dict
         )
     ),
@@ -96,15 +96,14 @@ Foam::coneDirectionLagrangianVectorFieldSource::
 Foam::tmp<Foam::LagrangianSubVectorField>
 Foam::coneDirectionLagrangianVectorFieldSource::direction
 (
-    const LagrangianInjection& injection,
     const LagrangianSubVectorField& axis
 ) const
 {
     const LagrangianSubMesh& subMesh = axis.mesh();
 
     // Restart the generator if necessary and set the time index up to date
-    rndGen_.start(timeIndex_ == field_.db().time().timeIndex());
-    timeIndex_ = field_.db().time().timeIndex();
+    rndGen_.start(timeIndex_ == field_.time().timeIndex());
+    timeIndex_ = field_.time().timeIndex();
 
     // Construct a random direction perpendicular to the cone axis
     const tmp<LagrangianSubVectorField> tt1Dir(normalised(perpendicular(axis)));
@@ -125,21 +124,9 @@ Foam::coneDirectionLagrangianVectorFieldSource::direction
 
     // Pick a random angle within the cone angles
     const tmp<LagrangianSubScalarField> tthetaInner =
-        Function1LagrangianFieldSource::value
-        (
-            injection,
-            subMesh,
-            dimless,
-            thetaInner_()
-        );
+        Function1LagrangianFieldSource::value(subMesh, dimless, thetaInner_());
     const tmp<LagrangianSubScalarField> tthetaOuter =
-        Function1LagrangianFieldSource::value
-        (
-            injection,
-            subMesh,
-            dimless,
-            thetaOuter_()
-        );
+        Function1LagrangianFieldSource::value(subMesh, dimless, thetaOuter_());
     const tmp<LagrangianSubScalarField> tfrac =
         LagrangianSubScalarField::New
         (
@@ -165,8 +152,21 @@ Foam::coneDirectionLagrangianVectorFieldSource::direction
 
 void Foam::coneDirectionLagrangianVectorFieldSource::write(Ostream& os) const
 {
-    writeEntry(os, field_.db().time().userUnits(), unitDegrees, thetaInner_());
-    writeEntry(os, field_.db().time().userUnits(), unitDegrees, thetaOuter_());
+    writeEntry
+    (
+        os,
+        field_.time().userUnits(),
+        units::degrees,
+        thetaInner_()
+    );
+
+    writeEntry
+    (
+        os,
+        field_.time().userUnits(),
+        units::degrees,
+        thetaOuter_()
+    );
 
     writeEntry(os, "coneDirectionRndGen", rndGen_);
 }

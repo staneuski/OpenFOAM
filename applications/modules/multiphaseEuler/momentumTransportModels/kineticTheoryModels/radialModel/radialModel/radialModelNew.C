@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,7 +35,7 @@ Foam::kineticTheoryModels::radialModel::New
 {
     const word radialModelType(dict.lookup("radialModel"));
 
-    Info<< "Selecting radialModel "
+    Info<< indentOrNl << "Selecting " << typeName << ' '
         << radialModelType << endl;
 
     dictionaryConstructorTable::iterator cstrIter =
@@ -52,7 +52,9 @@ Foam::kineticTheoryModels::radialModel::New
     }
 
     const dictionary& coeffDict =
-        dict.optionalSubDict(radialModelType + "Coeffs");
+        dict.optionalTypeDict(radialModelType);
+
+    printDictionary print(coeffDict);
 
     return autoPtr<radialModel>(cstrIter()(coeffDict));
 }

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2024-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,6 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "bXiIgnited.H"
+#include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
 
@@ -59,6 +60,15 @@ Foam::fv::bXiIgnited::bXiIgnited
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
+bool Foam::fv::bXiIgnited::igniting
+(
+    const dimensionedScalar duration
+) const
+{
+    return false;
+}
+
+
 bool Foam::fv::bXiIgnited::igniting() const
 {
     return false;
@@ -76,15 +86,6 @@ void Foam::fv::bXiIgnited::addSup
     const volScalarField& rho,
     const volScalarField& b,
     fvMatrix<scalar>& eqn
-) const
-{}
-
-
-void Foam::fv::bXiIgnited::XiCorr
-(
-    volScalarField& Xi,
-    const volScalarField& b,
-    const volScalarField& mgb
 ) const
 {}
 

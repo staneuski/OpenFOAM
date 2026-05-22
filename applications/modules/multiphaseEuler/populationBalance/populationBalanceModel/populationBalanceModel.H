@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -44,7 +44,7 @@ Description
     Since the representative volumes are fixed a priori and the total dispersed
     phase volume already available from solving the phase continuity equation,
     the model only determines the evolution of the individual size class
-    fractions
+    fraciions
 
     \f[
         f_{i,\varphi} = \frac{\alpha_{i,\varphi}}{\alpha_{\varphi}}\,,
@@ -194,20 +194,9 @@ Usage
 
         // Choose coalescence and breakup sub-models ...
 
-        coalescenceModels
-        (
-            LehrMilliesMewes
-            {}
-        );
+        coalescenceModel LehrMilliesMewes;
 
-        breakupModels
-        ();
-
-        binaryBreakupModels
-        (
-            LehrMilliesMewes
-            {}
-        );
+        breakupModel    LehrMilliesMewes;
     }
     \endverbatim
 
@@ -217,7 +206,6 @@ See also
     Foam::populationBalance::coalescenceModel
     Foam::populationBalance::breakupModel
     Foam::populationBalance::daughterSizeDistributionModel
-    Foam::populationBalance::binaryBreakupModel
     Foam::functionObjects::populationBalanceSizeDistribution
     Foam::functionObjects::populationBalanceSetSizeDistribution
     Foam::functionObjects::populationBalanceMoments
@@ -230,6 +218,7 @@ SourceFiles
 #ifndef populationBalanceModel_H
 #define populationBalanceModel_H
 
+#include "daughterSizeDistributionModel.H"
 #include "populationBalance.H"
 #include "phaseSystem.H"
 #include "HashPtrTable.H"
@@ -247,7 +236,12 @@ namespace populationBalance
     class shapeModel;
     class coalescenceModel;
     class breakupModel;
-    class binaryBreakupModel;
+
+    namespace breakupModels
+    {
+        class daughterSizeDistribution;
+        class binary;
+    }
 }
 
 /*---------------------------------------------------------------------------*\
@@ -334,26 +328,21 @@ private:
         //- The shape model
         autoPtr<populationBalance::shapeModel> shapeModel_;
 
-        //- Coalescence models
-        PtrList<populationBalance::coalescenceModel> coalescenceModels_;
-
-        //- Coalescence rate
-        autoPtr<volScalarField::Internal> coalescenceRate_;
+        //- Coalescence model
+        autoPtr<populationBalance::coalescenceModel> coalescenceModel_;
 
         //- Coalescence relevant group pairs
         List<labelPair> coalescencePairs_;
 
         //- Breakup models
-        PtrList<populationBalance::breakupModel> breakupModels_;
+        autoPtr<populationBalance::breakupModel> breakupModel_;
 
-        //- Breakup rate
-        autoPtr<volScalarField::Internal> breakupRate_;
+        //- Daughter size distribution breakup model
+        populationBalance::breakupModels::daughterSizeDistribution*
+            daughterSizeDistributionBreakupModel_;
 
-        //- Binary breakup models
-        PtrList<populationBalance::binaryBreakupModel> binaryBreakupModels_;
-
-        //- Binary breakup rate
-        autoPtr<volScalarField::Internal> binaryBreakupRate_;
+        //- Binary breakup model
+        populationBalance::breakupModels::binary* binaryBreakupModel_;
 
         //- Section width required for binary breakup formulation
         PtrList<PtrList<dimensionedScalar>> binaryBreakupDeltas_;
@@ -377,28 +366,56 @@ private:
     // Private Member Functions
 
         //- Get the coefficient dictionary
-        const dictionary& coeffDict() const;
+        const dictionary& typeDict() const;
 
         //- Do pre-calculations relating to coalescence and breakup
         void precomputeCoalescenceAndBreakup();
 
         //- Calculate particle creation by coalescence
-        void birthByCoalescence(const label j, const label k);
+        void birthByCoalescence
+        (
+            const label j,
+            const label k,
+            const volScalarField::Internal& rate
+        );
 
         //- Calculate particle destruction by coalescence
-        void deathByCoalescence(const label i, const label j);
+        void deathByCoalescence
+        (
+            const label i,
+            const label j,
+            const volScalarField::Internal& rate
+        );
 
-        //- Calculate particle creation by breakup
-        void birthByBreakup(const label k, const label model);
+        //- Calculate particle creation by daughter-size-distribution-breakup
+        void birthByDaughterSizeDistributionBreakup
+        (
+            const label k,
+            const volScalarField::Internal& rate
+        );
 
-        //- Calculate particle destruction by breakup
-        void deathByBreakup(const label i);
+        //- Calculate particle destruction by daughter-size-distribution-breakup
+        void deathByDaughterSizeDistributionBreakup
+        (
+            const label i,
+            const volScalarField::Internal& rate
+        );
 
         //- Calculate particle creation by binary-breakup
-        void birthByBinaryBreakup(const label i, const label j);
+        void birthByBinaryBreakup
+        (
+            const label i,
+            const label j,
+            const volScalarField::Internal& rate
+        );
 
         //- Calculate particle destruction by binary-breakup
-        void deathByBinaryBreakup(const label j, const label i);
+        void deathByBinaryBreakup
+        (
+            const label j,
+            const label i,
+            const volScalarField::Internal& rate
+        );
 
         //- Do calculations relating to coalescence and breakup
         void computeCoalescenceAndBreakup();
@@ -480,6 +497,7 @@ public:
             const label i,
             const phaseModel& phase,
             const IOobject::readOption r = IOobject::NO_READ,
+            const IOobject::writeOption w = IOobject::NO_WRITE,
             const bool registerObject = true
         );
 

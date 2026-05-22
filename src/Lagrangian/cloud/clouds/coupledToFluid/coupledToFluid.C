@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -40,20 +40,21 @@ namespace clouds
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 Foam::tmp<Foam::volScalarField>
-Foam::clouds::coupledToFluid::getRhocVf() const
+Foam::clouds::coupledToFluid::getRhocVf(const word& phaseName) const
 {
-    if (mesh_.mesh().foundObject<volScalarField>("rho"))
+    const word rhocName = IOobject::groupName("rho", phaseName);
+
+    if (mesh_.poly().foundObject<volScalarField>(rhocName))
     {
-        return mesh_.mesh().lookupObject<volScalarField>("rho");
+        return mesh_.poly().lookupObject<volScalarField>(rhocName);
     }
 
-    if (mesh_.mesh().foundObject<basicThermo>(physicalProperties::typeName))
+    const word thermocName =
+        IOobject::groupName(physicalProperties::typeName, phaseName);
+
+    if (mesh_.poly().foundObject<basicThermo>(thermocName))
     {
-        return
-            mesh_.mesh().lookupObject<basicThermo>
-            (
-                physicalProperties::typeName
-            ).rho();
+        return mesh_.poly().lookupObject<basicThermo>(thermocName).rho();
     }
 
     FatalErrorInFunction
@@ -61,6 +62,28 @@ Foam::clouds::coupledToFluid::getRhocVf() const
         << exit(FatalError);
 
     return tmp<volScalarField>(nullptr);
+}
+
+
+const Foam::volScalarField&
+Foam::clouds::coupledToFluid::getMucVf(const word& phaseName) const
+{
+    const word mucName = IOobject::groupName("mu", phaseName);
+
+    if (mesh_.poly().foundObject<volScalarField>(mucName))
+    {
+        return mesh_.poly().lookupObject<volScalarField>(mucName);
+    }
+
+    const word thermocName =
+        IOobject::groupName(physicalProperties::typeName, phaseName);
+
+    if (mesh_.poly().foundObject<fluidThermo>(thermocName))
+    {
+        return mesh_.poly().lookupObject<fluidThermo>(thermocName).mu();
+    }
+
+    return NullObjectRef<volScalarField>();
 }
 
 
@@ -77,32 +100,73 @@ Foam::clouds::coupledToFluid::calcNuc
 
 // * * * * * * * * * * * *  Protected Member Functions * * * * * * * * * * * //
 
-void Foam::clouds::coupledToFluid::updateRhoc()
+void Foam::clouds::coupledToFluid::updateCarrier()
 {
+    coupled::updateCarrier();
+
     if (trhocVf_.isTmp())
     {
-        trhocVf_ = getRhocVf();
+        trhocVf_.ref() = getRhocVf(carriedCloud_.carrierPhaseName());
+    }
+
+    if (trhocPhaseVf_.isTmp())
+    {
+        trhocPhaseVf_.ref() = getRhocVf(carriedCloud_.phaseName());
     }
 }
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::clouds::coupledToFluid::coupledToFluid(const cloud& c)
+Foam::clouds::coupledToFluid::coupledToFluid
+(
+    const cloud& c,
+    const carried& carriedCloud
+)
 :
-    coupled(c),
+    coupled(c, carriedCloud),
     mesh_(c.mesh()),
-    trhocVf_(getRhocVf()),
-    rhoc(carrierField<scalar>(trhocVf_())),
+    carriedCloud_(carriedCloud),
+    trhocVf_(getRhocVf(carriedCloud.carrierPhaseName())),
+    trhocPhaseVf_
+    (
+        carriedCloud.hasPhase()
+      ? getRhocVf(carriedCloud.phaseName())
+      : tmp<volScalarField>(NullObjectRef<volScalarField>())
+    ),
+    mucVf_(getMucVf(carriedCloud.carrierPhaseName())),
+    rhoc(carriedCloud.carrierField<scalar>(trhocVf_())),
+    rhocPhase
+    (
+        carriedCloud.hasPhase()
+      ? carriedCloud.carrierField<scalar>(trhocPhaseVf_())
+      : carriedCloud.carrierField<scalar>
+        (
+            IOobject::groupName("rhoc", carriedCloud.phaseName()),
+            [&]()
+            {
+                FatalErrorInFunction
+                    << "Cloud " << c.name() << " does not have a corresponding "
+                    << "Eulerian phase density" << exit(FatalError);
+                return tmp<volScalarField>(nullptr);
+            }
+        )
+    ),
     muc
     (
-        carrierField<scalar>
+        isNull(mucVf_)
+      ? c.derivedField<scalar>
         (
-            mesh_
-           .mesh()
-           .lookupObject<fluidThermo>(physicalProperties::typeName)
-           .mu()
+            [&]
+            (
+                const LagrangianModelRef& model,
+                const LagrangianSubMesh& subMesh
+            )
+            {
+                return rhoc(model, subMesh)*nuc(model, subMesh);
+            }
         )
+      : carriedCloud.carrierField<scalar>(mucVf_)
     )
 {}
 

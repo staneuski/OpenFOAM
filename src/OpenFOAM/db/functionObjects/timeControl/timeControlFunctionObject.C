@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2016-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2016-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -40,7 +40,7 @@ namespace functionObjects
 }
 
 
-// * * * * * * * * * * * * * * * Private Members * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 bool Foam::functionObjects::timeControl::active() const
 {
@@ -65,6 +65,17 @@ Foam::functionObjects::timeControl::timeControl
 {
     writeControl_.read(dict);
     executeControl_.read(dict);
+
+    // If we are *not* executing at the start then we need to explicitly call
+    // the controls' execute methods to ensure that internal state is correctly
+    // advanced past the initial time instant. If we *are* executing at the
+    // start then we don't need to do this as it will happen naturally as part
+    // of the function object's execute and write hooks.
+    if (!foPtr_->executeAtStart())
+    {
+        executeControl_.execute();
+        writeControl_.execute();
+    }
 }
 
 

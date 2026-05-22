@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       volVectorField;
+    location    "0";
     object      U;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -22,21 +23,18 @@ boundaryField
     inlet
     {
         type            pressureInletOutletVelocity;
-        value           uniform (0 0 0);
     }
 
     outlet1
     {
         type            inletOutlet;
         inletValue      uniform (0 0 0);
-        value           uniform (0 0 0);
     }
 
     outlet2
     {
         type            inletOutlet;
         inletValue      uniform (0 0 0);
-        value           uniform (0 0 0);
     }
 
     defaultFaces

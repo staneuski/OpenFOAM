@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -54,6 +54,8 @@ namespace fv
 
 void Foam::fv::phaseSurfaceBoiling::readCoeffs(const dictionary& dict)
 {
+    reReadSpecie(dict);
+
     saturationModelPtr_.reset
     (
         saturationTemperatureModel::New
@@ -133,11 +135,7 @@ void Foam::fv::phaseSurfaceBoiling::correctMDot() const
         saturationModelPtr_->Tsat(liquid_.fluidThermo().p()())
     );
 
-    const volScalarField::Internal L
-    (
-        vapourThermo.ha(liquid_.fluidThermo().p()(), Tsat)
-      - liquidThermo.ha()()
-    );
+    const volScalarField::Internal L(this->L(Tsat));
 
     // Wetted fraction
     wetFraction_ =
@@ -252,7 +250,14 @@ Foam::fv::phaseSurfaceBoiling::phaseSurfaceBoiling
     const dictionary& dict
 )
 :
-    phaseChange(name, modelType, mesh, dict, wordList()),
+    phaseChange
+    (
+        name,
+        modelType,
+        mesh,
+        dict,
+        readSpecie(coeffs(modelType, dict), false)
+    ),
     nucleation(),
     solver_(mesh().lookupObject<solvers::multiphaseEuler>(solver::typeName)),
     fluid_(solver_.fluid),
@@ -458,7 +463,7 @@ void Foam::fv::phaseSurfaceBoiling::addSup
     }
 
     // Let the base class do the other liquid-vapour transfers
-    if (&he == &liquid_.thermo().he())
+    if (&he != &solid_.thermo().he())
     {
         phaseChange::addSup(alpha, rho, he, eqn);
     }

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -37,7 +37,12 @@ Foam::cloudLagrangianFieldSource::cloudLagrangianFieldSource
 )
 :
     field_(static_cast<const LagrangianFieldSourceBase&>(field)),
-    cloud_(field_.db().template lookupType<Foam::cloud>())
+    cloud_
+    (
+        field_.db().template foundType<Foam::cloud>()
+      ? field_.db().template lookupType<Foam::cloud>()
+      : NullObjectRef<Foam::cloud>()
+    )
 {}
 
 
@@ -46,15 +51,38 @@ Foam::cloudLagrangianFieldSource::cloudLagrangianFieldSource
 template<class Cloud, class ... Clouds>
 bool Foam::cloudLagrangianFieldSource::isCloud() const
 {
-    return CloudTypes<Cloud, Clouds ...>::isA(cloud_);
+    if (isNull(cloud_))
+    {
+        return false;
+    }
+    else
+    {
+        return CloudTypes<Cloud, Clouds ...>::isA(cloud_);
+    }
+}
+
+
+template<class Cloud, class ... Clouds>
+void Foam::cloudLagrangianFieldSource::assertCloud() const
+{
+    if (!isCloud<Cloud, Clouds ...>())
+    {
+        FatalErrorInFunction
+            << "The '" << field_.type() << "' source of field '"
+            << (field_.db().dbDir()/field_.internalName()).c_str()
+            << "' of cloud '" << cloud_.mesh().name()
+            << "' requires a cloud of type "
+            << CloudTypes<Cloud, Clouds ...>::typesString("or").c_str()
+            << " (or a derivation thereof), rather than '" << cloud_.type()
+            << "'" << exit(FatalError);
+    }
 }
 
 
 template<class Cloud, class ... Clouds>
 void Foam::cloudLagrangianFieldSource::assertCloud
 (
-    const LagrangianModel& model,
-    const LagrangianSubMesh& subMesh
+    const LagrangianModel& model
 ) const
 {
     if (!isCloud<Cloud, Clouds ...>())
@@ -73,13 +101,22 @@ void Foam::cloudLagrangianFieldSource::assertCloud
 
 
 template<class Cloud>
+const Cloud& Foam::cloudLagrangianFieldSource::cloud() const
+{
+    assertCloud<Cloud>();
+
+    return refCast<const Cloud>(cloud_);
+}
+
+
+template<class Cloud>
 const Cloud& Foam::cloudLagrangianFieldSource::cloud
 (
-    const LagrangianModel& model,
-    const LagrangianSubMesh& subMesh
+    const LagrangianModel& model
 ) const
 {
-    assertCloud<Cloud>(model, subMesh);
+    assertCloud<Cloud>(model);
+
     return refCast<const Cloud>(cloud_);
 }
 

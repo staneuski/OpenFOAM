@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2019-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2019-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -37,7 +37,7 @@ template<class Type>
 Foam::waveInletOutletFvPatchField<Type>::waveInletOutletFvPatchField
 (
     const fvPatch& p,
-    const DimensionedField<Type, volMesh>& iF,
+    const DimensionedField<Type, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -47,7 +47,7 @@ Foam::waveInletOutletFvPatchField<Type>::waveInletOutletFvPatchField
         Function1<Type>::New
         (
             "inletValueAbove",
-            this->db().time().userUnits(),
+            this->time().userUnits(),
             iF.dimensions(),
             dict
         )
@@ -57,7 +57,7 @@ Foam::waveInletOutletFvPatchField<Type>::waveInletOutletFvPatchField
         Function1<Type>::New
         (
             "inletValueBelow",
-            this->db().time().userUnits(),
+            this->time().userUnits(),
             iF.dimensions(),
             dict
         )
@@ -87,7 +87,7 @@ Foam::waveInletOutletFvPatchField<Type>::waveInletOutletFvPatchField
 (
     const waveInletOutletFvPatchField<Type>& ptf,
     const fvPatch& p,
-    const DimensionedField<Type, volMesh>& iF,
+    const DimensionedField<Type, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -102,7 +102,7 @@ template<class Type>
 Foam::waveInletOutletFvPatchField<Type>::waveInletOutletFvPatchField
 (
     const waveInletOutletFvPatchField<Type>& ptf,
-    const DimensionedField<Type, volMesh>& iF
+    const DimensionedField<Type, fvMesh>& iF
 )
 :
     mixedFvPatchField<Type>(ptf, iF),
@@ -128,11 +128,11 @@ void Foam::waveInletOutletFvPatchField<Type>::updateCoeffs()
             phiName_
         );
 
-    const scalar t = this->db().time().value();
+    const scalar t = this->time().value();
 
     const waveSuperposition& waves = waveSuperposition::New(this->db());
 
-    const pointField& localPoints = this->patch().patch().localPoints();
+    const pointField& localPoints = this->patch().poly().localPoints();
 
     this->refValue() =
         levelSetAverage
@@ -159,14 +159,14 @@ void Foam::waveInletOutletFvPatchField<Type>::write(Ostream& os) const
     writeEntry
     (
         os,
-        this->db().time().userUnits(),
+        this->time().userUnits(),
         this->internalField().dimensions(),
         inletValueAbove_()
     );
     writeEntry
     (
         os,
-        this->db().time().userUnits(),
+        this->time().userUnits(),
         this->internalField().dimensions(),
         inletValueBelow_()
     );

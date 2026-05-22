@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2016-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2016-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -71,7 +71,7 @@ Foam::laminarModel<BasicMomentumTransportModel>::New
     const viscosity& viscosity
 )
 {
-    const IOdictionary modelDict
+    const IOdictionary dict
     (
         momentumTransportModel::readModelDict
         (
@@ -80,16 +80,19 @@ Foam::laminarModel<BasicMomentumTransportModel>::New
         )
     );
 
-    if (modelDict.found("laminar"))
+    if (dict.found("laminar"))
     {
-        const word modelType =
-            modelDict.subDict("laminar").lookupBackwardsCompatible<word>
-            (
-                {"model", "laminarModel"}
-            );
+        const dictionary& laminarDict(dict.subDict("laminar"));
 
-        Info<< indent
+        const word modelType = laminarDict.lookupBackwardsCompatible<word>
+        (
+            {"model", "laminarModel"}
+        );
+
+        Info<< indentOrNl
             << "Selecting laminar stress model " << modelType << endl;
+
+        libs.open(laminarDict, "libs", dictionaryConstructorTablePtr_);
 
         typename dictionaryConstructorTable::iterator cstrIter =
             dictionaryConstructorTablePtr_->find(modelType);
@@ -104,35 +107,26 @@ Foam::laminarModel<BasicMomentumTransportModel>::New
                 << exit(FatalError);
         }
 
-        Info<< incrIndent;
-
-        autoPtr<laminarModel> modelPtr
+        printDictionary print(laminarDict.name());
+        return cstrIter()
         (
-            cstrIter()
-            (
-                alpha,
-                rho,
-                U,
-                alphaRhoPhi,
-                phi,
-                viscosity
-            )
+            alpha,
+            rho,
+            U,
+            alphaRhoPhi,
+            phi,
+            viscosity
         );
-
-        Info<< decrIndent;
-
-        return modelPtr;
     }
     else
     {
-        Info<< indent
+        Info<< indentOrNl
             << "Selecting laminar stress model "
             << laminarModels::Stokes<BasicMomentumTransportModel>::typeName
             << endl;
 
-        Info<< incrIndent;
-
-        autoPtr<laminarModel> modelPtr
+        printDictionary print(dict.name());
+        return autoPtr<laminarModel>
         (
             new laminarModels::Stokes<BasicMomentumTransportModel>
             (
@@ -144,10 +138,6 @@ Foam::laminarModel<BasicMomentumTransportModel>::New
                 viscosity
             )
         );
-
-        Info<< decrIndent;
-
-        return modelPtr;
     }
 }
 
@@ -164,9 +154,20 @@ Foam::laminarModel<BasicMomentumTransportModel>::laminarDict() const
 
 template<class BasicMomentumTransportModel>
 const Foam::dictionary&
-Foam::laminarModel<BasicMomentumTransportModel>::coeffDict() const
+Foam::laminarModel<BasicMomentumTransportModel>::typeDict() const
 {
-    return this->laminarDict().optionalSubDict(type() + "Coeffs");
+    return typeDict(this->type());
+}
+
+
+template<class BasicMomentumTransportModel>
+const Foam::dictionary&
+Foam::laminarModel<BasicMomentumTransportModel>::typeDict
+(
+    const word& type
+) const
+{
+    return this->laminarDict().optionalTypeDict(type);
 }
 
 

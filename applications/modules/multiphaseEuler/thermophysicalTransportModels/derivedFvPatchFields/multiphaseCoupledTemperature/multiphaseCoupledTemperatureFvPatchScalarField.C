@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2022-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2022-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -95,7 +95,7 @@ void Foam::multiphaseCoupledTemperatureFvPatchScalarField::getNbr
 {
     // Lookup the fluid model
     const phaseSystem& fluid =
-        patch().boundaryMesh().mesh()
+        patch().mesh()
        .lookupObject<phaseSystem>(phaseSystem::propertiesName);
 
     scalarField sumKappa(size(), scalar(0));
@@ -125,57 +125,13 @@ void Foam::multiphaseCoupledTemperatureFvPatchScalarField::getNbr
 }
 
 
-void Foam::multiphaseCoupledTemperatureFvPatchScalarField::getNbr
-(
-    tmp<scalarField>& TrefNbr,
-    tmp<scalarField>& qNbr
-) const
-{
-    // Lookup the fluid model
-    const phaseSystem& fluid =
-        patch().boundaryMesh().mesh()
-       .lookupObject<phaseSystem>(phaseSystem::propertiesName);
-
-    TrefNbr = new scalarField(size(), scalar(0));
-    scalarField& Tw = TrefNbr.ref();
-
-    forAll(fluid.phases(), phasei)
-    {
-        const phaseModel& phase = fluid.phases()[phasei];
-        const rhoThermo& thermo = phase.thermo();
-
-        const fvPatchScalarField& alpha =
-            phase.boundaryField()[patch().index()];
-
-        Tw += alpha*thermo.T().boundaryField()[patch().index()];
-
-        /*
-        // Pending the addition of phase anisotropic thermal transport
-        tmp<scalarField> qCorr = ttm.qCorr(patch().index());
-
-        if (qCorr.valid())
-        {
-            if (qCorr.valid())
-            {
-                qNbr.ref() += alpha*qCorr;
-            }
-            else
-            {
-                qNbr = alpha*qCorr;
-            }
-        }
-        */
-    }
-}
-
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::multiphaseCoupledTemperatureFvPatchScalarField::
 multiphaseCoupledTemperatureFvPatchScalarField
 (
     const fvPatch& p,
-    const DimensionedField<scalar, volMesh>& iF,
+    const DimensionedField<scalar, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -188,7 +144,7 @@ multiphaseCoupledTemperatureFvPatchScalarField
 (
     const multiphaseCoupledTemperatureFvPatchScalarField& psf,
     const fvPatch& p,
-    const DimensionedField<scalar, volMesh>& iF,
+    const DimensionedField<scalar, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -200,7 +156,7 @@ Foam::multiphaseCoupledTemperatureFvPatchScalarField::
 multiphaseCoupledTemperatureFvPatchScalarField
 (
     const multiphaseCoupledTemperatureFvPatchScalarField& psf,
-    const DimensionedField<scalar, volMesh>& iF
+    const DimensionedField<scalar, fvMesh>& iF
 )
 :
     coupledTemperatureFvPatchScalarField(psf, iF)

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2021 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,10 +35,10 @@ Foam::ConstantRateDevolatilisation<CloudType>::ConstantRateDevolatilisation
 )
 :
     DevolatilisationModel<CloudType>(dict, owner, typeName),
-    volatileData_(this->coeffDict().lookup("volatileData")),
+    volatileData_(this->typeDict().lookup("volatileData")),
     YVolatile0_(volatileData_.size()),
     volatileToGasMap_(volatileData_.size()),
-    residualCoeff_(this->coeffDict().template lookup<scalar>("residualCoeff"))
+    residualCoeff_(this->typeDict().template lookup<scalar>("residualCoeff"))
 {
     if (volatileData_.empty())
     {
@@ -103,7 +103,7 @@ void Foam::ConstantRateDevolatilisation<CloudType>::calculate
     const scalarField& YGasEff,
     const scalarField& YLiquidEff,
     const scalarField& YSolidEff,
-    label& canCombust,
+    label& canReact,
     scalarField& dMassDV
 ) const
 {
@@ -114,7 +114,7 @@ void Foam::ConstantRateDevolatilisation<CloudType>::calculate
         const scalar massVolatile0 = mass0*YVolatile0_[i];
         const scalar massVolatile = mass*YGasEff[id];
 
-        // Combustion allowed once all volatile components evolved
+        // Reaction allowed once all volatile components evolved
         done = done && (massVolatile <= residualCoeff_*massVolatile0);
 
         // Model coefficients
@@ -124,9 +124,9 @@ void Foam::ConstantRateDevolatilisation<CloudType>::calculate
         dMassDV[id] = min(dt*A0*massVolatile0, massVolatile);
     }
 
-    if (done && canCombust != -1)
+    if (done && canReact != -1)
     {
-        canCombust = 1;
+        canReact = 1;
     }
 }
 

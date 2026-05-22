@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2019 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -64,7 +64,7 @@ protected:
         const label comm_;
 
 
-    // Protected member functions
+    // Protected Member Functions
 
         //- Helper: determine number of processors whose recvSizes fits
         //  ito maxBufferSize
@@ -147,18 +147,6 @@ public:
 
         //- Read header. Call only on master.
         static bool readMasterHeader(IOobject&, Istream&);
-
-        //- Helper: write FoamFile IOobject header
-        static void writeHeader
-        (
-            Ostream& os,
-            const IOstream::versionNumber version,
-            const IOstream::streamFormat format,
-            const word& type,
-            const string& note,
-            const fileName& location,
-            const word& name
-        );
 
         //- Read selected block (non-seeking) + header information
         static autoPtr<ISstream> readBlock

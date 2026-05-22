@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       volScalarField;
+    location    "0";
     object      k;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -40,7 +41,6 @@ boundaryField
     {
         type            inletOutlet;
         inletValue      uniform 0.001;
-        value           uniform 1e-11;
     }
 
     front

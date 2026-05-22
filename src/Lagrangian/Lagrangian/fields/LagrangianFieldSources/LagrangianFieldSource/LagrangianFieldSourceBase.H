@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -44,6 +44,7 @@ namespace Foam
 {
 
 // Forward declaration of classes
+class Time;
 class regIOobject;
 class dimensionSet;
 class objectRegistry;
@@ -90,8 +91,14 @@ public:
             //- Return local objectRegistry
             const objectRegistry& db() const;
 
+            //- Return time
+            const Time& time() const;
+
             //- Return internal field name
             const word& internalName() const;
+
+            //- Return internal field group
+            word internalGroup() const;
 
             //- Return internal dimensions reference
             virtual const dimensionSet& internalDimensions() const = 0;

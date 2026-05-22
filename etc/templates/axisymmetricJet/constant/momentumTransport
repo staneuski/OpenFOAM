@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "constant";
     object      momentumTransport;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -30,15 +31,15 @@ LES
 
     turbulence          on;
 
-    cubeRootVolCoeffs
+    cubeRootVol
     {
         deltaCoeff      1;
     }
 
-    smoothCoeffs
+    smooth
     {
         delta           cubeRootVol;
-        cubeRootVolCoeffs
+        cubeRootVol
         {
             deltaCoeff      1;
         }

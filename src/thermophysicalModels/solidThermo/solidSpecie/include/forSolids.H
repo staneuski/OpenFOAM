@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2019-2023 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2019-2025 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -49,23 +49,27 @@ License
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-#define forSolidEquations(Mu, He, Cp, Macro, Args...)                          \
+#define forSolidEqns(Mu, He, Cp, Macro, Args...)                               \
     forThermo(Mu, He, Cp, rhoConst, specie, Macro, Args)
 
 #define forSolidEnergiesAndThermos(Mu, Macro, Args...)                         \
-    forSolidEquations(Mu, sensibleInternalEnergy, eConstThermo, Macro, Args);  \
-    forSolidEquations                                                          \
-        (Mu, sensibleInternalEnergy, ePolynomialThermo, Macro, Args);          \
-    forSolidEquations(Mu, sensibleInternalEnergy, ePowerThermo, Macro, Args);  \
-    forSolidEquations                                                          \
-        (Mu, sensibleInternalEnergy, eIcoTabulatedThermo, Macro, Args)
+    forSolidEqns(Mu, sensibleInternalEnergy, eConstThermo, Macro, Args);       \
+    forSolidEqns(Mu, sensibleInternalEnergy, ePolynomialThermo, Macro, Args);  \
+    forSolidEqns(Mu, sensibleInternalEnergy, ePowerThermo, Macro, Args);       \
+    forSolidEqns(Mu, sensibleInternalEnergy, eIcoTabulatedThermo, Macro, Args)
 
-#define forSolidTransports(Macro, Args...)                                     \
+#define forIsoSolidTransports(Macro, Args...)                                  \
     forSolidEnergiesAndThermos(constIsoSolidTransport, Macro, Args);           \
-    forSolidEnergiesAndThermos(constAnisoSolidTransport, Macro, Args);         \
     forSolidEnergiesAndThermos(exponentialSolidTransport, Macro, Args);        \
     forSolidEnergiesAndThermos(polynomialSolidTransport, Macro, Args);         \
     forSolidEnergiesAndThermos(tabulatedSolidTransport, Macro, Args)
+
+#define forSolidTransports(Macro, Args...)                                     \
+    forIsoSolidTransports(Macro, Args)                                         \
+    forSolidEnergiesAndThermos(constAnisoSolidTransport, Macro, Args);
+
+#define forIsoSolids(Macro, Args...)                                           \
+    forIsoSolidTransports(Macro, Args)
 
 #define forSolids(Macro, Args...)                                              \
     forSolidTransports(Macro, Args)

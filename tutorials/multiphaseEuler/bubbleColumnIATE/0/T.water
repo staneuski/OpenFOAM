@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       volScalarField;
+    location    "0";
     object      T.water;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -28,7 +29,6 @@ boundaryField
         type            inletOutlet;
         phi             phi.water;
         inletValue      uniform 300;
-        value           $internalField;
     }
     inlet
     {

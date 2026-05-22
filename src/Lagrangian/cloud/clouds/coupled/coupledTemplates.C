@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,82 +24,146 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "coupled.H"
-#include "CarrierField.H"
 #include "CarrierEqn.H"
+#include "LagrangianmDdt.H"
+
+// * * * * * * * * * * * *  Protected Member Functions * * * * * * * * * * * //
+
+template<class Type>
+Foam::CarrierEqn<Type>& Foam::clouds::coupled::carrierEqn
+(
+    const CloudDerivedField<Type>& psic
+)
+{
+    const word key = carried::carrierNameToName(psic.name());
+
+    typename HashPtrTable<CarrierEqn<Type>>::iterator iter =
+        carrierEqns<Type>().find(key);
+
+    if (iter != carrierEqns<Type>().end()) return **iter;
+
+    CarrierEqn<Type>* ptr =
+        new CarrierEqn<Type>(key, carriedCloud_.Uc.psi().mesh());
+    carrierEqns<Type>().insert(key, ptr);
+
+    return *ptr;
+}
+
+
+template<class Type>
+Foam::CarrierEqn<Type>& Foam::clouds::coupled::carrierEqn
+(
+    const CarrierField<Type>& psic
+)
+{
+    typename HashPtrTable<CarrierEqn<Type>>::iterator iter =
+        carrierEqns<Type>().find(psic.psi().name());
+
+    if (iter != carrierEqns<Type>().end()) return **iter;
+
+    CarrierEqn<Type>* ptr = new CarrierEqn<Type>(psic.psi());
+    carrierEqns<Type>().insert(psic.psi().name(), ptr);
+
+    return *ptr;
+}
+
+
+// * * * * * * * * * * * *  Protected Member Functions * * * * * * * * * * * //
+
+template<class Type>
+bool Foam::clouds::coupled::initPsicDdt
+(
+    const LagrangianSubScalarSubField& vOrM,
+    const CloudDerivedField<Type>& psic
+) const
+{
+    const LagrangianSubMesh& subMesh = vOrM.mesh();
+
+    return Lagrangianm::initDdt(vOrM.dimensions(), psic(subMesh));
+}
+
+
+template<class Type>
+Foam::tmp<Foam::LagrangianEqn<Type>> Foam::clouds::coupled::psicEqn
+(
+    const LagrangianSubScalarField& deltaT,
+    const LagrangianSubScalarSubField& vOrM,
+    const LagrangianSubSubField<Type>& psi,
+    const CloudDerivedField<Type>& psic
+) const
+{
+    const LagrangianModels& models = cloud_.LagrangianModels();
+    const LagrangianSubMesh& subMesh = deltaT.mesh();
+
+    return
+        Lagrangianm::noDdt(deltaT, vOrM.dimensions(), psic(subMesh))
+     ==
+        models.sourceProxy(deltaT, vOrM, psi, psic(subMesh));
+}
+
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
 template<class Type>
-const Foam::CarrierField<Type>& Foam::clouds::coupled::carrierField
-(
-    const VolField<Type>& psi
-) const
+bool Foam::clouds::coupled::hasCarrierEqn(const word& key) const
 {
-    return carrierField<Type, VolField<Type>>(psi);
-}
-
-
-template<class Type, class ... Args>
-const Foam::CarrierField<Type>& Foam::clouds::coupled::carrierField
-(
-    const Args& ... args
-) const
-{
-    const CarrierField<Type>* lookupPtr =
-        carrierFields<Type>().lookupPtr(CarrierField<Type>(args ...).name());
-
-    if (lookupPtr) return *lookupPtr;
-
-    CarrierField<Type>* ptr = new CarrierField<Type>(args ...);
-    carrierFields<Type>().insert(ptr->name(), ptr);
-    return *ptr;
+    return carrierEqns<Type>().found(key);
 }
 
 
 template<class Type>
-Foam::CarrierEqn<Type>& Foam::clouds::coupled::carrierEqn
-(
-    const VolField<Type>& psi
-)
+const Foam::CarrierEqn<Type>&
+Foam::clouds::coupled::carrierEqn(const word& key) const
 {
-    CarrierEqn<Type>* lookupPtr =
-        carrierEqns<Type>().lookupPtr(psi.name());
-
-    if (lookupPtr) return *lookupPtr;
-
-    CarrierEqn<Type>* ptr = new CarrierEqn<Type>(psi);
-    carrierEqns<Type>().insert(psi.name(), ptr);
-    return *ptr;
+    return carrierEqns<Type>()[key];
 }
 
 
 template<class Type>
-const Foam::CarrierEqn<Type>& Foam::clouds::coupled::carrierEqn
-(
-    const VolField<Type>& psi
-) const
+const Foam::HashTable<const Foam::CarrierEqn<Type>*>
+Foam::clouds::coupled::carrierEqns(const word& key) const
 {
-    return carrierEqns<Type>()[psi.name()];
+    const word member = IOobject::member(key);
+
+    HashTable<const CarrierEqn<Type>*> result;
+
+    forAllConstIter
+    (
+        typename HashPtrTable<CarrierEqn<Type>>,
+        carrierEqns<Type>(),
+        iter
+    )
+    {
+        if (IOobject::member(iter.key()) == member)
+        {
+            result.set(IOobject::group(iter.key()), iter());
+        }
+    }
+
+    return result;
 }
 
 
 template<class Type>
-Foam::CarrierEqn<Type>& Foam::clouds::coupled::carrierEqn
-(
-    const CarrierField<Type>& psic
-)
+bool Foam::clouds::coupled::hasCarrierEqn(const VolField<Type>& psi) const
 {
-    return carrierEqn(psic.psi());
+    return hasCarrierEqn<Type>(psi.name());
 }
 
 
 template<class Type>
-const Foam::CarrierEqn<Type>& Foam::clouds::coupled::carrierEqn
-(
-    const CarrierField<Type>& psic
-) const
+const Foam::CarrierEqn<Type>&
+Foam::clouds::coupled::carrierEqn(const VolField<Type>& psi) const
 {
-    return carrierEqn(psic.psi());
+    return carrierEqn<Type>(psi.name());
+}
+
+
+template<class Type>
+const Foam::HashTable<const Foam::CarrierEqn<Type>*>
+Foam::clouds::coupled::carrierEqns(const VolField<Type>& psi) const
+{
+    return carrierEqns<Type>(psi.name());
 }
 
 

@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       volVectorField;
+    location    "0";
     object      U.gas;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -47,7 +48,6 @@ boundaryField
     {
         type            pressureInletOutletVelocity;
         phi             phi.gas;
-        value           uniform (0 0 0);
     }
 
     stirrer

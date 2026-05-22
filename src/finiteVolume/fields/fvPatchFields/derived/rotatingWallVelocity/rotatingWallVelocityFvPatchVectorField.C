@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -34,14 +34,14 @@ Foam::rotatingWallVelocityFvPatchVectorField::
 rotatingWallVelocityFvPatchVectorField
 (
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const dictionary& dict
 )
 :
     fixedValueFvPatchField<vector>(p, iF, dict, false),
     origin_(dict.lookup<vector>("origin")),
     axis_(dict.lookup<vector>("axis")),
-    omega_(db().time(), dict)
+    omega_(time(), dict)
 {
     if (dict.found("value"))
     {
@@ -63,7 +63,7 @@ rotatingWallVelocityFvPatchVectorField
 (
     const rotatingWallVelocityFvPatchVectorField& pvf,
     const fvPatch& p,
-    const DimensionedField<vector, volMesh>& iF,
+    const DimensionedField<vector, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -78,7 +78,7 @@ Foam::rotatingWallVelocityFvPatchVectorField::
 rotatingWallVelocityFvPatchVectorField
 (
     const rotatingWallVelocityFvPatchVectorField& pvf,
-    const DimensionedField<vector, volMesh>& iF
+    const DimensionedField<vector, fvMesh>& iF
 )
 :
     fixedValueFvPatchField<vector>(pvf, iF),
@@ -97,7 +97,7 @@ void Foam::rotatingWallVelocityFvPatchVectorField::updateCoeffs()
         return;
     }
 
-    const scalar omega = omega_.value(db().time().value());
+    const scalar omega = omega_.value(time().value());
 
     // Calculate the rotating wall velocity from the specification of the motion
     const vectorField Up

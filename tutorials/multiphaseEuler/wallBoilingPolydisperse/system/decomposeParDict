@@ -7,9 +7,10 @@
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
-    format          ascii;
-    class           dictionary;
-    object          decomposeParDict;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      decomposeParDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -17,12 +18,12 @@ numberOfSubdomains 4;
 
 method          scotch;
 
-simpleCoeffs
+simple
 {
     n               (1 1 24);
 }
 
-hierarchicalCoeffs
+hierarchical
 {
     n               (1 1 1);
     order           xyz;

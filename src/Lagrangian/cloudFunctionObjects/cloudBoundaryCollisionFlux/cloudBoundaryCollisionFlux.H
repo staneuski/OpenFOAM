@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -60,11 +60,14 @@ private:
 
     // Private Data
 
+        //- Field of proc indices
+        autoPtr<LagrangianLabelDynamicField> prociPtr_;
+
         //- Field of face indices
-        autoPtr<LagrangianLabelField> faceiPtr_;
+        autoPtr<LagrangianLabelDynamicField> faceiPtr_;
 
         //- Field of the property for which to compute the flux
-        autoPtr<LagrangianScalarField> qPtr_;
+        autoPtr<LagrangianScalarDynamicField> qPtr_;
 
         //- Name of the flux
         const word phiName_;
@@ -129,7 +132,7 @@ public:
         //- Hook before all face crossings
         virtual void preCrossFaces
         (
-            const LagrangianScalarInternalDynamicField& fraction
+            const LagrangianInternalScalarDynamicField& fraction
         );
 
         //- Hook before face crossings of a specific sub-mesh
@@ -147,7 +150,7 @@ public:
         //- Hook after all face crossings
         virtual void postCrossFaces
         (
-            const LagrangianScalarInternalDynamicField& fraction
+            const LagrangianInternalScalarDynamicField& fraction
         );
 
         //- Write the number flux

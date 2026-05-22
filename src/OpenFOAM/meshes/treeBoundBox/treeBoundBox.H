@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -98,9 +98,6 @@ class treeBoundBox
 public:
 
     // Static Data Members
-
-        //- The great value used for greatBox and invertedBox
-        static const scalar great;
 
         //- As per boundBox::greatBox, but with great instead of vGreat
         static const treeBoundBox greatBox;
@@ -211,11 +208,11 @@ public:
             const FixedList<label, Size>& indices
         );
 
-        //- Construct from dictionary
-        inline treeBoundBox(const dictionary&);
-
         //- Construct from Istream
         inline treeBoundBox(Istream&);
+
+        //- Construct from dictionary
+        inline treeBoundBox(const dictionary&);
 
 
     // Member Functions
@@ -380,6 +377,11 @@ public:
 //- Data associated with treeBoundBox type are contiguous
 template<>
 inline bool contiguous<treeBoundBox>() {return contiguous<boundBox>();}
+
+
+//- A treeBoundBox is scaleable
+template<>
+struct scaleable<treeBoundBox> : public scaleable<boundBox> {};
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

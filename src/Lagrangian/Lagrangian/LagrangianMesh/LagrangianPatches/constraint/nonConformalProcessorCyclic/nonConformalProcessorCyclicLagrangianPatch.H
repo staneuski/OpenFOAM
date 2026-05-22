@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -59,7 +59,7 @@ private:
 
         //- Reference to the nonConformalProcessorCyclic poly patch
         const nonConformalProcessorCyclicPolyPatch&
-            nonConformalProcessorCyclicPatch_;
+            nonConformalProcessorCyclicPoly_;
 
 
 public:
@@ -84,13 +84,6 @@ public:
 
     // Member Functions
 
-        //- Return the nonConformalProcessorCyclic patch
-        const nonConformalProcessorCyclicPolyPatch&
-        nonConformalProcessorCyclicPatch() const
-        {
-            return nonConformalProcessorCyclicPatch_;
-        }
-
         //- Return a reference to the referred patch
         const nonConformalCyclicLagrangianPatch& referPatch() const
         {
@@ -107,7 +100,7 @@ public:
         (
             PstreamBuffers&,
             LagrangianMesh&,
-            const LagrangianScalarInternalDynamicField& fraction
+            const LagrangianInternalScalarDynamicField& fraction
         ) const;
 
         //- Evaluate changes in elements that have tracked to this patch
@@ -115,7 +108,7 @@ public:
         (
             PstreamBuffers&,
             LagrangianMesh&,
-            const LagrangianScalarInternalDynamicField& fraction
+            const LagrangianInternalScalarDynamicField& fraction
         ) const;
 };
 

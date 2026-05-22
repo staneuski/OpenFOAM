@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -25,14 +25,14 @@ License
 
 #include "fvFieldSource.H"
 #include "fvSource.H"
-#include "volMesh.H"
+#include "fvMesh.H"
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class Type>
 Foam::fvFieldSource<Type>::fvFieldSource
 (
-    const DimensionedField<Type, volMesh>& iF
+    const DimensionedField<Type, fvMesh>& iF
 )
 :
     libs_(fileNameList::null()),
@@ -43,19 +43,11 @@ Foam::fvFieldSource<Type>::fvFieldSource
 template<class Type>
 Foam::fvFieldSource<Type>::fvFieldSource
 (
-    const DimensionedField<Type, volMesh>& iF,
+    const DimensionedField<Type, fvMesh>& iF,
     const dictionary& dict
 )
 :
-    libs_
-    (
-        dict.lookupOrDefault
-        (
-            "libs",
-            fileNameList::null(),
-            dictionary::writeOptionalEntries > 1
-        )
-    ),
+    libs_(dict.lookupOrDefault("libs", fileNameList::null())),
     internalField_(iF)
 {}
 
@@ -64,7 +56,7 @@ template<class Type>
 Foam::fvFieldSource<Type>::fvFieldSource
 (
     const fvFieldSource<Type>& field,
-    const DimensionedField<Type, volMesh>& iF
+    const DimensionedField<Type, fvMesh>& iF
 )
 :
     libs_(field.libs_),
@@ -79,7 +71,7 @@ Foam::autoPtr<Foam::fvFieldSource<Type>>
 Foam::fvFieldSource<Type>::New
 (
     const word& fieldSourceType,
-    const DimensionedField<Type, volMesh>& iF
+    const DimensionedField<Type, fvMesh>& iF
 )
 {
     typename nullConstructorTable::iterator cstrIter =
@@ -102,7 +94,7 @@ template<class Type>
 Foam::autoPtr<Foam::fvFieldSource<Type>>
 Foam::fvFieldSource<Type>::New
 (
-    const DimensionedField<Type, volMesh>& iF,
+    const DimensionedField<Type, fvMesh>& iF,
     const dictionary& dict
 )
 {
@@ -152,7 +144,14 @@ const Foam::objectRegistry& Foam::fvFieldSource<Type>::db() const
 
 
 template<class Type>
-const Foam::DimensionedField<Type, Foam::volMesh>&
+const Foam::Time& Foam::fvFieldSource<Type>::time() const
+{
+    return internalField_.mesh().time();
+}
+
+
+template<class Type>
+const Foam::DimensionedField<Type, Foam::fvMesh>&
 Foam::fvFieldSource<Type>::internalField() const
 {
     return internalField_;
@@ -198,11 +197,11 @@ Foam::tmp<Foam::scalarField> Foam::fvFieldSource<Type>::internalCoeff
 
 
 template<class Type>
-Foam::tmp<Foam::DimensionedField<Type, Foam::volMesh>>
+Foam::tmp<Foam::DimensionedField<Type, Foam::fvMesh>>
 Foam::fvFieldSource<Type>::sourceCoeff
 (
     const fvSource& model,
-    const DimensionedField<scalar, volMesh>& source
+    const DimensionedField<scalar, fvMesh>& source
 ) const
 {
     return
@@ -226,11 +225,11 @@ Foam::tmp<Foam::Field<Type>> Foam::fvFieldSource<Type>::sourceCoeff
 
 
 template<class Type>
-Foam::tmp<Foam::DimensionedField<Type, Foam::volMesh>>
+Foam::tmp<Foam::DimensionedField<Type, Foam::fvMesh>>
 Foam::fvFieldSource<Type>::value
 (
     const fvSource& model,
-    const DimensionedField<scalar, volMesh>& source
+    const DimensionedField<scalar, fvMesh>& source
 ) const
 {
     return
@@ -270,12 +269,12 @@ const Foam::fvFieldSource<OtherType>& Foam::fvFieldSource<Type>::fieldSource
 
 template<class Type>
 template<class OtherType>
-Foam::tmp<Foam::DimensionedField<OtherType, Foam::volMesh>>
+Foam::tmp<Foam::DimensionedField<OtherType, Foam::fvMesh>>
 Foam::fvFieldSource<Type>::value
 (
     const word& name,
     const fvSource& model,
-    const DimensionedField<scalar, volMesh>& source
+    const DimensionedField<scalar, fvMesh>& source
 ) const
 {
     return fieldSource<OtherType>(name, model).value(model, source);

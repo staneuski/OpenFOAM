@@ -10,11 +10,9 @@ FoamFile
     format      ascii;
     class       dictionary;
     location    "system";
-    object      blockMeshDict;
+    object      blockMeshDict.intakeValve;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-convertToMeters 1;
 
 // base coordinates on the cylinder and valve dictionaries
 

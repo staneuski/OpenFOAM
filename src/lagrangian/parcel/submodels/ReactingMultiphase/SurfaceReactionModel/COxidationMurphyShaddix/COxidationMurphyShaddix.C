@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -45,14 +45,14 @@ Foam::COxidationMurphyShaddix<CloudType>::COxidationMurphyShaddix
 )
 :
     SurfaceReactionModel<CloudType>(dict, owner, typeName),
-    D0_(this->coeffDict().template lookup<scalar>("D0")),
-    rho0_(this->coeffDict().template lookup<scalar>("rho0")),
-    T0_(this->coeffDict().template lookup<scalar>("T0")),
-    Dn_(this->coeffDict().template lookup<scalar>("Dn")),
-    A_(this->coeffDict().template lookup<scalar>("A")),
-    E_(this->coeffDict().template lookup<scalar>("E")),
-    n_(this->coeffDict().template lookup<scalar>("n")),
-    WVol_(this->coeffDict().template lookup<scalar>("WVol")),
+    D0_(this->typeDict().template lookup<scalar>("D0")),
+    rho0_(this->typeDict().template lookup<scalar>("rho0")),
+    T0_(this->typeDict().template lookup<scalar>("T0")),
+    Dn_(this->typeDict().template lookup<scalar>("Dn")),
+    A_(this->typeDict().template lookup<scalar>("A")),
+    E_(this->typeDict().template lookup<scalar>("E")),
+    n_(this->typeDict().template lookup<scalar>("n")),
+    WVol_(this->typeDict().template lookup<scalar>("WVol")),
     CsLocalId_(-1),
     O2GlobalId_(owner.composition().carrierId("O2")),
     CO2GlobalId_(owner.composition().carrierId("CO2")),
@@ -136,7 +136,7 @@ Foam::scalar Foam::COxidationMurphyShaddix<CloudType>::calculate
     const label idSolid = this->owner().composition().idSolid();
     const scalar fComb = YMixture[idSolid]*YSolid[CsLocalId_];
 
-    // Surface combustion until combustible fraction is consumed
+    // Surface reaction until combustible fraction is consumed
     if (fComb < small)
     {
         return 0.0;

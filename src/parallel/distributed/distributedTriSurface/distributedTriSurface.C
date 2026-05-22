@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -26,7 +26,6 @@ License
 #include "distributedTriSurface.H"
 #include "distributionMap.H"
 #include "randomGenerator.H"
-#include "addToRunTimeSelectionTable.H"
 #include "triangleFuncs.H"
 #include "matchPoints.H"
 #include "globalIndex.H"
@@ -38,6 +37,8 @@ License
 #include "vectorList.H"
 #include "PackedBoolList.H"
 #include "PatchTools.H"
+#include "labelIOField.H"
+#include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -1945,10 +1946,9 @@ void Foam::searchableSurfaces::distributedTriSurface::getField
         return;
     }
 
-    if (foundObject<triSurfaceLabelField>("values"))
+    if (foundObject<labelIOField>("values"))
     {
-        const Foam::triSurfaceLabelField& fld =
-            lookupObject<triSurfaceLabelField>("values");
+        const Foam::labelIOField& fld = lookupObject<labelIOField>("values");
 
         // Get query data (= local index of triangle)
         // ~~~~~~~~~~~~~~
@@ -2423,10 +2423,11 @@ void Foam::searchableSurfaces::distributedTriSurface::writeStats
     reduce(bb.min(), minOp<point>());
     reduce(bb.max(), maxOp<point>());
 
-    os  << "Triangles    : " << returnReduce(triSurface::size(), sumOp<label>())
-        << endl
-        << "Vertices     : " << returnReduce(nPoints, sumOp<label>()) << endl
-        << "Bounding Box : " << bb << endl;
+    os  << indent << "Triangles    : "
+        << returnReduce(triSurface::size(), sumOp<label>()) << endl
+        << indent << "Vertices     : "
+        << returnReduce(nPoints, sumOp<label>()) << endl
+        << indent << "Bounding Box : " << bb << endl;
 }
 
 

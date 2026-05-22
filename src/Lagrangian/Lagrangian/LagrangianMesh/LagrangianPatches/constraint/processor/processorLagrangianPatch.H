@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -59,7 +59,7 @@ private:
     // Private Data
 
         //- Reference to the processor poly patch
-        const processorPolyPatch& processorPatch_;
+        const processorPolyPatch& processorPoly_;
 
 
 protected:
@@ -93,9 +93,9 @@ public:
     // Member Functions
 
         //- Return the processor patch
-        const processorPolyPatch& processorPatch() const
+        const processorPolyPatch& processorPoly() const
         {
-            return processorPatch_;
+            return processorPoly_;
         }
 
         //- Return the sub-mesh associated with this patch
@@ -107,7 +107,7 @@ public:
         (
             PstreamBuffers&,
             LagrangianMesh&,
-            const LagrangianScalarInternalDynamicField& fraction
+            const LagrangianInternalScalarDynamicField& fraction
         ) const;
 
         //- Evaluate changes in elements that have tracked to this patch
@@ -115,7 +115,7 @@ public:
         (
             PstreamBuffers&,
             LagrangianMesh&,
-            const LagrangianScalarInternalDynamicField& fraction
+            const LagrangianInternalScalarDynamicField& fraction
         ) const;
 
         //- Update following partitioning of the mesh

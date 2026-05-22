@@ -9,9 +9,12 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "system";
     object      controlDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+application     shallowWaterFoam;
 
 startFrom       startTime;
 

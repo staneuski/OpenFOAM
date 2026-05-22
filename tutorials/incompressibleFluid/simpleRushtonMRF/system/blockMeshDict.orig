@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "system";
     object      blockMeshDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -25,7 +26,7 @@ r2Cells   $r1Cells;
 r3Cells   $r1Cells;
 r4Cells   #calc "$factor*4";
 
-#ifeq $mode graded
+#ifeq ($mode graded)
     r5Cells   #calc "$factor*40";
     zCells    #calc "$factor*100";
 #else
@@ -57,8 +58,6 @@ rdisk45 #calc "$rsqrt2*$rdisk";
 r45     #calc "$rsqrt2*$r";
 rzone45 #calc "$rsqrt2*$rzone";
 R45     #calc "$rsqrt2*$R";
-
-convertToMeters 1;
 
 vertices
 (
@@ -104,7 +103,7 @@ vertices
 );
 
 // Grading
-#ifeq $mode graded
+#ifeq ($mode graded)
     zGrd   ((1 1 40)(20 4 1)(1 1 0.025));
     rGrd   ((4 1 1)(1 1 0.025));
 #else
@@ -196,10 +195,6 @@ boundary
             (19 26 27 20)
         );
     }
-);
-
-mergePatchPairs
-(
 );
 
 // ************************************************************************* //

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2015-2020 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2015-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -73,7 +73,7 @@ Description
             // of the normal-to-wall field
             nRequired false;
 
-            advectionDiffusionCoeffs
+            advectionDiffusion
             {
                 method    Poisson;
                 epsilon   0.1;
@@ -119,10 +119,6 @@ Description
         {
             solver          GAMG;
             smoother        GaussSeidel;
-            cacheAgglomeration true;
-            nCellsInCoarsestLevel 10;
-            agglomerator    faceAreaPair;
-            mergeLevels     1;
             tolerance       1e-4;
             relTol          0;
         }
@@ -131,10 +127,6 @@ Description
         {
             solver          GAMG;
             smoother        symGaussSeidel;
-            cacheAgglomeration true;
-            nCellsInCoarsestLevel 10;
-            agglomerator    faceAreaPair;
-            mergeLevels     1;
             tolerance       1e-4;
             relTol          0;
         }
@@ -182,7 +174,7 @@ class advectionDiffusion
 :
     public patchDistMethod
 {
-    // Private Member Data
+    // Private Data
 
         //- Sub-dictionary of coefficients
         dictionary coeffs_;

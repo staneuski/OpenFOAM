@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -77,17 +77,10 @@ namespace Foam
 
 class basicThermo
 {
-protected:
+    // Private Static Member Functions
 
-    // Protected Static Member Functions
-
-        //- Lookup and the named field, or construct it as MUST-READ if it is
-        //  not found, and return a reference
-        static volScalarField& lookupOrConstruct
-        (
-            const fvMesh& mesh,
-            const char* name
-        );
+        // Convert multiComponent -> multicomponent for backward-compatibility
+        static word mixtureName(const Foam::dictionary& thermoTypeDict);
 
         //- Get the constructor iterator for the given thermo dictionary and
         //  entries and constructor iterator table
@@ -101,13 +94,17 @@ protected:
             const word& thermoTypeName
         );
 
-        //- Get the constructor iterator for the given thermo dictionary and
-        //  constructor iterator table
-        template<class Thermo, class Table>
-        static typename Table::iterator lookupCstrIter
+
+protected:
+
+    // Protected Static Member Functions
+
+        //- Lookup and the named field, or construct it as MUST-READ if it is
+        //  not found, and return a reference
+        static volScalarField& lookupOrConstruct
         (
-            const dictionary& thermoDict,
-            Table* tablePtr
+            const fvMesh& mesh,
+            const char* name
         );
 
 
@@ -156,6 +153,15 @@ public:
         {
             return IOobject::groupName(name, phaseName);
         }
+
+        //- Get the constructor iterator for the given thermo dictionary and
+        //  constructor iterator table
+        template<class Thermo, class Table>
+        static typename Table::iterator lookupCstrIter
+        (
+            const dictionary& thermoDict,
+            Table* tablePtr
+        );
 
         //- Lookup the thermo associated with the given field
         template<class FieldType>
@@ -236,6 +242,9 @@ public:
 
         //- Update properties
         virtual void correct() = 0;
+
+        //- Name of the mixture
+        virtual word mixtureName() const = 0;
 
         //- Name of the thermo physics
         virtual word thermoName() const = 0;
@@ -482,7 +491,7 @@ class basicThermo::implementation
 :
     virtual public basicThermo
 {
-    // Private Member Data
+    // Private Data
 
         //- Reference to the mesh
         const fvMesh& mesh_;

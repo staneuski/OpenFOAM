@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2017-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2017-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -24,8 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "sixDoFRigidBodyState.H"
-#include "motionSolver_fvMeshMover.H"
-#include "motionSolver.H"
+#include "pointMeshMover_fvMeshMover.H"
 #include "sixDoFRigidBodyMotion.H"
 #include "quaternion.H"
 #include "addToRunTimeSelectionTable.H"
@@ -114,10 +113,10 @@ bool Foam::functionObjects::sixDoFRigidBodyState::execute()
 const Foam::sixDoFRigidBodyMotion&
 Foam::functionObjects::sixDoFRigidBodyState::motion() const
 {
-    const fvMeshMovers::motionSolver& mover =
-        refCast<const fvMeshMovers::motionSolver>(mesh_.mover());
+    const fvMeshMovers::pointMeshMover& mover =
+        refCast<const fvMeshMovers::pointMeshMover>(mesh_.mover());
 
-    return (refCast<const sixDoFRigidBodyMotion>(mover.motion()));
+    return (refCast<const sixDoFRigidBodyMotion>(mover.mover()));
 }
 
 
@@ -134,7 +133,7 @@ Foam::functionObjects::sixDoFRigidBodyState::angularVelocity() const
 }
 
 
-const Foam::unitConversion&
+const Foam::unitSet&
 Foam::functionObjects::sixDoFRigidBodyState::angularVelocityUnits() const
 {
     return angularVelocityUnits_;

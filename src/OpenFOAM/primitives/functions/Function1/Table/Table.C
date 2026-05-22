@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -125,7 +125,7 @@ Foam::Function1s::Table<Type>::Table
     const word& name,
     const tableBase::boundsHandling boundsHandling,
     const word& interpolationScheme,
-    const autoPtr<TableReader<Type>>& reader,
+    const autoPtr<TableReader<scalar, Type>>& reader,
     const List<Tuple2<scalar, Type>>& table
 )
 :
@@ -141,16 +141,19 @@ template<class Type>
 Foam::Function1s::Table<Type>::Table
 (
     const word& name,
-    const unitConversions& units,
+    const unitSets& units,
     const dictionary& dict
 )
 :
     FieldFunction1<Type, Table<Type>>(name),
     boundsHandling_
     (
-        dict.found("outOfBounds")
-      ? tableBase::boundsHandlingNames.read(dict.lookup("outOfBounds"))
-      : tableBase::boundsHandling::clamp
+        tableBase::boundsHandlingNames.lookupOrDefault
+        (
+            "outOfBounds",
+            dict,
+            tableBase::boundsHandling::clamp
+        )
     ),
     interpolationScheme_
     (
@@ -160,7 +163,7 @@ Foam::Function1s::Table<Type>::Table
             linearInterpolationWeights::typeName
         )
     ),
-    reader_(TableReader<Type>::New(name, units, dict)),
+    reader_(TableReader<scalar, Type>::New(name, units, dict)),
     values_(reader_->read(units, dict))
 {
     check();
@@ -171,8 +174,8 @@ template<class Type>
 Foam::Function1s::Table<Type>::Table
 (
     const word& name,
-    const unitConversion& xUnits,
-    const unitConversion& valueUnits,
+    const unitSet& xUnits,
+    const unitSet& valueUnits,
     const dictionary& dict
 )
 :
@@ -184,15 +187,15 @@ template<class Type>
 Foam::Function1s::Table<Type>::Table
 (
     const word& name,
-    const unitConversions& units,
+    const unitSets& units,
     Istream& is
 )
 :
     FieldFunction1<Type, Table<Type>>(name),
     boundsHandling_(tableBase::boundsHandling::clamp),
     interpolationScheme_(linearInterpolationWeights::typeName),
-    reader_(new TableReaders::Embedded<Type>()),
-    values_(TableReaders::Embedded<Type>().read(units, is))
+    reader_(new TableReaders::Embedded<scalar, Type>()),
+    values_(TableReaders::Embedded<scalar, Type>().read(units, is))
 {
     check();
 }
@@ -377,7 +380,7 @@ template<class Type>
 void Foam::Function1s::Table<Type>::write
 (
     Ostream& os,
-    const unitConversions& units
+    const unitSets& units
 ) const
 {
     writeEntryIfDifferent

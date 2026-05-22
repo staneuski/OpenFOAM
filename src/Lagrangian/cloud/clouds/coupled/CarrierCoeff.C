@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -38,17 +38,19 @@ void Foam::CarrierCoeff<Type, Implicit>::initialise
 
     S_.set
     (
-        new DimensionedField<Type, volMesh>
+        new DimensionedField<Type, fvMesh>
         (
             IOobject
             (
-                lField.mesh().mesh().name() + ":" + lField.name(),
-                mesh_.time().name(),
-                mesh_,
+                lField.mesh().mesh().name()
+              + ":" + eqn_.name()
+              + ":S" + (Implicit ? 'p' : 'u'),
+                eqn_.mesh().time().name(),
+                eqn_.mesh(),
                 IOobject::NO_READ,
                 IOobject::AUTO_WRITE
             ),
-            mesh_,
+            eqn_.mesh(),
             dimensioned<Type>(lField.dimensions(), Zero)
         )
     );
@@ -58,10 +60,9 @@ void Foam::CarrierCoeff<Type, Implicit>::initialise
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class Type, bool Implicit>
-template<class PsiType>
-Foam::CarrierCoeff<Type, Implicit>::CarrierCoeff(const VolField<PsiType>& psi)
+Foam::CarrierCoeff<Type, Implicit>::CarrierCoeff(const CarrierEqnBase& eqn)
 :
-    mesh_(psi.mesh())
+    eqn_(eqn)
 {}
 
 
@@ -71,7 +72,7 @@ Foam::CarrierCoeff<Type, Implicit>::CarrierCoeff
     const CarrierCoeff<Type, Implicit>& coeff
 )
 :
-    mesh_(coeff.mesh_),
+    eqn_(coeff.eqn_),
     S_(coeff.S_, false)
 {}
 
@@ -83,7 +84,7 @@ Foam::CarrierCoeff<Type, Implicit>::CarrierCoeff
     const bool reuse
 )
 :
-    mesh_(coeff.mesh_),
+    eqn_(coeff.eqn_),
     S_(coeff.S_, reuse)
 {}
 
@@ -94,7 +95,7 @@ Foam::CarrierCoeff<Type, Implicit>::CarrierCoeff
     CarrierCoeff<Type, Implicit>&& coeff
 )
 :
-    mesh_(coeff.mesh_),
+    eqn_(coeff.eqn_),
     S_(coeff.S_, true)
 {}
 
@@ -116,7 +117,7 @@ void Foam::CarrierCoeff<Type, Implicit>::clear()
 
 
 template<class Type, bool Implicit>
-const Foam::DimensionedField<Type, Foam::volMesh>&
+const Foam::DimensionedField<Type, Foam::fvMesh>&
 Foam::CarrierCoeff<Type, Implicit>::S() const
 {
     return S_();
@@ -157,6 +158,26 @@ void Foam::CarrierCoeff<Type, Implicit>::operator-=
     initialise(lCoeff.S());
 
     Lagrangianc::accumulate((-lCoeff.S())(), S_(), lCoeff.eqn().name());
+}
+
+
+template<class Type, bool Implicit>
+void Foam::CarrierCoeff<Type, Implicit>::operator*=
+(
+    const dimensionedScalar& s
+)
+{
+    if (valid()) S_() *= s;
+}
+
+
+template<class Type, bool Implicit>
+void Foam::CarrierCoeff<Type, Implicit>::operator/=
+(
+    const dimensionedScalar& s
+)
+{
+    if (valid()) S_() /= s;
 }
 
 

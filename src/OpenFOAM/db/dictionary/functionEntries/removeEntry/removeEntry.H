@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2020 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -48,6 +48,7 @@ SourceFiles
 #define removeEntry_H
 
 #include "functionEntry.H"
+#include "wordReList.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -64,23 +65,42 @@ class removeEntry
 :
     public functionEntry
 {
+    // Private Data
+
+        //- The list of patterns of entries to remove
+        wordReList patterns_;
+
 
 public:
 
     //- Runtime type information
-    ClassName("remove");
+    FunctionTypeName("#remove");
 
 
     // Constructors
 
-        //- Disallow default bitwise copy construction
-        removeEntry(const removeEntry&) = delete;
+        //- Construct from line number, dictionary and Istream
+        removeEntry
+        (
+            const label lineNumber,
+            const dictionary& parentDict,
+            Istream& is
+        );
+
+        //- Copy construct
+        removeEntry(const removeEntry&) = default;
+
+        //- Clone
+        virtual autoPtr<entry> clone(const dictionary&) const
+        {
+            return autoPtr<entry>(new removeEntry(*this));
+        }
 
 
     // Member Functions
 
-        //- Execute the functionEntry in a sub-dict context
-        static bool execute(dictionary& parentDict, Istream&);
+        //- Expand the functionEntry into the contextDict
+        virtual bool execute(dictionary& contextDict, Istream&);
 
 
     // Member Operators

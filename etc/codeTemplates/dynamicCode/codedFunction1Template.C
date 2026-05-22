@@ -34,9 +34,14 @@ namespace Function1s
 {
     defineTypeNameAndDebug(${typeName}Function1${TemplateType}, 0);
 }
-    Function1<${TemplateType}>::adddictionaryConstructorToTable<Function1s::
-        ${typeName}Function1${TemplateType}>
-        ${typeName}Function1${TemplateType}ConstructorToTable_;
+
+Function1<${TemplateType}>::
+addRemovabledictionaryConstructorToTable
+<
+    Function1s::${typeName}Function1${TemplateType}
+>
+${typeName}Function1${TemplateType}ConstructorToTable_;
+
 }
 
 
@@ -44,12 +49,9 @@ namespace Function1s
 
 extern "C"
 {
-    // dynamicCode:
-    // SHA1 = ${SHA1sum}
-    //
-    // Unique function name that can be checked if the correct library version
-    // has been loaded
-    void ${typeName}_${SHA1sum}(bool load)
+    // Unique function name that can be checked
+    // to ensure the correct library version has been loaded
+    void ${uniqueFunctionName}(bool load)
     {
         if (load)
         {
@@ -69,7 +71,7 @@ Foam::Function1s::${typeName}Function1${TemplateType}::
 ${typeName}Function1${TemplateType}
 (
     const word& entryName,
-    const unitConversions& units,
+    const unitSets& units,
     const dictionary& dict
 )
 :
@@ -132,7 +134,7 @@ Foam::Function1s::${typeName}Function1${TemplateType}::integral
 void Foam::Function1s::${typeName}Function1${TemplateType}::write
 (
     Ostream& os,
-    const unitConversions&
+    const unitSets&
 ) const
 {
     NotImplemented;

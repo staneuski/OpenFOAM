@@ -9,7 +9,7 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
-    location    "system";
+    location    "system/meshes/2e-05";
     object      decomposeParDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -18,7 +18,7 @@ numberOfSubdomains 4;
 
 method          hierarchical;
 
-hierarchicalCoeffs
+hierarchical
 {
     n               (2 2 1);
     order           xyz;

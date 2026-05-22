@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     #include "addNoOverwriteOption.H"
     #include "addRegionOption.H"
 
-    #include "setRootCase.H"
+    #include "setRootCaseNoFunctionObjects.H"
     #include "createTimeNoFunctionObjects.H"
     #include "createRegionMeshNoChangers.H"
 
@@ -51,8 +51,8 @@ int main(int argc, char *argv[])
 
         mesh.setInstance(runTime.name());
 
-        // Set the precision of the points data to 10
-        IOstream::defaultPrecision(max(10u, IOstream::defaultPrecision()));
+        // Ensure the points are written to a sufficient precision
+        IOstream::defaultPrecision(IOstream::highPrecision());
 
         if (!overwrite)
         {

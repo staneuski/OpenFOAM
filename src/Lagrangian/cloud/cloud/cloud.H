@@ -39,14 +39,12 @@ SourceFiles
 #define cloud_H
 
 #include "LagrangianModels.H"
+#include "CloudStateField.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
-
-template<class Type>
-class CloudStateField;
 
 template<class Type>
 class CloudDerivedField;
@@ -71,13 +69,6 @@ private:
 
         //- The demand-driven Lagrangian models pointer
         mutable Foam::LagrangianModels* LagrangianModelsPtr_;
-
-        //- State fields
-        #define DECLARE_STATE_FIELDS(Type, nullArg)       \
-            mutable PtrList<CloudStateField<Type>>        \
-                CAT3(state, CAPITALIZE(Type), Fields_);
-        FOR_ALL_FIELD_TYPES(DECLARE_STATE_FIELDS);
-        #undef DECLARE_STATE_FIELDS
 
         //- Derived fields
         #define DECLARE_DERIVED_FIELDS(Type, nullArg)     \
@@ -110,13 +101,6 @@ private:
             const IOobject::readOption readOption=IOobject::READ_IF_PRESENT,
             const IOobject::writeOption writeOption=IOobject::AUTO_WRITE
         );
-
-        //- Access the state fields. Only specialisations are defined.
-        template<class Type>
-        PtrList<CloudStateField<Type>>& stateFields() const;
-
-        //- Clear the state fields
-        void clearStateFields();
 
         //- Access the derived fields. Only specialisations are defined.
         template<class Type>
@@ -186,12 +170,6 @@ protected:
 
     // Protected Member Functions
 
-        //- Initialisation hook
-        virtual void initialise(const bool predict);
-
-        //- Partition hook
-        virtual void partition();
-
         //- Return the acceleration with which to do second-order tracking
         virtual tmp<LagrangianSubVectorField> dUdt
         (
@@ -206,7 +184,10 @@ protected:
         (
             const LagrangianSubScalarField& deltaT,
             const bool final
-        );
+        ) = 0;
+
+        //- Partition hook
+        virtual void partition();
 
 
 public:
@@ -226,7 +207,7 @@ public:
         const enum trackingType { linear, parabolic } tracking;
 
         //- Velocity
-        CloudStateField<vector>& U;
+        CloudStateField<vector> U;
 
 
     //- Declare run-time constructor selection table
@@ -234,35 +215,58 @@ public:
     (
         autoPtr,
         cloud,
-        polyMesh,
-        (const polyMesh& mesh, const word& name, const contextType context),
-        (mesh, name, context)
+        LagrangianMesh,
+        (
+            LagrangianMesh& mesh,
+            const contextType context,
+            const dictionary& dict
+        ),
+        (mesh, context, dict)
     );
 
 
     // Constructors
 
-        //- Construct from a mesh and a name
+        //- Construct from a mesh and context. Reads the velocity field.
+        cloud(LagrangianMesh& mesh, const contextType context);
+
+        //- Construct from a mesh, context and a specified velocity field
         cloud
         (
-            const polyMesh& mesh,
-            const word& name,
+            LagrangianMesh& mesh,
             const contextType context,
-            const IOobject::readOption readOption=IOobject::READ_IF_PRESENT,
-            const IOobject::writeOption writeOption=IOobject::AUTO_WRITE
+            const tmp<LagrangianVectorDynamicField>& tU
         );
 
         //- Disallow default bitwise copy construction
         cloud(const cloud&) = delete;
 
 
-    //- Selector
-    static autoPtr<cloud> New
-    (
-        const polyMesh& mesh,
-        const word& name,
-        const word& type
-    );
+    //- Selectors
+
+        //- Select given the type name
+        static autoPtr<cloud> New
+        (
+            const polyMesh& mesh,
+            const word& name,
+            const contextType context,
+            const dictionary& dict,
+            const word& type,
+            const IOobject::readOption readOption=IOobject::READ_IF_PRESENT,
+            const IOobject::writeOption writeOption=IOobject::AUTO_WRITE
+        );
+
+        //- Select given the type class
+        template<class Type>
+        static autoPtr<Type> New
+        (
+            const polyMesh& pMesh,
+            const word& name,
+            const contextType context,
+            const dictionary& dict,
+            const IOobject::readOption readOption=IOobject::READ_IF_PRESENT,
+            const IOobject::writeOption writeOption=IOobject::AUTO_WRITE
+        );
 
 
     //- Destructor
@@ -288,13 +292,6 @@ public:
 
         // Fields
 
-            //- Add/get a state field to/from the cache
-            template<class Type, class ... Args>
-            CloudStateField<Type>& stateField
-            (
-                const Args& ... args
-            ) const;
-
             //- Add/get a derived field to/from the cache
             template<class Type, class ... Args>
             const CloudDerivedField<Type>& derivedField
@@ -313,7 +310,7 @@ public:
         // Evolution
 
             //- Solve the cloud's evolution over the current time-step
-            virtual void solve();
+            virtual void solve(const bool initial, const bool final);
 
 
         // Mesh changes

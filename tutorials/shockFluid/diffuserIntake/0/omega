@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       volScalarField;
+    location    "0";
     object      omega;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -23,7 +24,7 @@ boundaryField
 {
     inlet
     {
-        type            turbulentMixingLengthFrequencyInlet;
+        type            turbulentOmega;
         mixingLength    0.00575;
         value           uniform $omegaInitial;
     }
@@ -32,7 +33,6 @@ boundaryField
     {
         type            inletOutlet;
         inletValue      uniform $omegaInitial;
-        value           uniform $omegaInitial;
     }
 
     wall

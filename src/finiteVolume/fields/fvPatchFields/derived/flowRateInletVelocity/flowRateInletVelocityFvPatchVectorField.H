@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -184,10 +184,6 @@ class flowRateInletVelocityFvPatchVectorField
         template<class AlphaType>
         void updateValues(const AlphaType& alpha);
 
-        //- Return whether the flow rate can be evaluated on this case (i.e.,
-        //  is not a non-parallel processor case)
-        bool canEvaluate();
-
 
 public:
 
@@ -201,7 +197,7 @@ public:
         flowRateInletVelocityFvPatchVectorField
         (
             const fvPatch&,
-            const DimensionedField<vector, volMesh>&,
+            const DimensionedField<vector, fvMesh>&,
             const dictionary&
         );
 
@@ -212,7 +208,7 @@ public:
         (
             const flowRateInletVelocityFvPatchVectorField&,
             const fvPatch&,
-            const DimensionedField<vector, volMesh>&,
+            const DimensionedField<vector, fvMesh>&,
             const fieldMapper&
         );
 
@@ -226,13 +222,13 @@ public:
         flowRateInletVelocityFvPatchVectorField
         (
             const flowRateInletVelocityFvPatchVectorField&,
-            const DimensionedField<vector, volMesh>&
+            const DimensionedField<vector, fvMesh>&
         );
 
         //- Construct and return a clone setting internal field reference
         virtual tmp<fvPatchVectorField> clone
         (
-            const DimensionedField<vector, volMesh>& iF
+            const DimensionedField<vector, fvMesh>& iF
         ) const
         {
             return tmp<fvPatchVectorField>

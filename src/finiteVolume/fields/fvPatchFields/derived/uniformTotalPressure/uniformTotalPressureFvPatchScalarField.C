@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -35,7 +35,7 @@ Foam::uniformTotalPressureFvPatchScalarField::
 uniformTotalPressureFvPatchScalarField
 (
     const fvPatch& p,
-    const DimensionedField<scalar, volMesh>& iF,
+    const DimensionedField<scalar, fvMesh>& iF,
     const dictionary& dict
 )
 :
@@ -50,7 +50,7 @@ uniformTotalPressureFvPatchScalarField
         Function1<scalar>::New
         (
             "p0",
-            db().time().userUnits(),
+            time().userUnits(),
             iF.dimensions(),
             dict
         )
@@ -65,7 +65,7 @@ uniformTotalPressureFvPatchScalarField
     }
     else
     {
-        fvPatchScalarField::operator==(p0_->value(db().time().value()));
+        fvPatchScalarField::operator==(p0_->value(time().value()));
     }
 }
 
@@ -75,7 +75,7 @@ uniformTotalPressureFvPatchScalarField
 (
     const uniformTotalPressureFvPatchScalarField& ptf,
     const fvPatch& p,
-    const DimensionedField<scalar, volMesh>& iF,
+    const DimensionedField<scalar, fvMesh>& iF,
     const fieldMapper& mapper
 )
 :
@@ -89,7 +89,7 @@ uniformTotalPressureFvPatchScalarField
 {
     // Set the patch pressure to the current total pressure
     // This is not ideal but avoids problems with the creation of patch faces
-    fvPatchScalarField::operator==(p0_->value(this->db().time().value()));
+    fvPatchScalarField::operator==(p0_->value(this->time().value()));
 }
 
 
@@ -97,7 +97,7 @@ Foam::uniformTotalPressureFvPatchScalarField::
 uniformTotalPressureFvPatchScalarField
 (
     const uniformTotalPressureFvPatchScalarField& ptf,
-    const DimensionedField<scalar, volMesh>& iF
+    const DimensionedField<scalar, fvMesh>& iF
 )
 :
     fixedValueFvPatchScalarField(ptf, iF),
@@ -122,7 +122,7 @@ void Foam::uniformTotalPressureFvPatchScalarField::updateCoeffs
         return;
     }
 
-    scalar p0 = p0_->value(this->db().time().value());
+    scalar p0 = p0_->value(this->time().value());
 
     const fvsPatchField<scalar>& phip =
         patch().lookupPatchField<surfaceScalarField, scalar>(phiName_);
@@ -207,7 +207,7 @@ void Foam::uniformTotalPressureFvPatchScalarField::write(Ostream& os) const
     writeEntry
     (
         os,
-        db().time().userUnits(),
+        time().userUnits(),
         internalField().dimensions(),
         p0_()
     );

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2023-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2023-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -77,7 +77,7 @@ public:
 
         // Species set
 
-            //- The table of species
+            //- Return the table of species
             virtual const speciesTable& species() const = 0;
 
             //- Does the mixture include this specie?
@@ -90,7 +90,7 @@ public:
         // Active/Inactive handling
 
             //- Access the specie active flags
-            virtual const List<bool>& speciesActive() const = 0;
+            virtual const boolList& speciesActive() const = 0;
 
             //- Synchronise the specie active flags
             virtual void syncSpeciesActive() const = 0;
@@ -301,7 +301,7 @@ public:
 
 
 /*---------------------------------------------------------------------------*\
-                     Class multicomponentThermo Declaration
+              Class multicomponentThermo::implementation Declaration
 \*---------------------------------------------------------------------------*/
 
 class multicomponentThermo::implementation
@@ -312,9 +312,6 @@ protected:
 
     // Protected data
 
-        //- Table of specie names
-        speciesTable species_;
-
         //- The name of the default specie. The mass fraction of which is
         //  derived from the other species rather than solved. Also used as the
         //  carrier specie in multicomponent diffusion.
@@ -322,9 +319,6 @@ protected:
 
         //- The index of the default specie
         label defaultSpeciei_;
-
-        //- List of specie active flags
-        List<bool> active_;
 
         //- Species mass fractions
         PtrList<volScalarField> Y_;
@@ -335,7 +329,10 @@ protected:
     // Protected Member Functions
 
         //- Scale the mass fractions to sum to 1
-        void correctMassFractions();
+        void correctMassFractions
+        (
+            const speciesTable& species
+        );
 
 
 public:
@@ -346,9 +343,10 @@ public:
         implementation
         (
             const dictionary&,
-            const wordList&,
+            const speciesTable&,
             const fvMesh&,
-            const word&
+            const word&,
+            const bool requiresDefaultSpecie = true
         );
 
 
@@ -358,14 +356,8 @@ public:
 
     // Member Functions
 
-        //- The table of species
-        virtual const speciesTable& species() const;
-
         //- The index of the default specie
         virtual label defaultSpecie() const;
-
-        //- Access the specie active flags
-        virtual const List<bool>& speciesActive() const;
 
         //- Synchronise the specie active flags
         virtual void syncSpeciesActive() const;
@@ -381,25 +373,25 @@ public:
         virtual void normaliseY();
 
         //- Get the slicer
-        inline volScalarFieldListSlicer Yslicer() const;
+        inline GeometricFieldListSlicer<scalar> Yslicer() const;
 
         //- Get the composition of an internal cell
         inline scalarFieldListSlice cellComposition
         (
-            const volScalarFieldListSlicer& Yslicer,
+            const GeometricFieldListSlicer<scalar>& Yslicer,
             const label celli
         ) const;
 
         //- Get the composition of a boundary face
         inline scalarFieldListSlice patchFaceComposition
         (
-            const volScalarFieldListSlicer& Yslicer,
+            const GeometricFieldListSlicer<scalar>& Yslicer,
             const label patchi,
             const label facei
         ) const;
 
         //- Get the slicer for the given source
-        inline DimensionedFieldListAndSlicer<scalar, volMesh> Yslicer
+        inline DimensionedFieldListAndSlicer<scalar, fvMesh> Yslicer
         (
             const fvSource& model,
             const volScalarField::Internal& source
@@ -408,7 +400,7 @@ public:
         //- Get the composition of a source cell
         inline scalarFieldListSlice sourceCellComposition
         (
-            const DimensionedFieldListAndSlicer<scalar, volMesh>& Yslicer,
+            const DimensionedFieldListAndSlicer<scalar, fvMesh>& Yslicer,
             const label i
         ) const;
 

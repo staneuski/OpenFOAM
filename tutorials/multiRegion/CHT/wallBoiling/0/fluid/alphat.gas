@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       volScalarField;
+    location    "0/fluid";
     object      alphat.gas;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -31,7 +32,7 @@ boundaryField
     }
     wall
     {
-        type            alphatBoilingWallFunction;
+        type            alphatPhaseChangeWallFunction;
         libs            ("libmultiphaseEulerFvModels.so");
         value           uniform 0;
     }

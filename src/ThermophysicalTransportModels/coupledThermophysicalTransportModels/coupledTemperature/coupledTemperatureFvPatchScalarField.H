@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -43,12 +43,12 @@ Usage
     \table
         Property     | Description             | Required    | Default value
         Tnbr         | name of the field       | no          | T
-        thicknessLayers | list of thicknesses per layer [m] | no |
-        kappaLayers  | list of thermal conductivities per layer [W/m/K] | no |
+        h     | Heat transfer coefficient of insulation layer [W/m^2/K] | no |
         qs           | Optional source heat flux [W/m^2] | no | 0
         Qs           | Optional heat source [W]          | no | 0
         qrNbr        | name of the radiative flux in the nbr region | no | none
         qr           | name of the radiative flux in this region | no | none
+        qrRelaxation | Relaxation factor for radiative field | no | 1
     \endtable
 
     Example of the boundary condition specification:
@@ -56,9 +56,6 @@ Usage
     <patchName>
     {
         type            coupledTemperature;
-        thicknessLayers (0.1 0.2 0.3 0.4); // Optional wall layer thicknesses
-        kappaLayers     (1 2 3 4); // Optional wall layer conductivities
-        qs              uniform 100;    // Optional source heat flux [W/m^2]
         value           uniform 300;
     }
     \endverbatim
@@ -81,7 +78,7 @@ SourceFiles
 #define coupledTemperatureFvPatchScalarField_H
 
 #include "mixedFvPatchFields.H"
-#include "scalarField.H"
+#include "FunctionalDimensionedFieldFwd.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -107,20 +104,20 @@ class coupledTemperatureFvPatchScalarField
         //- Name of the radiative heat flux in local region
         const word qrName_;
 
-        //- Thickness of wall layers
-        scalarList thicknessLayers_;
+        //- Relaxation factor for qr
+        scalar qrRelax_;
 
-        //- Conductivity of wall layers
-        scalarList kappaLayers_;
+        //- Cache qr for relaxation
+        mutable scalarField qrPrevious_;
+
+        //- Optional heat transfer coefficient of insulation layer [W/m^2K]
+        autoPtr<FunctionalDimensionedField<scalar, fvPatch>> h_;
 
         //- Optional source heat flux [W/m^2]
         autoPtr<scalarField> qs_;
 
         //- Optional heat source [W]
         scalar Qs_;
-
-        //- Optional wall material conductivity/thickness
-        scalar wallKappaByDelta_;
 
 
 protected:
@@ -147,14 +144,6 @@ protected:
             tmp<scalarField>& qNbr
         ) const;
 
-        //- Get the neighbour patch wall temperature and heat-flux
-        //  when wall thermal resistance is specified
-        virtual void getNbr
-        (
-            tmp<scalarField>& TwNbr,
-            tmp<scalarField>& qNbr
-        ) const;
-
         //- Add field to result which may have not been previously set
         void add
         (
@@ -175,7 +164,7 @@ public:
         coupledTemperatureFvPatchScalarField
         (
             const fvPatch&,
-            const DimensionedField<scalar, volMesh>&,
+            const DimensionedField<scalar, fvMesh>&,
             const dictionary&
         );
 
@@ -186,7 +175,7 @@ public:
         (
             const coupledTemperatureFvPatchScalarField&,
             const fvPatch&,
-            const DimensionedField<scalar, volMesh>&,
+            const DimensionedField<scalar, fvMesh>&,
             const fieldMapper&
         );
 
@@ -194,24 +183,18 @@ public:
         coupledTemperatureFvPatchScalarField
         (
             const coupledTemperatureFvPatchScalarField&,
-            const DimensionedField<scalar, volMesh>&
+            const DimensionedField<scalar, fvMesh>&
         );
 
         //- Construct and return a clone setting internal field reference
         virtual tmp<fvPatchScalarField> clone
         (
-            const DimensionedField<scalar, volMesh>& iF
-        ) const
-        {
-            return tmp<fvPatchScalarField>
-            (
-                new coupledTemperatureFvPatchScalarField
-                (
-                    *this,
-                    iF
-                )
-            );
-        }
+            const DimensionedField<scalar, fvMesh>& iF
+        ) const;
+
+
+    //- Destructor
+    virtual ~coupledTemperatureFvPatchScalarField();
 
 
     // Member Functions

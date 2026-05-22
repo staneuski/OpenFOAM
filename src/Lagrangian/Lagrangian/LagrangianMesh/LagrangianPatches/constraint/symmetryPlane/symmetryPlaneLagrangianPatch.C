@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2025-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -45,11 +45,11 @@ namespace Foam
 
 Foam::symmetryPlaneLagrangianPatch::symmetryPlaneLagrangianPatch
 (
-    const polyPatch& patch,
+    const polyPatch& poly,
     const LagrangianBoundaryMesh& boundaryMesh
 )
 :
-    LagrangianPatch(patch, boundaryMesh)
+    LagrangianPatch(poly, boundaryMesh)
 {}
 
 
@@ -65,7 +65,7 @@ void Foam::symmetryPlaneLagrangianPatch::evaluate
 (
     PstreamBuffers&,
     LagrangianMesh& mesh,
-    const LagrangianScalarInternalDynamicField& fraction
+    const LagrangianInternalScalarDynamicField& fraction
 ) const
 {
     this->mesh().sub(mesh.states()) = LagrangianState::inCell;

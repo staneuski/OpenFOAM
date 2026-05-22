@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "constant";
     object      cloudProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -87,7 +88,7 @@ subModels
 
     patchInteractionModel localInteraction;
 
-    localInteractionCoeffs
+    localInteraction
     {
         patches
         (

@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2014-2025 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2014-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -57,7 +57,7 @@ class wallLubricationModel
 {
 protected:
 
-    // Protected member functions
+    // Protected Member Functions
 
         //- Zero-gradient wall-lubrication force at walls
         tmp<volVectorField> zeroGradWalls(tmp<volVectorField>) const;
@@ -110,7 +110,13 @@ public:
         (
             const dictionary& dict,
             const phaseInterface& interface,
-            const bool outer=true
+            const bool outer = false
+        );
+
+        static autoPtr<wallLubricationModel> New
+        (
+            const UPtrList<const dictionary>& subDicts,
+            const phaseInterface& interface
         );
 
 
@@ -146,7 +152,7 @@ public:
 
         inline static autoPtr<blendedWallLubricationModel> New
         (
-            const dictionary& dict,
+            const UPtrList<const dictionary>& subDicts,
             const phaseInterface& interface,
             const dictionary& blendingDict
         )
@@ -156,7 +162,7 @@ public:
                 (
                     new blendedWallLubricationModel
                     (
-                        dict,
+                        subDicts,
                         interface,
                         blendingDict
                     )

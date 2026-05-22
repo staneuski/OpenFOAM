@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2021-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -28,7 +28,9 @@ License
 #include "fvcLaplacian.H"
 #include "fvcSnGrad.H"
 #include "fvmSup.H"
+#include "fvmLaplacian.H"
 #include "surfaceInterpolate.H"
+#include "speciesTable.H"
 #include "Function2Evaluate.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -101,7 +103,7 @@ transformDiffusionCoefficient() const
     A.inv(invA);
 
     // Calculate the generalised Fick's law diffusion coefficients
-    multiply(D, invA, B);
+    multiply(D_, invA, B);
 }
 
 
@@ -145,7 +147,7 @@ transformDiffusionCoefficientFields() const
                 {
                     if (j != d)
                     {
-                        (*DijPtrs[i][j])[pi] = D(is, js);
+                        (*DijPtrs[i][j])[pi] = D_(is, js);
 
                         js++;
                     }
@@ -315,6 +317,31 @@ void MaxwellStefan<BasicThermophysicalTransportModel>::updateDii() const
             }
         }
     }
+
+    // Compute the effective diffusivity of the species, if necessary
+    if (!Di_.empty())
+    {
+        Di_.setSize(Y.size());
+
+        forAll(Y, i)
+        {
+            // Copy the diagonal coefficient to begin with
+            Di_.set(i, Dii_[i].clone().ptr());
+
+            // The mass fraction of the sub-system excluding this specie
+            const volScalarField sumYnoti(max(1 - Y[i], small));
+
+            // Subtract the off-diagonal coefficients, weighted by their
+            // specie's fraction in the sub-system
+            forAll(Y, j)
+            {
+                if (j != i)
+                {
+                    Di_[i] -= Y[j]/sumYnoti*Dij[i][j];
+                }
+            }
+        }
+    }
 }
 
 
@@ -344,6 +371,21 @@ MaxwellStefan<BasicThermophysicalTransportModel>::jexp() const
 }
 
 
+template<class BasicThermophysicalTransportModel>
+const PtrList<volScalarField>&
+MaxwellStefan<BasicThermophysicalTransportModel>::Di() const
+{
+    if (!Di_.size())
+    {
+        const PtrList<volScalarField>& Y = this->thermo().Y();
+        Di_.setSize(Y.size()); // <-- Mark as to be computed from now on
+        updateDii();
+    }
+
+    return Dii_;
+}
+
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class BasicThermophysicalTransportModel>
@@ -367,7 +409,7 @@ MaxwellStefan<BasicThermophysicalTransportModel>::MaxwellStefan
 
     DTFuncs_
     (
-        this->coeffDict().found("DT")
+        this->typeDict(type).found("DT")
       ? this->thermo().species().size()
       : 0
     ),
@@ -383,7 +425,7 @@ MaxwellStefan<BasicThermophysicalTransportModel>::MaxwellStefan
     A(W.size() - 1),
     B(A.m()),
     invA(A.m()),
-    D(W.size())
+    D_(W.size())
 {
     // Set the molecular weights of the species
     forAll(W, i)
@@ -405,7 +447,7 @@ bool MaxwellStefan<BasicThermophysicalTransportModel>::read()
     {
         const speciesTable& species = this->thermo().species();
 
-        const dictionary& coeffDict = this->coeffDict();
+        const dictionary& coeffDict = this->typeDict();
         const dictionary& Ddict = coeffDict.subDict("D");
 
         // Read the array of specie binary mass diffusion coefficient functions
@@ -499,6 +541,34 @@ bool MaxwellStefan<BasicThermophysicalTransportModel>::read()
 
 
 template<class BasicThermophysicalTransportModel>
+tmp<volScalarField> MaxwellStefan<BasicThermophysicalTransportModel>::D
+(
+    const volScalarField& Yi
+) const
+{
+    return volScalarField::New
+    (
+        "D",
+        this->momentumTransport().rho()
+       *Di()[this->thermo().specieIndex(Yi)]
+    );
+}
+
+
+template<class BasicThermophysicalTransportModel>
+tmp<scalarField> MaxwellStefan<BasicThermophysicalTransportModel>::D
+(
+    const volScalarField& Yi,
+    const label patchi
+) const
+{
+    return
+        this->momentumTransport().rho().boundaryField()[patchi]
+       *Di()[this->thermo().specieIndex(Yi)].boundaryField()[patchi];
+}
+
+
+template<class BasicThermophysicalTransportModel>
 tmp<volScalarField> MaxwellStefan<BasicThermophysicalTransportModel>::DEff
 (
     const volScalarField& Yi
@@ -536,7 +606,7 @@ MaxwellStefan<BasicThermophysicalTransportModel>::q() const
             IOobject::groupName
             (
                 "q",
-                this->momentumTransport().alphaRhoPhi().group()
+                this->thermo().phaseName()
             ),
            -fvc::interpolate(this->alpha()*this->kappaEff())
            *fvc::snGrad(this->thermo().T())
@@ -746,7 +816,7 @@ tmp<surfaceScalarField> MaxwellStefan<BasicThermophysicalTransportModel>::j
                 IOobject::groupName
                 (
                     "j" + name(d),
-                    this->momentumTransport().alphaRhoPhi().group()
+                    this->thermo().phaseName()
                 ),
                 Yi.mesh(),
                 dimensionedScalar(dimMass/dimArea/dimTime, 0)
@@ -848,6 +918,13 @@ void MaxwellStefan<BasicThermophysicalTransportModel>::topoChange
     // Delete the cached Dii and jexp, will be re-created in predict
     Dii_.clear();
     jexp_.clear();
+
+    // Clear Di elements (if any) individually so the entire list is still
+    // marked as to be computed from now on
+    forAll(Di_, i)
+    {
+        Di_.set(i, nullptr);
+    }
 }
 
 
@@ -860,6 +937,13 @@ void MaxwellStefan<BasicThermophysicalTransportModel>::mapMesh
     // Delete the cached Dii and jexp, will be re-created in predict
     Dii_.clear();
     jexp_.clear();
+
+    // Clear Di elements (if any) individually so the entire list is still
+    // marked as to be computed from now on
+    forAll(Di_, i)
+    {
+        Di_.set(i, nullptr);
+    }
 }
 
 
@@ -872,6 +956,13 @@ void MaxwellStefan<BasicThermophysicalTransportModel>::distribute
     // Delete the cached Dii and jexp, will be re-created in predict
     Dii_.clear();
     jexp_.clear();
+
+    // Clear Di elements (if any) individually so the entire list is still
+    // marked as to be computed from now on
+    forAll(Di_, i)
+    {
+        Di_.set(i, nullptr);
+    }
 }
 
 

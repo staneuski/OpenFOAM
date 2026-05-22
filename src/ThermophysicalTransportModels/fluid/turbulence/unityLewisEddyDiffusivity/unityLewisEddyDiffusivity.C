@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2020-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2020-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -88,8 +88,8 @@ unityLewisEddyDiffusivity
     Prt_
     (
         allowDefaultPrt
-      ? dimensioned<scalar>("Prt", dimless, this->coeffDict(), 1)
-      : dimensioned<scalar>("Prt", dimless, this->coeffDict())
+      ? dimensioned<scalar>("Prt", dimless, this->typeDict(type), 1)
+      : dimensioned<scalar>("Prt", dimless, this->typeDict(type))
     ),
 
     alphat_
@@ -99,7 +99,7 @@ unityLewisEddyDiffusivity
             IOobject::groupName
             (
                 "alphat",
-                this->momentumTransport().alphaRhoPhi().group()
+                thermo.phaseName()
             ),
             momentumTransport.time().name(),
             momentumTransport.mesh(),
@@ -118,7 +118,7 @@ bool unityLewisEddyDiffusivity<TurbulenceThermophysicalTransportModel>::read()
 {
     if (TurbulenceThermophysicalTransportModel::read())
     {
-        Prt_.readIfPresent(this->coeffDict());
+        Prt_.readIfPresent(this->typeDict());
 
         return true;
     }
@@ -138,7 +138,7 @@ unityLewisEddyDiffusivity<TurbulenceThermophysicalTransportModel>::q() const
         IOobject::groupName
         (
             "q",
-            this->momentumTransport().alphaRhoPhi().group()
+            this->thermo().phaseName()
         ),
        -fvc::interpolate(this->alpha()*this->alphaEff())
        *fvc::snGrad(this->thermo().he())
@@ -185,7 +185,7 @@ unityLewisEddyDiffusivity<TurbulenceThermophysicalTransportModel>::j
         IOobject::groupName
         (
             "j(" + Yi.name() + ')',
-            this->momentumTransport().alphaRhoPhi().group()
+            this->thermo().phaseName()
         ),
        -fvc::interpolate(this->DEff(Yi)*this->alpha())*fvc::snGrad(Yi)
     );

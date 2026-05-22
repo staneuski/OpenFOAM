@@ -9,6 +9,7 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
+    location    "system";
     object      fvSolution;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -56,7 +57,7 @@ timeScheme $fvSchemes!ddtSchemes/default;
 
 PIMPLE
 {
-#ifeq $timeScheme steadyState
+#ifeq ($timeScheme steadyState)
     nNonOrthogonalCorrectors 0;
     residualControl
     {
@@ -71,7 +72,7 @@ PIMPLE
 #endif
 }
 
-#ifeq $timeScheme steadyState
+#ifeq ($timeScheme steadyState)
 relaxationFactors
 {
     fields

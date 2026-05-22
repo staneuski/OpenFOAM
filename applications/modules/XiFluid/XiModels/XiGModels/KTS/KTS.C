@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2024 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2026 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -55,8 +55,8 @@ bool Foam::XiGModels::KTS::readCoeffs(const dictionary& dict)
 Foam::XiGModels::KTS::KTS
 (
     const dictionary& dict,
-    const psiuMulticomponentThermo& thermo,
-    const fluidThermoThermophysicalTransportModel& turbulence,
+    const ubRhoThermo& thermo,
+    const compressibleMomentumTransportModel& turbulence,
     const volScalarField& Su
 )
 :
@@ -75,19 +75,20 @@ Foam::XiGModels::KTS::~KTS()
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-Foam::tmp<Foam::volScalarField> Foam::XiGModels::KTS::G() const
+Foam::tmp<Foam::volScalarField::Internal> Foam::XiGModels::KTS::G() const
 {
-    const volScalarField up(sqrt((2.0/3.0)*turbulence_.k()));
-
-    tmp<volScalarField> tepsilon = turbulence_.epsilon();
-    const volScalarField& epsilon = tepsilon();
-
-    const volScalarField tauEta
+    const volScalarField::Internal epsilon
     (
-        sqrt(mag(thermo_.muu()/(thermo_.rhou()*epsilon)))
+        max
+        (
+            momentumTransport_.epsilon()(),
+            dimensionedScalar(sqr(dimVelocity)/dimTime, small)
+        )
     );
 
-    return Geta_/tauEta;
+    return
+        Geta_
+       /sqrt(mag(thermo_.uThermo().mu()()/(thermo_.uThermo().rho()()*epsilon)));
 }
 
 
