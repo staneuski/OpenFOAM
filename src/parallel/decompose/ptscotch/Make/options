@@ -11,14 +11,37 @@ EXE_INC = \
     -I$(or $(PTSCOTCH_INCLUDE_DIR),/usr/include/scotch) \
     -I../decompositionMethods/lnInclude
 
-LIB_LIBS = \
-    -L$(SCOTCH_ARCH_PATH)/lib \
-    $(if $(PTSCOTCH_LIB_DIR),-L$(PTSCOTCH_LIB_DIR)) \
-    -L$(FOAM_EXT_LIBBIN)/$(FOAM_MPI) \
-    -lptscotch \
-    -lptscotcherrexit \
-    -lscotch
+ifeq ("$(SO)","dylib")
+    # See scotch/Make/options for explanation
+    PTSCOTCH_FIND_DYLIB = $(shell \
+        for dir in \
+            $(SCOTCH_ARCH_PATH)/lib \
+            $(PTSCOTCH_LIB_DIR) \
+            $(FOAM_EXT_LIBBIN)/$(FOAM_MPI) \
+            $(FOAM_EXT_LIBBIN) \
+            $$(printf '%s\n' $$NIX_LDFLAGS | awk 'prev=="-L"{print; prev=""; next} /^-L./{sub(/^-L/,""); print} {prev=$$1}'); \
+        do \
+            [ -n "$$dir" ] && [ -f "$$dir/$(1)" ] && { echo "$$dir/$(1)"; break; }; \
+        done)
 
-ifneq ("$(SO)","dylib")
-    LIB_LIBS += -lrt
+    PTSCOTCH_DYLIB := $(call PTSCOTCH_FIND_DYLIB,libptscotch.dylib)
+    PTSCOTCHERREXIT_DYLIB := $(call PTSCOTCH_FIND_DYLIB,libptscotcherrexit.dylib)
+    SCOTCH_DYLIB := $(call PTSCOTCH_FIND_DYLIB,libscotch.dylib)
+
+    LIB_LIBS = \
+        $(if $(SCOTCH_ARCH_PATH),-L$(SCOTCH_ARCH_PATH)/lib) \
+        $(if $(PTSCOTCH_LIB_DIR),-L$(PTSCOTCH_LIB_DIR)) \
+        $(if $(FOAM_EXT_LIBBIN),-L$(FOAM_EXT_LIBBIN)/$(FOAM_MPI)) \
+        $(if $(PTSCOTCH_DYLIB),$(PTSCOTCH_DYLIB),-lptscotch) \
+        $(if $(PTSCOTCHERREXIT_DYLIB),$(PTSCOTCHERREXIT_DYLIB),-lptscotcherrexit) \
+        $(if $(SCOTCH_DYLIB),$(SCOTCH_DYLIB),-lscotch)
+else
+    LIB_LIBS = \
+        -L$(SCOTCH_ARCH_PATH)/lib \
+        $(if $(PTSCOTCH_LIB_DIR),-L$(PTSCOTCH_LIB_DIR)) \
+        -L$(FOAM_EXT_LIBBIN)/$(FOAM_MPI) \
+        -lptscotch \
+        -lptscotcherrexit \
+        -lscotch \
+        -lrt
 endif

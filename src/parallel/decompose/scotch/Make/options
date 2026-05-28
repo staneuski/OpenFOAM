@@ -9,13 +9,34 @@ EXE_INC = \
     -I$(or $(SCOTCH_INCLUDE_DIR),/usr/include/scotch) \
     -I../decompositionMethods/lnInclude
 
-LIB_LIBS = \
-    -L$(SCOTCH_ARCH_PATH)/lib \
-    $(if $(SCOTCH_LIB_DIR),-L$(SCOTCH_LIB_DIR)) \
-    -L$(FOAM_EXT_LIBBIN) \
-    -lscotch \
-    -lscotcherrexit
+ifeq ("$(SO)","dylib")
+    # Apple ld-prime drops -lscotch when combined with -undefined,dynamic_lookup
+    # because no symbol formally needs resolving. Locate libscotch's absolute
+    # path (checking $SCOTCH_ARCH_PATH, $FOAM_EXT_LIBBIN, and -L paths from
+    # $NIX_LDFLAGS) and pass it positionally so the linker is forced to record
+    # it as an LC_LOAD_DYLIB entry.
+    SCOTCH_DYLIB := $(shell \
+        for dir in \
+            $(SCOTCH_ARCH_PATH)/lib \
+            $(SCOTCH_LIB_DIR) \
+            $(FOAM_EXT_LIBBIN) \
+            $$(printf '%s\n' $$NIX_LDFLAGS | awk 'prev=="-L"{print; prev=""; next} /^-L./{sub(/^-L/,""); print} {prev=$$1}'); \
+        do \
+            [ -n "$$dir" ] && [ -f "$$dir/libscotch.dylib" ] && { echo "$$dir/libscotch.dylib"; break; }; \
+        done)
 
-ifneq ("$(SO)","dylib")
-    LIB_LIBS += -lrt
+    LIB_LIBS = \
+        $(if $(SCOTCH_ARCH_PATH),-L$(SCOTCH_ARCH_PATH)/lib) \
+        $(if $(SCOTCH_LIB_DIR),-L$(SCOTCH_LIB_DIR)) \
+        $(if $(FOAM_EXT_LIBBIN),-L$(FOAM_EXT_LIBBIN)) \
+        $(if $(SCOTCH_DYLIB),$(SCOTCH_DYLIB),-lscotch) \
+        -lscotcherrexit
+else
+    LIB_LIBS = \
+        -L$(SCOTCH_ARCH_PATH)/lib \
+        $(if $(SCOTCH_LIB_DIR),-L$(SCOTCH_LIB_DIR)) \
+        -L$(FOAM_EXT_LIBBIN) \
+        -lscotch \
+        -lscotcherrexit \
+        -lrt
 endif
