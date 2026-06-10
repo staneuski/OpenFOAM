@@ -703,6 +703,7 @@ bool Foam::MPLICcell::singleCutCell
         cutOrientationDiffers = cutStatusCalcSf();
         const vector Cf = calcCutCf(cutSf_);
         appendSfCf(cutSf_, Cf, mag(cutSf_));
+        accumulateCutCentre(cutSf_, Cf);
     }
 
     // Potentially multiple cuts through cell
@@ -854,6 +855,7 @@ bool Foam::MPLICcell::multiCutCell
             const vector Sf = calcCutSf();
             const vector Cf = calcCutCf(Sf);
             appendSfCf(Sf, Cf, mag(Sf));
+            accumulateCutCentre(Sf, Cf);
             cutSf_ += Sf;
         }
 
@@ -990,6 +992,7 @@ bool Foam::MPLICcell::cutTetCell
         const vector Sf = calcCutSf();
         const vector Cf = calcCutCf(Sf);
         appendSfCf(Sf, Cf, mag(Sf));
+        accumulateCutCentre(Sf, Cf);
         cutSf_  += Sf;
     }
 

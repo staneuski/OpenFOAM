@@ -40,6 +40,7 @@ SourceFiles
 #include "fvMesh.H"
 #include "HashPtrTable.H"
 #include "intersectionPatchToPatch.H"
+#include "nonConformalCouplePolygons.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -194,7 +195,8 @@ private:
                 const polyPatch& origPp,
                 const labelList& patchis,
                 const labelList& patchOffsets,
-                const bool owner
+                const bool owner,
+                nonConformalCouplePolygons::boundaryPolygons* polygonsBfPtr
             );
 
             //- Add error geometry to the original patches and store the edge
@@ -218,7 +220,8 @@ private:
                 const tmp<SurfaceFieldBoundary<label>>& tOrigFacesNbrBf,
                 const tmp<SurfaceFieldBoundary<vector>>& tOrigSfNbrBf,
                 const tmp<SurfaceFieldBoundary<point>>& tOrigCfNbrBf,
-                List<part>& origEdgeParts
+                List<part>& origEdgeParts,
+                nonConformalCouplePolygons::boundaryPolygons* polygonsBfPtr
             ) const;
 
             //- Perform intersections for the given non-conformal mapped
@@ -231,7 +234,8 @@ private:
                 const tmp<SurfaceFieldBoundary<label>>& tOrigFacesNbrBf,
                 const tmp<SurfaceFieldBoundary<vector>>& tOrigSfNbrBf,
                 const tmp<SurfaceFieldBoundary<point>>& tOrigCfNbrBf,
-                List<part>& origEdgeParts
+                List<part>& origEdgeParts,
+                nonConformalCouplePolygons::boundaryPolygons* polygonsBfPtr
             ) const;
 
             //- Convert per-patch lists of edge parts into a single
@@ -269,8 +273,18 @@ private:
                 surfaceVectorField& SfSf,
                 surfaceVectorField& CfSf,
                 const boolList& patchCoupleds,
-                const bool matchTopology
+                const bool matchTopology,
+                nonConformalCouplePolygons::boundaryPolygons* polygonsBfPtr
+              = nullptr
             ) const;
+
+            //- Create an empty couple-polygon store registered on the mesh,
+            //  removing any stale one first. Returns null if polygon retention
+            //  is disabled (intersection::storePolygons_ is false).
+            autoPtr<nonConformalCouplePolygons> newCouplePolygons() const;
+
+            //- Remove any couple-polygon store from the mesh registry
+            void clearCouplePolygons() const;
 
 
         // Motion

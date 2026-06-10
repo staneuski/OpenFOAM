@@ -650,7 +650,8 @@ void Foam::fvMeshStitcher::createCouplings
     const polyPatch& origPp,
     const labelList& patchis,
     const labelList& patchOffsets,
-    const bool owner
+    const bool owner,
+    nonConformalCouplePolygons::boundaryPolygons* polygonsBfPtr
 )
 {
     // Add coupled faces into the non-conformal patches
@@ -718,6 +719,17 @@ void Foam::fvMeshStitcher::createCouplings
                     origFacei + origPp.start();
                 SfBf[patchi][patchFacei] = pOther.area;
                 CfBf[patchi][patchFacei] = pOther.centre;
+
+                // Store the intersection polygons of the coupling face in the
+                // frame of the adjacent cell, consistent with pOther. These are
+                // only populated for genuine couplings (i > 0) when polygon
+                // retention is enabled. The tiny i == 0 stabilisation couples
+                // and any retention-disabled couples leave an empty list.
+                if (polygonsBfPtr)
+                {
+                    (*polygonsBfPtr)[patchi][patchFacei] =
+                        owner ? c.nbrPolygons : c.polygons;
+                }
             }
         }
     }
@@ -764,7 +776,8 @@ void Foam::fvMeshStitcher::intersectNonConformalCyclic
     const tmp<surfaceLabelField::Boundary>& tOrigFacesNbrBf,
     const tmp<surfaceVectorField::Boundary>& tOrigSfNbrBf,
     const tmp<surfaceVectorField::Boundary>& tOrigCfNbrBf,
-    List<part>& origEdgeParts
+    List<part>& origEdgeParts,
+    nonConformalCouplePolygons::boundaryPolygons* polygonsBfPtr
 ) const
 {
     // Alias the original poly patches
@@ -854,6 +867,7 @@ void Foam::fvMeshStitcher::intersectNonConformalCyclic
             polyFacesBf[patchi].resize(patchSize);
             SfBf[patchi].resize(patchSize);
             CfBf[patchi].resize(patchSize);
+            if (polygonsBfPtr) (*polygonsBfPtr)[patchi].resize(patchSize);
         }
     }
 
@@ -871,7 +885,8 @@ void Foam::fvMeshStitcher::intersectNonConformalCyclic
         origPp,
         patchis,
         labelList(Pstream::nProcs(), 0),
-        nccFvp.owner()
+        nccFvp.owner(),
+        polygonsBfPtr
     );
 
     // Add error geometry to the original patches and store the edge parts
@@ -898,7 +913,8 @@ void Foam::fvMeshStitcher::intersectNonConformalMappedWall
     const tmp<surfaceLabelField::Boundary>& tOrigFacesNbrBf,
     const tmp<surfaceVectorField::Boundary>& tOrigSfNbrBf,
     const tmp<surfaceVectorField::Boundary>& tOrigCfNbrBf,
-    List<part>& origEdgeParts
+    List<part>& origEdgeParts,
+    nonConformalCouplePolygons::boundaryPolygons* polygonsBfPtr
 ) const
 {
     // Alias the original poly patch
@@ -958,6 +974,10 @@ void Foam::fvMeshStitcher::intersectNonConformalMappedWall
         polyFacesPf.resize(count);
         SfBf[polyFacesPf.patch().index()].resize(count);
         CfBf[polyFacesPf.patch().index()].resize(count);
+        if (polygonsBfPtr)
+        {
+            (*polygonsBfPtr)[polyFacesPf.patch().index()].resize(count);
+        }
     };
 
     // Create a coupling by transferring geometry from the original to the
@@ -974,7 +994,8 @@ void Foam::fvMeshStitcher::intersectNonConformalMappedWall
         origPp,
         labelList(Pstream::nProcs(), ncmwFvp.index()),
         polyFacesPf.procOffsets(),
-        ncmwFvp.owner()
+        ncmwFvp.owner(),
+        polygonsBfPtr
     );
 
     // Add error geometry to the original patch and store the edge parts
@@ -1459,7 +1480,8 @@ void Foam::fvMeshStitcher::intersect
     surfaceVectorField& SfSf,
     surfaceVectorField& CfSf,
     const boolList& patchCoupleds,
-    const bool matchTopology
+    const bool matchTopology,
+    nonConformalCouplePolygons::boundaryPolygons* polygonsBfPtr
 ) const
 {
     const polyBoundaryMesh& pbMesh = mesh_.poly().boundary();
@@ -1526,7 +1548,8 @@ void Foam::fvMeshStitcher::intersect
                 tOrigFacesNbrBf,
                 tOrigSfNbrBf,
                 tOrigCfNbrBf,
-                patchEdgeParts[nccFvp.origPatchIndex()]
+                patchEdgeParts[nccFvp.origPatchIndex()],
+                polygonsBfPtr
             );
         }
         else if (isA<nonConformalProcessorCyclicFvPatch>(fvp))
@@ -1545,7 +1568,8 @@ void Foam::fvMeshStitcher::intersect
                 tOrigFacesNbrBf,
                 tOrigSfNbrBf,
                 tOrigCfNbrBf,
-                patchEdgeParts[ncmwFvp.origPatchIndex()]
+                patchEdgeParts[ncmwFvp.origPatchIndex()],
+                polygonsBfPtr
             );
         }
         else
@@ -1648,6 +1672,41 @@ void Foam::fvMeshStitcher::intersect
 }
 
 
+Foam::autoPtr<Foam::nonConformalCouplePolygons>
+Foam::fvMeshStitcher::newCouplePolygons() const
+{
+    if (!patchToPatches::intersection::storePolygons_)
+    {
+        return autoPtr<nonConformalCouplePolygons>(nullptr);
+    }
+
+    clearCouplePolygons();
+
+    return autoPtr<nonConformalCouplePolygons>
+    (
+        new nonConformalCouplePolygons(mesh_)
+    );
+}
+
+
+void Foam::fvMeshStitcher::clearCouplePolygons() const
+{
+    if
+    (
+        mesh_.foundObject<nonConformalCouplePolygons>
+        (
+            nonConformalCouplePolygons::typeName
+        )
+    )
+    {
+        mesh_.lookupObjectRef<nonConformalCouplePolygons>
+        (
+            nonConformalCouplePolygons::typeName
+        ).checkOut();
+    }
+}
+
+
 bool Foam::fvMeshStitcher::disconnectThis
 (
     const bool changing,
@@ -1685,6 +1744,9 @@ bool Foam::fvMeshStitcher::disconnectThis
     {
         mesh_.conform();
     }
+
+    // The coupling-face polygons (if any) are now stale
+    clearCouplePolygons();
 
     // Resize all the affected patch fields
     resizePatchFields<SurfaceField>();
@@ -1780,8 +1842,18 @@ bool Foam::fvMeshStitcher::connectThis
     surfaceVectorField Sf(mesh_.Sf().cloneUnSliced()());
     surfaceVectorField Cf(mesh_.Cf().cloneUnSliced()());
 
-    // Construct non-conformal geometry
-    intersect(polyFacesBf, Sf, Cf, patchCoupleds, matchTopology);
+    // Construct non-conformal geometry, retaining the coupling-face polygons
+    // if a geometric VOF scheme has requested them
+    autoPtr<nonConformalCouplePolygons> couplePolygonsPtr(newCouplePolygons());
+    intersect
+    (
+        polyFacesBf,
+        Sf,
+        Cf,
+        patchCoupleds,
+        matchTopology,
+        couplePolygonsPtr.valid() ? &couplePolygonsPtr->boundary() : nullptr
+    );
 
     // If the mesh is moving then create any additional non-conformal geometry
     // necessary to correct the mesh fluxes
@@ -1804,6 +1876,12 @@ bool Foam::fvMeshStitcher::connectThis
     else
     {
         mesh_.unconform(polyFacesBf, Sf, Cf);
+    }
+
+    // Hand the populated coupling-face polygons to the mesh registry
+    if (couplePolygonsPtr.valid())
+    {
+        regIOobject::store(couplePolygonsPtr);
     }
 
     // Reset the poly faces instance to that of any loaded topology
@@ -2396,6 +2474,7 @@ void Foam::fvMeshStitcher::reconnect(const bool geometric) const
 
     // Undo all non-conformal changes and clear all geometry and topology
     mesh_.conform();
+    clearCouplePolygons();
 
     // Determine which patches are coupled
     const boolList patchCoupleds =
@@ -2407,11 +2486,27 @@ void Foam::fvMeshStitcher::reconnect(const bool geometric) const
     surfaceVectorField Sf(mesh_.Sf().cloneUnSliced()());
     surfaceVectorField Cf(mesh_.Cf().cloneUnSliced()());
 
-    // Construct non-conformal geometry
-    intersect(polyFacesBf, Sf, Cf, patchCoupleds, true);
+    // Construct non-conformal geometry, retaining the coupling-face polygons
+    // if a geometric VOF scheme has requested them
+    autoPtr<nonConformalCouplePolygons> couplePolygonsPtr(newCouplePolygons());
+    intersect
+    (
+        polyFacesBf,
+        Sf,
+        Cf,
+        patchCoupleds,
+        true,
+        couplePolygonsPtr.valid() ? &couplePolygonsPtr->boundary() : nullptr
+    );
 
     // Apply changes to the mesh
     mesh_.unconform(polyFacesBf, Sf, Cf);
+
+    // Hand the populated coupling-face polygons to the mesh registry
+    if (couplePolygonsPtr.valid())
+    {
+        regIOobject::store(couplePolygonsPtr);
+    }
 
     // Prevent hangs caused by processor cyclic patches using mesh geometry
     mesh_.deltaCoeffs();

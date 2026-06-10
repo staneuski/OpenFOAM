@@ -172,6 +172,7 @@ $(fvMeshMovers)/pointMeshMover/pointMeshMover_fvMeshMover.C
 fvMeshStitchers = fvMesh/fvMeshStitchers
 
 $(fvMeshStitchers)/fvMeshStitcher/fvMeshStitcher.C
+$(fvMeshStitchers)/fvMeshStitcher/nonConformalCouplePolygons.C
 $(fvMeshStitchers)/fvMeshStitcher/fvMeshStitcherNew.C
 $(fvMeshStitchers)/fvMeshStitcher/fvMeshStitcherTools.C
 $(fvMeshStitchers)/fvMeshStitcher/conformedFvPatchFields.C

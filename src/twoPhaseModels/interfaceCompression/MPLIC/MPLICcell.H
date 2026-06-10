@@ -87,6 +87,13 @@ class MPLICcell
             //- Cut normal
             vector cutNormal_;
 
+            //- Sum of the cut-piece areas, used to area-weight the cut centre
+            scalar cutSumMagSf_;
+
+            //- Sum of (cut-piece area)*(cut-piece centre), used to compute
+            //  a representative point on the reconstructed interface plane
+            vector cutSumMagSfCf_;
+
             //- Face cutter
             MPLICface faceCutter_;
 
@@ -316,6 +323,9 @@ class MPLICcell
             const bool own = true
         );
 
+        //- Accumulate an interface cut-piece into the area-weighted cut centre
+        inline void accumulateCutCentre(const vector& Sf, const vector& Cf);
+
         //- Calculating surface vector of unordered edges
         inline bool cutStatusCalcSf();
 
@@ -375,6 +385,11 @@ public:
 
         //- Return cut normal
         inline const vector& cutNormal() const;
+
+        //- Return a representative point on the reconstructed interface plane
+        //  (area-weighted centre of the interface cut-pieces). Together with
+        //  cutNormal() this defines the PLIC plane of the cell.
+        inline point cutBase() const;
 
         //- Return volume fraction corresponding to the cut
         inline scalar cutAlpha() const;

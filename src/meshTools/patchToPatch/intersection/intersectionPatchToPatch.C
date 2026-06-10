@@ -42,6 +42,8 @@ namespace patchToPatches
         debug::debugSwitch((intersection::typeName + "SrcFace").c_str(), -1);
     int intersection::debugTgtFacei =
         debug::debugSwitch((intersection::typeName + "TgtFace").c_str(), -1);
+
+    bool intersection::storePolygons_ = false;
 }
 }
 
@@ -286,6 +288,19 @@ bool Foam::patchToPatches::intersection::intersectFaces
             {
                 tgtCouple -= ictTgtPart;
                 tgtCouple.nbr -= ictSrcPart;
+            }
+
+            // Retain the intersection polygons for geometric VOF cutting. Each
+            // couple is the union of these per-triangle-pair loops. The "own"
+            // side stores its own points; the neighbour side stores the
+            // opposite points. Orientation/sign is carried by the areas above,
+            // so the loops are stored as-is.
+            if (storePolygons_)
+            {
+                srcCouple.polygons.append(List<point>(ictSrcPoints_));
+                srcCouple.nbrPolygons.append(List<point>(ictTgtPoints_));
+                tgtCouple.polygons.append(List<point>(ictTgtPoints_));
+                tgtCouple.nbrPolygons.append(List<point>(ictSrcPoints_));
             }
 
             // Store the intersection polygons for debugging
@@ -679,6 +694,30 @@ Foam::label Foam::patchToPatches::intersection::finalise
                 c.centre = tgtToSrc.invTransformPosition(c.centre);
                 c.nbr.area = tgtToSrc.invTransform(c.nbr.area);
                 c.nbr.centre = tgtToSrc.invTransformPosition(c.nbr.centre);
+
+                // Transform the retained polygons consistently with the parts
+                forAll(c.polygons, polyi)
+                {
+                    forAll(c.polygons[polyi], pointi)
+                    {
+                        c.polygons[polyi][pointi] =
+                            tgtToSrc.invTransformPosition
+                            (
+                                c.polygons[polyi][pointi]
+                            );
+                    }
+                }
+                forAll(c.nbrPolygons, polyi)
+                {
+                    forAll(c.nbrPolygons[polyi], pointi)
+                    {
+                        c.nbrPolygons[polyi][pointi] =
+                            tgtToSrc.invTransformPosition
+                            (
+                                c.nbrPolygons[polyi][pointi]
+                            );
+                    }
+                }
             }
         }
     }

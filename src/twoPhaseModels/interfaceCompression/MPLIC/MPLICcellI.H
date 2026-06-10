@@ -154,6 +154,18 @@ inline void Foam::MPLICcell::appendSfCf
 }
 
 
+inline void Foam::MPLICcell::accumulateCutCentre
+(
+    const vector& Sf,
+    const vector& Cf
+)
+{
+    const scalar magSf = mag(Sf);
+    cutSumMagSf_ += magSf;
+    cutSumMagSfCf_ += magSf*Cf;
+}
+
+
 inline void Foam::MPLICcell::phiU
 (
     const pointField& points,
@@ -260,6 +272,8 @@ inline void Foam::MPLICcell::clear()
     cutAlpha_ = -1;
     cutNormal_ = Zero;
     cutSf_ = Zero;
+    cutSumMagSf_ = 0;
+    cutSumMagSfCf_ = Zero;
     subCellVolume_ = 0;
 }
 
@@ -275,6 +289,12 @@ inline const Foam::DynamicList<Foam::scalar>& Foam::MPLICcell::alphaf() const
 inline const Foam::vector& Foam::MPLICcell::cutNormal() const
 {
     return cutNormal_;
+}
+
+
+inline Foam::point Foam::MPLICcell::cutBase() const
+{
+    return cutSumMagSf_ > vSmall ? cutSumMagSfCf_/cutSumMagSf_ : point::zero;
 }
 
 

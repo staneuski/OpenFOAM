@@ -105,6 +105,15 @@ protected:
             const fvMesh& mesh
         ) const;
 
+        //- Reconcile the phase fraction on the two sides of each non-conformal
+        //  coupling, selecting the upwind (donor) value according to the face
+        //  flux so that the advective flux is conservative across the interface
+        void syncNonConformalAlphaf
+        (
+            surfaceScalarField& alphaf,
+            const surfaceScalarField& phi
+        ) const;
+
         //- Return alpha interpolation
         tmp<surfaceScalarField> surfaceAlpha
         (

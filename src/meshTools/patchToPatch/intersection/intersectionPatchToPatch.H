@@ -162,6 +162,16 @@ public:
             //- The neighbour part
             part nbr;
 
+            //- The point loops (intersection polygons) making up this part's
+            //  own side. Only populated when intersection::storePolygons_ is
+            //  enabled; used by geometric VOF schemes to cut the coupling
+            //  faces. A couple is the union of one polygon per intersecting
+            //  triangle pair, so this is a list of loops.
+            List<List<point>> polygons;
+
+            //- The point loops of the neighbour part, as polygons above
+            List<List<point>> nbrPolygons;
+
             //- Default construct
             couple()
             :
@@ -176,7 +186,8 @@ public:
                 nbr(nbrP)
             {}
 
-            //- Equality comparison
+            //- Equality comparison. The polygons are intentionally not
+            //  compared; they are auxiliary data that does not affect coupling
             friend bool operator==(const couple& a, const couple& b)
             {
                 return
@@ -193,13 +204,15 @@ public:
             //- Output stream operator
             friend Ostream& operator<<(Ostream& os, const couple& c)
             {
-                return os << static_cast<const part&>(c) << c.nbr;
+                return os << static_cast<const part&>(c) << c.nbr
+                    << c.polygons << c.nbrPolygons;
             }
 
             //- Input stream operator
             friend Istream& operator>>(Istream& is, couple& c)
             {
-                return is >> static_cast<part&>(c) >> c.nbr;
+                return is >> static_cast<part&>(c) >> c.nbr
+                    >> c.polygons >> c.nbrPolygons;
             }
         };
 
@@ -375,6 +388,12 @@ public:
         //- Extra debugging for intersections between specific faces. Named
         //  "intersectionSrcFace" and "intersectionTgtFace" respectively.
         static int debugSrcFacei, debugTgtFacei;
+
+        //- Retain the intersection polygons in the couples. Off by default to
+        //  avoid the memory cost. Geometric VOF schemes (interfaceCompression
+        //  PLIC/MPLIC) enable this at library load so that the coupling faces
+        //  can be cut against the reconstructed interface.
+        static bool storePolygons_;
 
 
     // Static Member Functions
