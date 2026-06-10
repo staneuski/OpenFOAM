@@ -34,6 +34,7 @@ License
 #include "nonConformalFvPatch.H"
 #include "nonConformalCoupledFvPatch.H"
 #include "nonConformalCyclicFvPatch.H"
+#include "nonConformalProcessorCyclicFvPatch.H"
 #include "Map.H"
 #include "HashSet.H"
 
@@ -78,54 +79,83 @@ inline vector loopAreaVector(const List<point>& ps)
 }
 
 
-//- Submerged (liquid) area fraction of a set of polygon loops under the PLIC
-//  plane through base b with interface area-vector direction n. The liquid
-//  side is taken to be where (x - b) & n <= 0, i.e. n points from the liquid
-//  to the gas, consistent with the cut surface area vector in MPLICcell.
-//  Returns -1 if the total polygon area is negligible.
-scalar submergedFraction
-(
-    const List<List<point>>& loops,
-    const point& b,
-    const vector& n
-)
+//- The total and submerged (liquid) areas of a set of polygon loops under the
+//  PLIC plane through base b with interface area-vector direction n. The
+//  liquid side is taken to be where (x - b) & n <= 0, i.e. n points from the
+//  liquid to the gas, consistent with the cut surface area vector in
+//  MPLICcell. Both the sums of the loop area magnitudes (for area-fraction
+//  interpolation) and the vector sums (for flux-weighted interpolation) are
+//  accumulated.
+struct submergedAreas
 {
-    scalar totalArea = 0;
-    scalar wetArea = 0;
+    scalar magTotal = 0;
+    scalar magWet = 0;
+    vector total = Zero;
+    vector wet = Zero;
 
-    forAll(loops, li)
+    submergedAreas
+    (
+        const List<List<point>>& loops,
+        const point& b,
+        const vector& n
+    )
     {
-        const List<point>& loop = loops[li];
-        if (loop.size() < 3) continue;
-
-        totalArea += mag(loopAreaVector(loop));
-
-        // Clip the loop against the half-space (x - b) & n <= 0
-        DynamicList<point> wet(loop.size() + 4);
-        forAll(loop, i)
+        forAll(loops, li)
         {
-            const point& cur = loop[i];
-            const point& nxt = loop[loop.fcIndex(i)];
+            const List<point>& loop = loops[li];
+            if (loop.size() < 3) continue;
 
-            const scalar dc = (cur - b) & n;
-            const scalar dn = (nxt - b) & n;
+            const vector loopA = loopAreaVector(loop);
+            magTotal += mag(loopA);
+            total += loopA;
 
-            if (dc <= 0) wet.append(cur);
-
-            if ((dc < 0) != (dn < 0))
+            // Clip the loop against the half-space (x - b) & n <= 0
+            DynamicList<point> wetLoop(loop.size() + 4);
+            forAll(loop, i)
             {
-                const scalar t = dc/(dc - dn);
-                wet.append(cur + t*(nxt - cur));
+                const point& cur = loop[i];
+                const point& nxt = loop[loop.fcIndex(i)];
+
+                const scalar dc = (cur - b) & n;
+                const scalar dn = (nxt - b) & n;
+
+                if (dc <= 0) wetLoop.append(cur);
+
+                if ((dc < 0) != (dn < 0))
+                {
+                    const scalar t = dc/(dc - dn);
+                    wetLoop.append(cur + t*(nxt - cur));
+                }
+            }
+
+            if (wetLoop.size() >= 3)
+            {
+                const vector wetA = loopAreaVector(wetLoop);
+                magWet += mag(wetA);
+                wet += wetA;
             }
         }
-
-        if (wet.size() >= 3) wetArea += mag(loopAreaVector(wet));
     }
 
-    if (totalArea < vSmall) return -1;
+    //- Submerged area fraction, or -1 if the total area is negligible
+    scalar fraction() const
+    {
+        if (magTotal < vSmall) return -1;
 
-    return min(max(wetArea/totalArea, scalar(0)), scalar(1));
-}
+        return min(max(magWet/magTotal, scalar(0)), scalar(1));
+    }
+
+    //- Submerged fraction of the volumetric flux carried by velocity U,
+    //  falling back to the area fraction when the face flux is negligible
+    scalar fluxFraction(const vector& U) const
+    {
+        const scalar phiTotal = total & U;
+
+        if (mag(phiTotal) < vSmall*mag(U) + vSmall) return fraction();
+
+        return min(max((wet & U)/phiTotal, scalar(0)), scalar(1));
+    }
+};
 
 } // End anonymous namespace
 } // End namespace Foam
@@ -184,22 +214,78 @@ void Foam::MPLIC::syncNonConformalAlphaf
         alphaf0[patchi] = alphaf.boundaryField()[patchi];
     }
 
+    // Exchange the reconstructed values across the processor-cyclic couplings
+    // so that the donor selection below can see the other side. Processor
+    // patch faces are index-aligned across the two ranks, and each coupled
+    // patch pair has a unique communication tag.
+    List<scalarField> nbrProcAlpha(mesh.boundary().size());
+    {
+        const label startOfRequests = UPstream::nRequests();
+
+        forAll(mesh.boundary(), patchi)
+        {
+            const fvPatch& fvp = mesh.boundary()[patchi];
+
+            if (!isA<nonConformalProcessorCyclicFvPatch>(fvp)) continue;
+
+            const processorFvPatch& procFvp =
+                refCast<const nonConformalProcessorCyclicFvPatch>(fvp);
+
+            nbrProcAlpha[patchi].setSize(alphaf0[patchi].size());
+
+            if (!nbrProcAlpha[patchi].empty())
+            {
+                UIPstream::read
+                (
+                    Pstream::commsTypes::nonBlocking,
+                    procFvp.neighbProcNo(),
+                    reinterpret_cast<char*>(nbrProcAlpha[patchi].begin()),
+                    nbrProcAlpha[patchi].byteSize(),
+                    procFvp.tag(),
+                    procFvp.comm()
+                );
+                UOPstream::write
+                (
+                    Pstream::commsTypes::nonBlocking,
+                    procFvp.neighbProcNo(),
+                    reinterpret_cast<const char*>(alphaf0[patchi].begin()),
+                    alphaf0[patchi].byteSize(),
+                    procFvp.tag(),
+                    procFvp.comm()
+                );
+            }
+        }
+
+        UPstream::waitRequests(startOfRequests);
+    }
+
     forAll(mesh.boundary(), patchi)
     {
         const fvPatch& fvp = mesh.boundary()[patchi];
 
-        // Same-mesh cyclic coupling. The processor-cyclic and mapped-wall
-        // couplings are not yet reconciled here and retain their owner-side
-        // reconstruction.
-        if (!isA<nonConformalCyclicFvPatch>(fvp)) continue;
+        // Identify the neighbour-side reconstruction for each coupling type.
+        // The mapped-wall coupling is left with its owner-side reconstruction:
+        // it is a wall coupling, so it carries no advective phase flux and
+        // donor selection is immaterial there.
+        const scalarField* nbrAlphaPtr = nullptr;
+        if (isA<nonConformalCyclicFvPatch>(fvp))
+        {
+            const nonConformalCyclicFvPatch& ncc =
+                refCast<const nonConformalCyclicFvPatch>(fvp);
 
-        const nonConformalCyclicFvPatch& ncc =
-            refCast<const nonConformalCyclicFvPatch>(fvp);
-
-        const label nbri = ncc.nbrPatch().index();
+            nbrAlphaPtr = &alphaf0[ncc.nbrPatch().index()];
+        }
+        else if (isA<nonConformalProcessorCyclicFvPatch>(fvp))
+        {
+            nbrAlphaPtr = &nbrProcAlpha[patchi];
+        }
+        else
+        {
+            continue;
+        }
 
         const scalarField& ownAlpha = alphaf0[patchi];
-        const scalarField& nbrAlpha = alphaf0[nbri];
+        const scalarField& nbrAlpha = *nbrAlphaPtr;
         const scalarField& phip = phi.boundaryField()[patchi];
 
         scalarField& pf = alphaf.boundaryFieldRef()[patchi];
@@ -445,11 +531,13 @@ Foam::tmp<Foam::surfaceScalarField> Foam::MPLIC::surfaceAlpha
 
     // Geometrically reconstruct the phase fraction on the non-conformal
     // coupling faces. Each coupling face is cut by the reconstructed interface
-    // plane of its adjacent (owner) cell; the submerged area fraction gives the
-    // face phase fraction. Faces whose owner cell is fully wet/dry, or whose
-    // owner cell could not be cut, take the owner cell value. The flux-upwind
-    // selection across the coupling and the matching of the two coupled sides
-    // are handled subsequently by syncNonConformalAlphaf.
+    // plane of its adjacent (owner) cell; the submerged area fraction (or, for
+    // the flux-weighted schemes, the submerged fraction of the volumetric flux
+    // carried by the owner-cell velocity) gives the face phase fraction. Faces
+    // whose owner cell is fully wet/dry, or whose owner cell could not be cut,
+    // take the owner cell value. The flux-upwind selection across the coupling
+    // and the matching of the two coupled sides are handled subsequently by
+    // syncNonConformalAlphaf.
     if (nccPolysPtr)
     {
         forAll(mesh.boundary(), patchi)
@@ -483,13 +571,17 @@ Foam::tmp<Foam::surfaceScalarField> Foam::MPLIC::surfaceAlpha
                  && facei < patchPolys.size()
                 )
                 {
+                    const submergedAreas areas
+                    (
+                        patchPolys[facei],
+                        cellCutBase[celli],
+                        cellCutNormal[celli]
+                    );
+
                     const scalar frac =
-                        submergedFraction
-                        (
-                            patchPolys[facei],
-                            cellCutBase[celli],
-                            cellCutNormal[celli]
-                        );
+                        unweighted
+                      ? areas.fraction()
+                      : areas.fluxFraction(U[celli]);
 
                     af = frac >= 0 ? frac : alpha[celli];
                 }
