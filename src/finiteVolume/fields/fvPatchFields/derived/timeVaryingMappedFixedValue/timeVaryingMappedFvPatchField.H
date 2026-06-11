@@ -49,7 +49,8 @@ Description
     provided in each time directory alongside the field data, i.e.
     dataDir/\<time\>/\<sample\>/\<points name\>. Points files found in the
     time directories take precedence over the static points file and the
-    mapping is then recomputed for every sample time.
+    mapping is then recomputed for any sample time at which the points
+    change.
 
     The default mode of operation (mapMethod planarInterpolation) is to project
     the points onto a plane (constructed from the first three points) and
@@ -152,6 +153,9 @@ class timeVaryingMappedFvPatchField
 
         //- Path of the points file from which the mapper was constructed
         fileName mapperPointsFile_;
+
+        //- Points from which the mapper was constructed
+        pointField mapperPoints_;
 
         //- List of boundaryData time directories
         instantList sampleTimes_;

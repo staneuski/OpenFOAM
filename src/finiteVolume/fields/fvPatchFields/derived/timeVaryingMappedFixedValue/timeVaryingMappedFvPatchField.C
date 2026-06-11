@@ -118,7 +118,7 @@ Foam::timeVaryingMappedFvPatchField<Type>::mapper
 
     if (mapperPtr_.empty() || mapperPointsFile_ != pointsFile)
     {
-        // Reread values and interpolate
+        // Reread the sample points
         pointField samplePoints((IFstream(pointsFile)()));
 
         if (debug)
@@ -128,24 +128,30 @@ Foam::timeVaryingMappedFvPatchField<Type>::mapper
                 << pointsFile << endl;
         }
 
-        // tbd: run-time selection
-        const bool nearestOnly
-        (
-           !mapMethod_.empty()
-         && mapMethod_ != "planarInterpolation"
-        );
-
-        // Allocate the interpolator
-        mapperPtr_.reset
-        (
-            new pointToPointPlanarInterpolation
+        // Only construct the mapper if the points have changed
+        if (mapperPtr_.empty() || samplePoints != mapperPoints_)
+        {
+            // tbd: run-time selection
+            const bool nearestOnly
             (
-                samplePoints,
-                patch_.poly().faceCentres(),
-                perturb_,
-                nearestOnly
-            )
-        );
+               !mapMethod_.empty()
+             && mapMethod_ != "planarInterpolation"
+            );
+
+            // Allocate the interpolator
+            mapperPtr_.reset
+            (
+                new pointToPointPlanarInterpolation
+                (
+                    samplePoints,
+                    patch_.poly().faceCentres(),
+                    perturb_,
+                    nearestOnly
+                )
+            );
+
+            mapperPoints_.transfer(samplePoints);
+        }
 
         mapperPointsFile_ = pointsFile;
     }
@@ -356,6 +362,7 @@ Foam::timeVaryingMappedFvPatchField<Type>::timeVaryingMappedFvPatchField
     ),
     mapperPtr_(nullptr),
     mapperPointsFile_(),
+    mapperPoints_(),
     sampleTimes_(0),
     startSampleTime_(-1),
     startSampledValues_(0),
@@ -414,6 +421,7 @@ timeVaryingMappedFvPatchField
     mapMethod_(ptf.mapMethod_),
     mapperPtr_(nullptr),
     mapperPointsFile_(),
+    mapperPoints_(),
     sampleTimes_(ptf.sampleTimes_),
     startSampleTime_(ptf.startSampleTime_),
     startAverage_(ptf.startAverage_),
@@ -443,6 +451,7 @@ timeVaryingMappedFvPatchField
     mapMethod_(ptf.mapMethod_),
     mapperPtr_(nullptr),
     mapperPointsFile_(),
+    mapperPoints_(),
     sampleTimes_(ptf.sampleTimes_),
     startSampleTime_(ptf.startSampleTime_),
     startSampledValues_(ptf.startSampledValues_),
